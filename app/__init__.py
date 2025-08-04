@@ -1,11 +1,11 @@
 # ========================================================================
-# File: app/__init__.py (Versi Final yang Direfactor)
-# Deskripsi: Menjadi pusat inisialisasi untuk aplikasi Flask,
-#            Firebase Admin, Firestore, dan Flask-Login.
+# File: app/__init__.py (Versi untuk Railway/Serverless)
+# Deskripsi: Menginisialisasi aplikasi dan membaca kredensial Firebase
+#            dari environment variable, bukan dari file.
 # ========================================================================
 
 import os
-# PERUBAHAN: Menambahkan redirect dan url_for ke impor
+import json # <-- Impor baru untuk membaca string JSON
 from flask import Flask, jsonify, request, redirect, url_for
 from dotenv import load_dotenv
 import firebase_admin
@@ -19,17 +19,22 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'kunci-rahasia-default-yang-aman')
 
-# 2. Inisialisasi Firebase Admin SDK & Firestore
+# 2. Inisialisasi Firebase Admin SDK & Firestore (CARA BARU)
 try:
     if not firebase_admin._apps:
-        cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
-        if not cred_path:
-            raise ValueError("FIREBASE_CREDENTIALS_PATH tidak diatur di file .env")
-        
-        cred = credentials.Certificate(cred_path)
+        # Ambil kredensial dari environment variable FIREBASE_CREDENTIALS_JSON
+        firebase_creds_json_str = os.getenv("FIREBASE_CREDENTIALS_JSON")
+        if not firebase_creds_json_str:
+            raise ValueError("Environment variable FIREBASE_CREDENTIALS_JSON tidak diatur.")
+
+        # Ubah string JSON menjadi dictionary Python
+        cred_dict = json.loads(firebase_creds_json_str)
+
+        # Inisialisasi menggunakan dictionary
+        cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred)
-        print("--- Firebase Admin SDK berhasil diinisialisasi. ---")
-    
+        print("--- Firebase Admin SDK berhasil diinisialisasi dari env var. ---")
+
     # Buat klien Firestore yang akan diimpor oleh file lain
     db = firestore.client()
     print("--- Klien Firestore berhasil diinisialisasi. ---")
