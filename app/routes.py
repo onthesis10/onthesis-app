@@ -640,3 +640,42 @@ def generate_citation_from_text(text, style):
     except Exception as e:
         print(f"Error saat menghubungi Gemini API: {e}")
         return None
+# app/routes.py
+
+# ... (semua kode yang sudah ada di atas) ...
+
+# =========================================================================
+# RUTE BARU UNTUK FITUR KRITIK & SARAN
+# =========================================================================
+@app.route('/api/submit-feedback', methods=['POST'])
+@login_required
+def submit_feedback():
+    """Menerima dan menyimpan feedback dari pengguna ke Firestore."""
+    try:
+        data = request.get_json()
+        message = data.get('message')
+        category = data.get('category')
+        page_url = data.get('pageUrl')
+
+        if not message or not category:
+            return jsonify({'status': 'error', 'message': 'Pesan dan kategori tidak boleh kosong.'}), 400
+
+        # Siapkan dokumen untuk disimpan di Firestore
+        feedback_doc = {
+            'userId': current_user.id,
+            'userEmail': current_user.email,
+            'message': message,
+            'category': category,
+            'pageUrl': page_url,
+            'timestamp': firestore.SERVER_TIMESTAMP,
+            'status': 'new' # Status awal, bisa diubah nanti (e.g., 'read', 'in_progress')
+        }
+
+        # Simpan ke koleksi 'feedback'
+        db.collection('feedback').add(feedback_doc)
+
+        return jsonify({'status': 'success', 'message': 'Terima kasih atas masukan Anda!'})
+
+    except Exception as e:
+        print(f"Error saat menyimpan feedback: {e}")
+        return jsonify({'status': 'error', 'message': 'Terjadi kesalahan di server.'}), 500

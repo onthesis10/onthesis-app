@@ -225,5 +225,145 @@
         });
     </script>
     {% block page_scripts %}{% endblock %}
+<!-- ======================================================================== -->
+<!-- FITUR BARU: Tombol dan Modal untuk Kritik & Saran                   -->
+<!-- Tambahkan ini tepat sebelum tag </body> penutup di layout.html         -->
+<!-- ======================================================================== -->
+
+<!-- Tombol Melayang (Floating Action Button) -->
+<button id="open-feedback-btn" title="Kirim Kritik & Saran" class="fixed bottom-6 right-6 bg-gradient-to-br from-orange-500 to-amber-600 text-white w-14 h-14 rounded-full shadow-lg hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 flex items-center justify-center z-40">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+</button>
+
+<!-- Modal/Jendela Pop-up untuk Form Feedback -->
+<div id="feedback-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-8 transform transition-all opacity-0 -translate-y-4" id="feedback-modal-content">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-bold text-gray-800 dark:text-white">Kirim Kritik & Saran</h3>
+            <button id="close-feedback-modal-btn" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">&times;</button>
+        </div>
+        <form id="feedback-form" class="space-y-4">
+            <div>
+                <label for="feedback-category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pilih Kategori</label>
+                <select id="feedback-category" name="category" class="w-full pl-4 pr-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" required>
+                    <option value="Saran Fitur">Saran Fitur Baru</option>
+                    <option value="Laporan Bug">Laporan Bug/Error</option>
+                    <option value="Desain & Tampilan">Desain & Tampilan (UI/UX)</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+            <div>
+                <label for="feedback-message" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pesan Anda</label>
+                <textarea id="feedback-message" name="message" rows="5" class="w-full pl-4 pr-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="Tuliskan masukan Anda di sini..." required></textarea>
+            </div>
+            <div class="flex justify-end gap-4 pt-4">
+                <button type="button" id="cancel-feedback-btn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">Batal</button>
+                <button type="submit" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-2 px-4 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">Kirim</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Kontainer Notifikasi (jika belum ada) -->
+<div id="notification-container" class="fixed top-5 right-5 z-[100] w-full max-w-xs"></div>
+
+<script>
+// --- Logika untuk Fitur Feedback ---
+document.addEventListener('DOMContentLoaded', () => {
+    const openBtn = document.getElementById('open-feedback-btn');
+    const modal = document.getElementById('feedback-modal');
+    const modalContent = document.getElementById('feedback-modal-content');
+    const closeBtn = document.getElementById('close-feedback-modal-btn');
+    const cancelBtn = document.getElementById('cancel-feedback-btn');
+    const form = document.getElementById('feedback-form');
+
+    const showModal = () => {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('opacity-0', '-translate-y-4');
+        }, 10);
+    };
+
+    const hideModal = () => {
+        modalContent.classList.add('opacity-0', '-translate-y-4');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    };
+
+    openBtn.addEventListener('click', showModal);
+    closeBtn.addEventListener('click', hideModal);
+    cancelBtn.addEventListener('click', hideModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            hideModal();
+        }
+    });
+
+    // --- Fungsi Notifikasi Global ---
+    const showNotification = (message, type = 'success') => {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+        
+        const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+        const notif = document.createElement('div');
+        // KODE YANG DIPERBAIKI: Menghapus backslash (\) yang salah
+        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 transition-all duration-300 transform translate-x-full`;
+        notif.textContent = message;
+        
+        container.appendChild(notif);
+        setTimeout(() => {
+            notif.classList.remove('translate-x-full');
+        }, 10);
+
+        setTimeout(() => {
+            notif.classList.add('translate-x-full');
+            setTimeout(() => notif.remove(), 300);
+        }, 4000);
+    };
+
+
+    // --- Logika Pengiriman Form ---
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Mengirim...';
+
+        const formData = new FormData(form);
+        const data = {
+            message: formData.get('message'),
+            category: formData.get('category'),
+            pageUrl: window.location.href // Mengirim URL halaman saat ini
+        };
+
+        try {
+            const response = await fetch('/api/submit-feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Gagal mengirim feedback.');
+            }
+
+            showNotification(result.message, 'success');
+            form.reset();
+            hideModal();
+
+        } catch (error) {
+            showNotification(error.message, 'error');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Kirim';
+        }
+    });
+});
+</script>
 </body>
 </html>
