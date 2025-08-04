@@ -1,0 +1,118 @@
+/* app/static/css/style.css */
+/* Semua kode CSS kustom Anda */
+
+body {
+    font-family: 'Poppins', sans-serif;
+    transition: background-color 0.5s ease;
+    background-color: #f8fafc; /* slate-50 */
+}
+.themed-sidebar {
+     background-color: #ffffff;
+     border-right: 1px solid #e2e8f0;
+}
+.themed-card {
+    background-color: white;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+.themed-text-header { color: #1e293b; }
+.themed-text-body { color: #475569; }
+.themed-text-link { color: #94a3b8; }
+.themed-input { background-color: #f9fafb; border-color: #d1d5db; color: #1e293b; }
+.themed-prose { color: #475569; }
+.themed-prose strong { color: #1e293b; }
+.laptop-base { background: linear-gradient(to top, #d1d5db, #e5e7eb); }
+.laptop-base::after { background: rgba(0, 0, 0, 0.1); }
+.laptop-screen { background: #ffffff; border: 4px solid #e5e7eb; }
+
+/* Dark Mode Styles */
+.dark body { 
+    background-color: #111827;
+    background-image: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=2670&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+.dark .themed-sidebar {
+    background-color: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right-color: rgba(255, 255, 255, 0.1);
+}
+.dark .themed-card {
+    background-color: rgba(30, 41, 59, 0.5);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dark .themed-text-header { color: #ffffff; }
+.dark .themed-text-body { color: #cbd5e1; }
+.dark .themed-text-link { color: #94a3b8; }
+.dark .themed-input { background-color: rgba(51, 65, 85, 0.7); border-color: rgba(255, 255, 255, 0.1); color: #ffffff; }
+.dark .themed-prose { color: #cbd5e1; }
+.dark .themed-prose strong { color: #ffffff; }
+.dark .laptop-base { background: linear-gradient(to top, #374151, #4b5563); }
+.dark .laptop-base::after { background: rgba(255, 255, 255, 0.1); }
+.dark .laptop-screen { background: rgba(51, 65, 85, 0.7); border: 4px solid #4b5563; }
+
+/* Component Styles */
+.sidebar-icon { width: 24px; height: 24px; }
+.nav-link.active { 
+    background: linear-gradient(to right, #f59e0b, #facc15);
+    color: #422006;
+    font-weight: 600;
+    box-shadow: 0 4px 15px -1px rgba(250, 204, 21, 0.3); 
+}
+
+/* Animations */
+@keyframes aurora {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.aurora-text {
+    background: linear-gradient(90deg, #facc15, #f59e0b, #ca8a04, #facc15);
+    background-size: 200% 200%;
+    /* [FIX] Menambahkan properti standar */
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.aurora-border-container {
+    position: relative;
+    padding: 2px;
+    border-radius: 14px;
+}
+.aurora-border-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    padding: 2px;
+    background: linear-gradient(90deg, #facc15, #f59e0b, #ca8a04, #facc15);
+    background-size: 200% 200%;
+    /* [FIX] Menambahkan properti standar */
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: aurora 4s ease infinite;
+    z-index: -1;
+    display: none; /* Hide by default for light mode */
+}
+.dark .aurora-border-container::before {
+    display: block; /* Show only in dark mode */
+}
+
+/* Laptop Card Effect */
+.laptop-card { perspective: 1000px; }
+.laptop-screen {
+    border-bottom: 0; border-radius: 12px 12px 0 0;
+    transform: rotateX(5deg); transform-origin: bottom center; transition: transform 0.3s ease;
+}
+.laptop-card:hover .laptop-screen { transform: rotateX(0deg); }
+.laptop-base {
+    width: 120%; margin-left: -10%; height: 20px;
+    border-radius: 0 0 12px 12px;
+    transform: rotateX(-60deg); transform-origin: top center;
+    position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}

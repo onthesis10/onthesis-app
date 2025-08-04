@@ -1,0 +1,9 @@
+# File rahasia yang berisi kunci API dan kredensial
+.env
+serviceAccountKey.json
+
+# Folder cache Python yang tidak perlu diunggah
+__pycache__/
+
+# File-file sementara Python
+*.pyc

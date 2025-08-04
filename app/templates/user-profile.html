@@ -1,0 +1,177 @@
+{% extends "layout.html" %}
+
+{% block title %}Profil Pengguna - OnThesis{% endblock %}
+
+{% block page_styles %}
+<style>
+    /* Style tambahan untuk tombol aksi */
+    .action-button {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+        justify-content: center;
+    }
+    /* Animasi untuk notifikasi */
+    @keyframes fade-in-out {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    .animate-fade-in-out {
+      animation: fade-in-out 4s ease-in-out forwards;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Kontainer utama dengan tema oranye cerah -->
+<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
+
+    <!-- Header Halaman -->
+    <header class="mb-8 flex-shrink-0 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Profil Pengguna</h1>
+        <p class="text-lg text-orange-800/80 mt-1">Kelola informasi akun dan preferensi Anda.</p>
+    </header>
+
+    <!-- Konten Utama (Grid) -->
+    <div class="flex-grow overflow-y-auto pr-2">
+        
+        <!-- Blok untuk menampilkan notifikasi/flash message -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="max-w-4xl mx-auto mb-6">
+            {% for category, message in messages %}
+              {% set text_color = 'text-blue-700' %}
+              {% set border_color = 'border-blue-400' %}
+              {% set bg_color = 'bg-blue-100' %}
+              
+              {% if category == 'success' %}
+                {% set text_color = 'text-green-700' %}
+                {% set border_color = 'border-green-400' %}
+                {% set bg_color = 'bg-green-100' %}
+              {% elif category == 'danger' %}
+                {% set text_color = 'text-red-700' %}
+                {% set border_color = 'border-red-400' %}
+                {% set bg_color = 'bg-red-100' %}
+              {% endif %}
+
+              <div class="{{ bg_color }} {{ border_color }} {{ text_color }} border px-4 py-3 rounded-lg relative" role="alert">
+                <span class="block sm:inline">{{ message }}</span>
+              </div>
+            {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Kolom Kiri: Detail Profil dan Form -->
+            <div class="lg:col-span-2 bg-white/70 backdrop-blur-sm border border-white/80 p-8 rounded-2xl shadow-inner">
+                
+                <!-- Info Pengguna -->
+                <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-200">
+                    <img class="w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-white/50" 
+                         src="{{ current_user.picture or 'https://ui-avatars.com/api/?name=' + (current_user.username|urlencode) + '&background=fb923c&color=fff' }}" 
+                         alt="Foto Profil">
+                    <div class="text-center sm:text-left">
+                        <h2 class="text-2xl font-bold text-slate-800">{{ current_user.username }}</h2>
+                        <p class="text-slate-500">{{ current_user.email or 'Email tidak tersedia' }}</p>
+                    </div>
+                </div>
+
+                <!-- Form Update Profil yang menunjuk ke rute 'user_profile' -->
+                <form method="POST" action="{{ url_for('user_profile') }}">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-4">Ubah Informasi</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="profile-name" class="block text-sm font-medium text-slate-600 mb-1">Nama Tampilan</label>
+                            <input type="text" id="profile-name" name="name" value="{{ current_user.username }}" class="w-full pl-4 pr-4 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition">
+                        </div>
+                        <div>
+                            <label for="profile-email" class="block text-sm font-medium text-slate-600 mb-1">Email</label>
+                            <input type="email" id="profile-email" name="email" value="{{ current_user.email or '' }}" class="w-full pl-4 pr-4 py-2 bg-slate-100 text-slate-500 border border-slate-300 rounded-lg cursor-not-allowed" readonly>
+                        </div>
+                        <div class="pt-4">
+                            <button type="submit" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-2 px-6 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">
+                                Simpan Perubahan
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Kolom Kanan: Status Langganan dan Tindakan -->
+            <div class="lg:col-span-1 space-y-8">
+                
+                <!-- Kartu Status Langganan -->
+                <div class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner text-center">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">Status Langganan</h3>
+                    {% if current_user.is_pro %}
+                        <div class="bg-green-100 text-green-800 font-bold text-lg py-3 px-4 rounded-lg">
+                            AKUN PRO
+                        </div>
+                        <p class="text-slate-500 mt-3 text-sm">Anda memiliki akses ke semua fitur premium. Terima kasih telah mendukung kami!</p>
+                    {% else %}
+                        <div class="bg-slate-100 text-slate-800 font-bold text-lg py-3 px-4 rounded-lg">
+                            AKUN GRATIS
+                        </div>
+                        <p class="text-slate-500 mt-3 text-sm">Upgrade untuk membuka Asisten AI, Analisis Data, dan fitur canggih lainnya.</p>
+                        
+                        <!-- PERUBAHAN: Tombol diubah menjadi link ke Payment Link Anda -->
+                        <a href="https://app.midtrans.com/payment-links/1754017123715" target="_blank" class="action-button mt-4 bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg hover:shadow-xl">
+                            Upgrade ke PRO
+                        </a>
+
+                    {% endif %}
+                </div>
+
+                <!-- Kartu Tindakan -->
+                <div class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">Tindakan</h3>
+                    <div class="space-y-3">
+                        <a href="{{ url_for('logout') }}" class="action-button bg-red-500 hover:bg-red-600 text-white shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            <span>Logout</span>
+                        </a>
+                        <button class="action-button bg-slate-200 hover:bg-slate-300 text-slate-700">
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            <span>Hapus Akun</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kontainer Notifikasi -->
+<div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
+{% endblock %}
+
+{% block page_scripts %}
+<!-- PERUBAHAN: Script Midtrans Snap.js dan logika upgrade via API tidak lagi diperlukan di halaman ini -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Fungsi notifikasi bisa tetap ada jika diperlukan di tempat lain
+    const showNotification = (message, type = 'success') => {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+        
+        const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+        const notif = document.createElement('div');
+        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-out`;
+        notif.textContent = message;
+        
+        container.appendChild(notif);
+        setTimeout(() => { notif.remove(); }, 4000);
+    };
+});
+</script>
+{% endblock %}

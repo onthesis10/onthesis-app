@@ -1,0 +1,736 @@
+{% extends "layout.html" %}
+
+{% block title %}Analisis Data (PRO) - OnThesis{% endblock %}
+
+{% block page_styles %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+<style>
+    /* Gaya untuk Tab Aktif */
+    .analysis-tab.active-tab {
+        background-color: white;
+        color: #f97316; /* orange-500 */
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    /* Animasi untuk notifikasi */
+    @keyframes fade-in-out {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    .animate-fade-in-out {
+      animation: fade-in-out 4s ease-in-out forwards;
+    }
+    .action-btn-sm {
+        background-color: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        padding: 0.25rem;
+        border-radius: 0.375rem; /* rounded-md */
+        color: #475569; /* slate-600 */
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .action-btn-sm:hover {
+        background-color: white;
+        color: #1e293b; /* slate-800 */
+    }
+    .action-btn-sm:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Kontainer utama dengan tema oranye cerah dan layout "fit" -->
+<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
+
+    <!-- Header Halaman -->
+    <header class="mb-8 flex-shrink-0 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Analisis Data Cerdas (PRO)</h1>
+        <p class="text-lg text-orange-800/80 mt-1">Lakukan uji statistik dan dapatkan interpretasi AI secara instan.</p>
+    </header>
+
+    <!-- Navigasi Tab (Centered) -->
+    <div class="mb-6 flex-shrink-0 flex justify-center">
+        <nav class="flex flex-wrap justify-center gap-2 p-1 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl shadow-md" aria-label="Tabs">
+            <button class="analysis-tab active-tab px-4 py-2 text-sm font-semibold text-slate-700 rounded-lg transition-all duration-300">Statistik Deskriptif</button>
+            <button class="analysis-tab px-4 py-2 text-sm font-semibold text-slate-700 rounded-lg transition-all duration-300">Validitas & Reliabilitas</button>
+            <button class="analysis-tab px-4 py-2 text-sm font-semibold text-slate-700 rounded-lg transition-all duration-300">Uji Normalitas</button>
+            <button class="analysis-tab px-4 py-2 text-sm font-semibold text-slate-700 rounded-lg transition-all duration-300">Uji Homogenitas</button>
+            <button class="analysis-tab px-4 py-2 text-sm font-semibold text-slate-700 rounded-lg transition-all duration-300">Uji Hipotesis</button>
+        </nav>
+    </div>
+
+    <!-- Kontainer Konten Tab (mengisi sisa ruang) -->
+    <div class="flex-grow overflow-hidden">
+        <!-- Konten Tab: Statistik Deskriptif -->
+        <div id="tab-content-descriptive" class="analysis-tab-content h-full">
+            <div class="h-full overflow-y-auto pr-2">
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <!-- Kolom Input Data -->
+                    <div class="lg:col-span-3 bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner">
+                        <h2 class="text-xl font-semibold text-slate-800 mb-4">Input Data</h2>
+                        <div class="flex items-center gap-4 mb-4">
+                            <button id="da-add-row-btn" class="w-full text-sm bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all duration-300 shadow-sm hover:shadow-md">Tambah Baris</button>
+                            <button id="da-upload-csv-btn" class="w-full text-sm bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all duration-300 shadow-sm hover:shadow-md">Upload CSV</button>
+                            <input type="file" id="da-csv-file-input" class="hidden" accept=".csv">
+                        </div>
+                        <div class="max-h-96 overflow-y-auto pr-2 border border-slate-200 rounded-lg">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-100/50">
+                                    <tr class="text-slate-600">
+                                        <th class="px-4 py-2 w-12 font-semibold">No.</th>
+                                        <th class="px-4 py-2 font-semibold">Label (Opsional)</th>
+                                        <th class="px-4 py-2 font-semibold">Nilai</th>
+                                        <th class="px-4 py-2 w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="da-input-tbody" class="divide-y divide-slate-200"></tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <button id="da-calculate-btn" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-2 px-6 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">Hitung</button>
+                        </div>
+                    </div>
+                    <!-- Kolom Hasil Analisis -->
+                    <div class="lg:col-span-2 bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold text-slate-800">Tabel Statistik Deskriptif</h2>
+                            <div class="flex items-center gap-2">
+                                <button id="da-copy-btn" class="action-btn-sm" disabled title="Salin Tabel"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                                <button id="da-download-btn" class="action-btn-sm" disabled title="Unduh CSV"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></button>
+                            </div>
+                        </div>
+                        <div id="da-results-container" class="overflow-x-auto">
+                            <p class="text-slate-500 italic">Hasil akan muncul di sini.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Baris Bawah: Interpretasi dan Visualisasi -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                    <!-- Kolom Interpretasi AI -->
+                    <div id="da-ai-interpretation-section" class="hidden bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-2">Interpretasi AI</h3>
+                        <button id="da-interpret-btn" class="w-full mb-3 bg-gradient-to-br from-teal-500 to-cyan-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-teal-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">Jelaskan Hasil Ini</button>
+                        <div id="da-interpretation-output" class="p-4 min-h-[100px] bg-slate-100/50 rounded-lg prose prose-sm max-w-none">
+                             <p class="text-slate-500 italic">Interpretasi dari AI akan muncul di sini.</p>
+                        </div>
+                    </div>
+                    <!-- Kontainer Visualisasi Data -->
+                    <div id="da-visualization-section" class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold text-slate-800">Visualisasi Data</h2>
+                            <select id="da-chart-type-select" class="text-sm bg-white border border-slate-300 rounded-lg focus:ring-1 focus:ring-orange-500 focus:border-orange-500 py-2">
+                                <option value="bar">Histogram</option>
+                                <option value="pie">Pie Chart</option>
+                                <option value="line">Line Chart</option>
+                            </select>
+                        </div>
+                        <div class="mx-auto" style="position: relative; height: 300px;">
+                            <canvas id="da-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Konten Tab: Validitas & Reliabilitas -->
+        <div id="tab-content-validity" class="analysis-tab-content hidden h-full">
+             <div class="h-full overflow-y-auto pr-2">
+                <!-- Bagian Input Data -->
+                <div class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner mb-8">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-4">Input Data Kuesioner</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                        <button id="vr-add-respondent-btn" class="w-full text-sm bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:shadow-md">Tambah Responden</button>
+                        <button id="vr-add-item-btn" class="w-full text-sm bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:shadow-md">Tambah Item</button>
+                        <button id="vr-upload-csv-btn" class="w-full text-sm bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:shadow-md">Upload CSV</button>
+                        <input type="file" id="vr-csv-file-input" class="hidden" accept=".csv">
+                    </div>
+                    <div class="max-h-96 overflow-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-sm text-left">
+                            <thead id="vr-table-head" class="bg-slate-100/50 sticky top-0">
+                                <!-- Header akan di-generate oleh JS -->
+                            </thead>
+                            <tbody id="vr-table-body" class="divide-y divide-slate-200">
+                                <!-- Baris data akan di-generate oleh JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                     <div class="mt-4 flex justify-end">
+                        <button id="vr-calculate-btn" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:shadow-lg">Uji Validitas & Reliabilitas</button>
+                    </div>
+                </div>
+                <!-- Bagian Hasil Uji -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Kolom Hasil Uji -->
+                    <div id="vr-results-section" class="hidden bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold text-slate-800">Tabel Output Hasil Uji</h2>
+                            <div class="flex items-center gap-2">
+                                <button id="vr-copy-btn" class="action-btn-sm" disabled title="Salin Tabel"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                                <button id="vr-download-btn" class="action-btn-sm" disabled title="Unduh CSV"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></button>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-slate-700 mb-2">Uji Validitas (Pearson)</h3>
+                        <div id="vr-validity-results" class="overflow-x-auto mb-6">
+                            <p class="text-slate-500 italic">Hasil uji validitas akan muncul di sini.</p>
+                        </div>
+                        <h3 class="text-lg font-semibold text-slate-700 mb-2">Uji Reliabilitas (Cronbach's Alpha)</h3>
+                        <div id="vr-reliability-results" class="mb-6">
+                           <p class="text-slate-500 italic">Hasil uji reliabilitas akan muncul di sini.</p>
+                        </div>
+                    </div>
+                    <!-- Kolom Interpretasi AI -->
+                    <div id="vr-ai-interpretation-section" class="hidden bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-inner">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-2">Interpretasi AI</h3>
+                        <button id="vr-interpret-btn" class="w-full mb-3 bg-gradient-to-br from-teal-500 to-cyan-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:shadow-lg">Jelaskan Hasil Ini</button>
+                        <div id="vr-interpretation-output" class="p-4 min-h-[100px] bg-slate-100/50 rounded-lg prose prose-sm max-w-none">
+                             <p class="text-slate-500 italic">Interpretasi dari AI akan muncul di sini.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Konten Tab: Uji Normalitas -->
+        <div id="tab-content-normality" class="analysis-tab-content hidden h-full">
+            <!-- ... Konten Tab 3 ... -->
+        </div>
+
+        <div id="tab-content-homogeneity" class="analysis-tab-content hidden h-full flex items-center justify-center text-slate-500 italic">Konten untuk Uji Homogenitas akan ada di sini.</div>
+        <div id="tab-content-hypothesis" class="analysis-tab-content hidden h-full flex items-center justify-center text-slate-500 italic">Konten untuk Uji Hipotesis akan ada di sini.</div>
+    </div>
+</div>
+
+<!-- Kontainer Notifikasi -->
+<div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Inisialisasi Elemen ---
+    const tabs = document.querySelectorAll('.analysis-tab');
+    const tabContents = document.querySelectorAll('.analysis-tab-content');
+    const converter = new showdown.Converter();
+    
+    // --- Logika Navigasi Tab ---
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active-tab'));
+            tab.classList.add('active-tab');
+            
+            tabContents.forEach(content => content.classList.add('hidden'));
+            tabContents[index].classList.remove('hidden');
+        });
+    });
+
+    // --- Fungsi Notifikasi ---
+    const showNotification = (message, type = 'success') => {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+        
+        const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+        const notif = document.createElement('div');
+        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-out`;
+        notif.textContent = message;
+        
+        container.appendChild(notif);
+        setTimeout(() => { notif.remove(); }, 4000);
+    };
+
+    // --- FUNGSI EKSPOR & SALIN ---
+    const copyTableToClipboard = (tableElement) => {
+        let text = '';
+        tableElement.querySelectorAll('tr').forEach(row => {
+            const rowData = [];
+            row.querySelectorAll('th, td').forEach(cell => {
+                rowData.push(cell.innerText);
+            });
+            text += rowData.join('\t') + '\n';
+        });
+        navigator.clipboard.writeText(text).then(() => {
+            showNotification('Tabel berhasil disalin!');
+        });
+    };
+
+    const downloadTableAsCSV = (tableElement, filename) => {
+        let csv = [];
+        tableElement.querySelectorAll('tr').forEach(row => {
+            let rowData = [];
+            row.querySelectorAll('th, td').forEach(cell => {
+                let text = cell.innerText.replace(/"/g, '""');
+                if (text.includes(',')) text = `"${text}"`;
+                rowData.push(text);
+            });
+            csv.push(rowData.join(','));
+        });
+        
+        const csvContent = "data:text/csv;charset=utf-8," + csv.join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showNotification('Tabel berhasil diunduh!');
+    };
+
+
+    // --- FUNGSI UTAMA INTERPRETASI AI ---
+    const handleInterpretation = async (button, outputElement, statsData, analysisType) => {
+        if (!statsData) {
+            showNotification("Tidak ada hasil untuk diinterpretasi.", 'error');
+            return;
+        }
+
+        const originalButtonHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `
+            <span class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></span>
+            <span>Menganalisis...</span>
+        `;
+        outputElement.innerHTML = `<p class="text-slate-500 italic">AI sedang berpikir...</p>`;
+
+        try {
+            // Asumsi: Anda memiliki endpoint backend '/interpret-analysis'
+            const response = await fetch('/interpret-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    type: analysisType, // e.g., 'descriptive', 'validity_reliability'
+                    stats: statsData 
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Gagal mendapat interpretasi.');
+            
+            outputElement.innerHTML = converter.makeHtml(data.interpretation);
+        } catch (error) {
+            outputElement.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            showNotification(error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalButtonHTML;
+        }
+    };
+
+
+    // ===================================================================
+    // --- LOGIKA TAB 1: STATISTIK DESKRIPTIF ---
+    // ===================================================================
+    const daTbody = document.getElementById('da-input-tbody');
+    const daAddRowBtn = document.getElementById('da-add-row-btn');
+    const daUploadCsvBtn = document.getElementById('da-upload-csv-btn');
+    const daCsvFileInput = document.getElementById('da-csv-file-input');
+    const daCalculateBtn = document.getElementById('da-calculate-btn');
+    const daResultsContainer = document.getElementById('da-results-container');
+    const daCopyBtn = document.getElementById('da-copy-btn');
+    const daDownloadBtn = document.getElementById('da-download-btn');
+    const daVisualizationSection = document.getElementById('da-visualization-section');
+    const daChartTypeSelect = document.getElementById('da-chart-type-select');
+    const daInterpretBtn = document.getElementById('da-interpret-btn');
+    const daInterpretationOutput = document.getElementById('da-interpretation-output');
+    let daChartInstance = null;
+    let daRowCount = 0;
+    let descriptiveStatsData = null;
+    let descriptiveRawData = null; // Menyimpan data mentah untuk chart
+
+    const daAddRow = (label = '', value = '') => {
+        daRowCount++;
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/50';
+        tr.innerHTML = `
+            <td class="px-4 py-2 text-slate-500">${daRowCount}</td>
+            <td class="px-4 py-2"><input type="text" class="bg-transparent p-1 w-full focus:outline-none focus:ring-1 focus:ring-orange-500 rounded" placeholder="Label ${daRowCount}" value="${label}"></td>
+            <td class="px-4 py-2"><input type="number" class="bg-transparent p-1 w-full focus:outline-none focus:ring-1 focus:ring-orange-500 rounded" placeholder="Nilai" value="${value}"></td>
+            <td class="px-4 py-2 text-center"><button class="delete-row-btn text-red-400 hover:text-red-600 font-bold text-xl">&times;</button></td>
+        `;
+        daTbody.appendChild(tr);
+        tr.querySelector('.delete-row-btn').addEventListener('click', () => {
+            tr.remove();
+            Array.from(daTbody.querySelectorAll('tr')).forEach((row, i) => {
+                row.querySelector('td:first-child').textContent = i + 1;
+            });
+            daRowCount = daTbody.rows.length;
+        });
+    };
+    
+    for (let i = 0; i < 5; i++) { if(daTbody) daAddRow(); }
+    if(daAddRowBtn) daAddRowBtn.addEventListener('click', () => daAddRow());
+
+    if(daUploadCsvBtn) daUploadCsvBtn.addEventListener('click', () => daCsvFileInput.click());
+    if(daCsvFileInput) daCsvFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            Papa.parse(file, {
+                header: false,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    daTbody.innerHTML = ''; daRowCount = 0;
+                    results.data.forEach(row => {
+                        const label = row[0] || '';
+                        const value = row[1] || '';
+                        daAddRow(label, value);
+                    });
+                    showNotification('CSV berhasil di-upload!', 'success');
+                }
+            });
+        }
+        e.target.value = ''; // Reset input
+    });
+
+    const renderDaChart = (data) => {
+        daVisualizationSection.classList.remove('hidden');
+        const ctx = document.getElementById('da-chart').getContext('2d');
+        const chartType = daChartTypeSelect.value;
+        if (daChartInstance) daChartInstance.destroy();
+
+        const chartColors = ['#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12'];
+        const gridColor = 'rgba(0, 0, 0, 0.05)';
+        const textColor = '#475569';
+
+        daChartInstance = new Chart(ctx, {
+            type: chartType,
+            data: {
+                labels: data.map(d => d.label),
+                datasets: [{
+                    label: 'Nilai Data',
+                    data: data.map(d => d.value),
+                    backgroundColor: chartColors,
+                    borderColor: chartColors,
+                    borderWidth: 1
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: textColor } } },
+                scales: { 
+                    y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
+                    x: { ticks: { color: textColor }, grid: { color: gridColor } } 
+                }
+            }
+        });
+    };
+
+    if(daCalculateBtn) daCalculateBtn.addEventListener('click', () => {
+        descriptiveRawData = Array.from(daTbody.querySelectorAll('tr')).map((row, index) => {
+            const value = parseFloat(row.querySelector('input[type="number"]').value);
+            return { label: row.querySelector('input[type="text"]').value || `Data ${index + 1}`, value };
+        }).filter(d => !isNaN(d.value));
+
+        if (descriptiveRawData.length > 0) {
+            const values = descriptiveRawData.map(d => d.value);
+            const n = values.length;
+            const sum = values.reduce((a, b) => a + b, 0);
+            const mean = sum / n;
+            const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / (n > 1 ? n - 1 : 1));
+            
+            descriptiveStatsData = { N: n, Minimum: Math.min(...values), Maximum: Math.max(...values), Mean: mean.toFixed(2), "Std. Deviation": stdDev.toFixed(2) };
+            
+            const tableHTML = `
+                <table class="w-full text-sm text-left" id="da-results-table">
+                    <thead class="bg-slate-100/50"><tr class="text-slate-600"><th class="px-4 py-2 font-semibold">Statistik</th><th class="px-4 py-2 font-semibold text-right">Nilai</th></tr></thead>
+                    <tbody class="divide-y divide-slate-200">${Object.entries(descriptiveStatsData).map(([key, value]) => `<tr class="hover:bg-slate-50/50"><td class="px-4 py-2 text-slate-600">${key}</td><td class="px-4 py-2 text-slate-800 font-semibold text-right">${value}</td></tr>`).join('')}</tbody>
+                </table>`;
+            daResultsContainer.innerHTML = tableHTML;
+            document.getElementById('da-ai-interpretation-section').classList.remove('hidden');
+            daCopyBtn.disabled = false;
+            daDownloadBtn.disabled = false;
+            
+            renderDaChart(descriptiveRawData);
+        } else {
+            showNotification('Silakan masukkan data yang valid untuk dihitung.', 'error');
+        }
+    });
+    
+    if(daChartTypeSelect) daChartTypeSelect.addEventListener('change', () => {
+        if (descriptiveRawData && descriptiveRawData.length > 0) {
+            renderDaChart(descriptiveRawData);
+        }
+    });
+    
+    if(daInterpretBtn) daInterpretBtn.addEventListener('click', () => handleInterpretation(daInterpretBtn, daInterpretationOutput, descriptiveStatsData, 'descriptive'));
+    if(daCopyBtn) daCopyBtn.addEventListener('click', () => {
+        const table = document.getElementById('da-results-table');
+        if(table) copyTableToClipboard(table);
+    });
+    if(daDownloadBtn) daDownloadBtn.addEventListener('click', () => {
+        const table = document.getElementById('da-results-table');
+        if(table) downloadTableAsCSV(table, 'statistik_deskriptif.csv');
+    });
+
+
+    // ===================================================================
+    // --- LOGIKA TAB 2: VALIDITAS & RELIABILITAS ---
+    // ===================================================================
+    const vrTableHead = document.getElementById('vr-table-head');
+    const vrTableBody = document.getElementById('vr-table-body');
+    const vrAddRespondentBtn = document.getElementById('vr-add-respondent-btn');
+    const vrAddItemBtn = document.getElementById('vr-add-item-btn');
+    const vrUploadCsvBtn = document.getElementById('vr-upload-csv-btn');
+    const vrCsvFileInput = document.getElementById('vr-csv-file-input');
+    const vrCalculateBtn = document.getElementById('vr-calculate-btn');
+    const vrResultsSection = document.getElementById('vr-results-section');
+    const vrValidityResults = document.getElementById('vr-validity-results');
+    const vrReliabilityResults = document.getElementById('vr-reliability-results');
+    const vrCopyBtn = document.getElementById('vr-copy-btn');
+    const vrDownloadBtn = document.getElementById('vr-download-btn');
+    const vrInterpretBtn = document.getElementById('vr-interpret-btn');
+    const vrInterpretationOutput = document.getElementById('vr-interpretation-output');
+    
+    let vrRespondentCount = 0;
+    let vrItemCount = 5;
+    let vrResultsData = null;
+
+    const renderVrTable = (data = null) => {
+        const items = data ? Object.keys(data[0]).filter(h => h.toLowerCase() !== 'responden') : Array.from({length: vrItemCount}, (_, i) => `Item ${i + 1}`);
+        vrItemCount = items.length;
+
+        let headHTML = '<tr><th class="px-4 py-2 font-semibold text-slate-600">Responden</th>';
+        items.forEach(item => {
+            headHTML += `<th class="px-4 py-2 font-semibold text-slate-600 text-center">${item}</th>`;
+        });
+        headHTML += '</tr>';
+        vrTableHead.innerHTML = headHTML;
+
+        vrTableBody.innerHTML = '';
+        const rowCount = data ? data.length : 10;
+        vrRespondentCount = 0;
+        for (let i = 0; i < rowCount; i++) {
+            addVrRespondentRow(data ? data[i] : null, items);
+        }
+    };
+
+    const addVrRespondentRow = (rowData = null, items = null) => {
+        vrRespondentCount++;
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/50';
+        let rowHTML = `<td class="px-4 py-2 text-slate-500 font-semibold">Responden ${vrRespondentCount}</td>`;
+        
+        const currentItems = items || Array.from({length: vrItemCount}, (_, i) => `Item ${i + 1}`);
+        currentItems.forEach(itemKey => {
+            const value = rowData ? rowData[itemKey] || '' : '';
+            rowHTML += `<td class="px-2 py-1"><input type="number" class="bg-transparent p-1 w-full text-center focus:outline-none focus:ring-1 focus:ring-orange-500 rounded" value="${value}" placeholder="-"></td>`;
+        });
+        tr.innerHTML = rowHTML;
+        vrTableBody.appendChild(tr);
+    };
+
+    if (vrTableHead) {
+        renderVrTable();
+        vrAddRespondentBtn.addEventListener('click', addVrRespondentRow);
+        vrAddItemBtn.addEventListener('click', () => {
+            vrItemCount++;
+            renderVrTable();
+        });
+        vrUploadCsvBtn.addEventListener('click', () => vrCsvFileInput.click());
+        vrCsvFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    dynamicTyping: true,
+                    complete: (results) => {
+                        if (results.data.length > 0 && results.meta.fields.length > 1) {
+                            renderVrTable(results.data);
+                            showNotification('CSV berhasil di-upload!', 'success');
+                        } else {
+                            showNotification('Format CSV tidak sesuai.', 'error');
+                        }
+                    }
+                });
+            }
+            e.target.value = '';
+        });
+
+        vrCalculateBtn.addEventListener('click', () => {
+            // Placeholder untuk hasil
+            const validityData = {
+                title: "Uji Validitas (Pearson)",
+                items: [
+                    { item: "Item 1", r_hitung: 0.850, keterangan: "Valid" },
+                    { item: "Item 2", r_hitung: 0.210, keterangan: "Tidak Valid" },
+                    { item: "Item 3", r_hitung: 0.910, keterangan: "Valid" },
+                    { item: "Item 4", r_hitung: 0.760, keterangan: "Valid" },
+                    { item: "Item 5", r_hitung: 0.880, keterangan: "Valid" }
+                ]
+            };
+            const reliabilityData = {
+                title: "Uji Reliabilitas (Cronbach's Alpha)",
+                value: 0.785,
+                keterangan: "Reliabel"
+            };
+            vrResultsData = { validity: validityData, reliability: reliabilityData }; // Simpan hasil
+
+            vrValidityResults.innerHTML = `
+                <table class="w-full text-sm text-left" id="vr-validity-table">
+                    <thead class="bg-slate-100/50"><tr class="text-slate-600"><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">r-hitung</th><th class="px-4 py-2 text-right">Keterangan</th></tr></thead>
+                    <tbody class="divide-y divide-slate-200">
+                        ${validityData.items.map(item => `<tr><td class="px-4 py-2">${item.item}</td><td class="px-4 py-2 text-right">${item.r_hitung.toFixed(3)}</td><td class="px-4 py-2 text-right font-semibold ${item.keterangan === 'Valid' ? 'text-green-600' : 'text-red-600'}">${item.keterangan}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+            vrReliabilityResults.innerHTML = `
+                <table class="w-full text-sm text-left" id="vr-reliability-table">
+                    <thead class="bg-slate-100/50"><tr class="text-slate-600"><th class="px-4 py-2">Statistik</th><th class="px-4 py-2 text-right">Nilai</th></tr></thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="px-4 py-2 text-slate-600">Cronbach's Alpha</td>
+                            <td class="px-4 py-2 text-slate-800 font-semibold text-right">${reliabilityData.value}</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 text-slate-600">Keterangan</td>
+                            <td class="px-4 py-2 text-slate-800 font-semibold text-right">${reliabilityData.keterangan}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+            vrResultsSection.classList.remove('hidden');
+            document.getElementById('vr-ai-interpretation-section').classList.remove('hidden');
+            vrCopyBtn.disabled = false;
+            vrDownloadBtn.disabled = false;
+        });
+        
+        vrInterpretBtn.addEventListener('click', () => handleInterpretation(vrInterpretBtn, vrInterpretationOutput, vrResultsData, 'validity_reliability'));
+        
+        vrCopyBtn.addEventListener('click', () => {
+            const validityTable = document.getElementById('vr-validity-table');
+            const reliabilityTable = document.getElementById('vr-reliability-table');
+            let text = 'Uji Validitas\n';
+            validityTable.querySelectorAll('tr').forEach(row => {
+                const rowData = [];
+                row.querySelectorAll('th, td').forEach(cell => rowData.push(cell.innerText));
+                text += rowData.join('\t') + '\n';
+            });
+            text += '\nUji Reliabilitas\n';
+            reliabilityTable.querySelectorAll('tr').forEach(row => {
+                const rowData = [];
+                row.querySelectorAll('th, td').forEach(cell => rowData.push(cell.innerText));
+                text += rowData.join('\t') + '\n';
+            });
+            navigator.clipboard.writeText(text).then(() => showNotification('Tabel hasil berhasil disalin!'));
+        });
+
+        vrDownloadBtn.addEventListener('click', () => {
+            const validityTable = document.getElementById('vr-validity-table');
+            const reliabilityTable = document.getElementById('vr-reliability-table');
+            let csv = ['Uji Validitas'];
+            validityTable.querySelectorAll('tr').forEach(row => {
+                let rowData = [];
+                row.querySelectorAll('th, td').forEach(cell => {
+                    let text = cell.innerText.replace(/"/g, '""');
+                    if (text.includes(',')) text = `"${text}"`;
+                    rowData.push(text);
+                });
+                csv.push(rowData.join(','));
+            });
+            csv.push(''); // Baris kosong
+            csv.push('Uji Reliabilitas');
+            reliabilityTable.querySelectorAll('tr').forEach(row => {
+                let rowData = [];
+                row.querySelectorAll('th, td').forEach(cell => {
+                    let text = cell.innerText.replace(/"/g, '""');
+                    if (text.includes(',')) text = `"${text}"`;
+                    rowData.push(text);
+                });
+                csv.push(rowData.join(','));
+            });
+            
+            const csvContent = "data:text/csv;charset=utf-8," + csv.join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", 'hasil_uji_validitas_reliabilitas.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showNotification('Tabel hasil berhasil diunduh!');
+        });
+    }
+
+
+    // ===================================================================
+    // --- LOGIKA TAB 3: UJI NORMALITAS ---
+    // ===================================================================
+    const normInput = document.getElementById('norm-input-data');
+    const normCalculateBtn = document.getElementById('norm-calculate-btn');
+    const normResultsSection = document.getElementById('norm-results-section');
+    const normResultsTable = document.getElementById('norm-results-table');
+    const normConclusion = document.getElementById('norm-conclusion');
+    const normVisualizationSection = document.getElementById('norm-visualization-section');
+    let normChartInstance = null;
+    
+    if (normCalculateBtn) {
+        normCalculateBtn.addEventListener('click', () => {
+            const values = normInput.value.trim().split('\n').map(v => parseFloat(v)).filter(v => !isNaN(v));
+            if (values.length < 5) {
+                showNotification('Masukkan minimal 5 data numerik yang valid.', 'error');
+                return;
+            }
+
+            // Placeholder untuk hasil uji
+            const testResult = {
+                statistic: 0.978,
+                p_value: 0.891
+            };
+            const isNormal = testResult.p_value > 0.05;
+
+            normResultsTable.innerHTML = `
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-100/50"><tr class="text-slate-600"><th class="px-4 py-2">Statistik</th><th class="px-4 py-2 text-right">Nilai</th></tr></thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr><td class="px-4 py-2">Statistic</td><td class="px-4 py-2 text-right">${testResult.statistic.toFixed(3)}</td></tr>
+                        <tr><td class="px-4 py-2">P-value (Sig.)</td><td class="px-4 py-2 text-right">${testResult.p_value.toFixed(3)}</td></tr>
+                    </tbody>
+                </table>
+            `;
+            normConclusion.innerHTML = isNormal 
+                ? '<span class="text-green-600">Kesimpulan: Data terdistribusi normal (p > 0.05).</span>'
+                : '<span class="text-red-600">Kesimpulan: Data tidak terdistribusi normal (p < 0.05).</span>';
+            
+            normResultsSection.classList.remove('hidden');
+            normVisualizationSection.classList.remove('hidden');
+
+            // Placeholder untuk Q-Q Plot
+            const ctx = document.getElementById('norm-chart').getContext('2d');
+            if (normChartInstance) normChartInstance.destroy();
+            
+            const sortedValues = [...values].sort((a,b) => a - b);
+            
+            normChartInstance = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Q-Q Plot',
+                        data: sortedValues.map((val, i) => ({ x: i / (sortedValues.length -1) * 100, y: val })), // Simplified theoretical quantiles
+                        backgroundColor: '#f97316'
+                    }, {
+                        type: 'line',
+                        label: 'Garis Normal',
+                        data: [{x: 0, y: Math.min(...values)}, {x: 100, y: Math.max(...values)}],
+                        borderColor: '#475569',
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Theoretical Quantiles' } },
+                        y: { title: { display: true, text: 'Sample Quantiles' } }
+                    }
+                }
+            });
+        });
+    }
+
+});
+</script>
+{% endblock %}

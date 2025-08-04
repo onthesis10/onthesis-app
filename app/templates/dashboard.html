@@ -1,0 +1,129 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - OnThesis{% endblock %}
+
+{% block content %}
+<!-- 
+    Kontainer utama diubah menjadi tema oranye cerah.
+    Struktur layout "fit" tetap dipertahankan dengan flexbox vertikal.
+-->
+<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
+
+    <!-- Bagian Sambutan (flex-shrink-0 agar tidak membesar) -->
+    <header class="mb-8 flex-shrink-0">
+        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">
+            Selamat Datang Kembali!
+        </h1>
+        <p class="text-lg text-orange-800/80 mt-1">Akses cepat ke semua fitur andalan Anda di bawah ini.</p>
+    </header>
+
+    <!-- 
+        Grid Fitur (flex-grow dan overflow-y-auto agar bisa di-scroll jika perlu,
+        tanpa membuat seluruh halaman ikut ter-scroll).
+    -->
+    <div class="flex-grow overflow-y-auto pr-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+            <!-- Kartu Fitur: Search References (Gaya Cerah) -->
+            <a href="{{ url_for('search_references') }}" class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                <div class="flex-shrink-0 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-teal-500" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6Zm-1.5 13.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5Zm-4-8.5h4v4h-4v-4Z"/></svg>
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-xl font-semibold text-slate-800">Search References</h2>
+                    <p class="text-slate-500 mt-2">
+                        Akses jutaan jurnal dan referensi ilmiah dari sumber terpercaya.
+                    </p>
+                </div>
+                <div class="mt-4 text-sm font-semibold text-teal-600">
+                    Buka Fitur &rarr;
+                </div>
+            </a>
+
+            <!-- Kartu Fitur: Manajemen Sitasi (Gaya Cerah) -->
+            <a href="{{ url_for('citation_management') }}" class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                <div class="flex-shrink-0 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-teal-500" viewBox="0 0 24 24" fill="currentColor"><path d="M14 17H4v2h10v-2Zm6-8H4v2h16V9Z M4 15h16v-2H4v2ZM4 5v2h16V5H4Z"/></svg>
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-xl font-semibold text-slate-800">Manajemen Sitasi</h2>
+                    <p class="text-slate-500 mt-2">
+                        Kelola daftar pustaka dan format kutipan secara otomatis.
+                    </p>
+                </div>
+                <div class="mt-4 text-sm font-semibold text-teal-600">
+                    Buka Fitur &rarr;
+                </div>
+            </a>
+
+            <!-- Kartu Fitur: Parafrase AI (Gaya Cerah) -->
+            <a href="{{ url_for('paraphrase_ai') }}" class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                <div class="flex-shrink-0 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-teal-500" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-xl font-semibold text-slate-800">Parafrase AI</h2>
+                    <p class="text-slate-500 mt-2">
+                        Ubah tulisan Anda menjadi lebih akademis dan bebas plagiarisme.
+                    </p>
+                </div>
+                <div class="mt-4 text-sm font-semibold text-teal-600">
+                    Buka Fitur &rarr;
+                </div>
+            </a>
+
+            <!-- Kartu Fitur: Curhat AI (Gaya Cerah) -->
+            <a href="{{ url_for('chat_ai') }}" class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                <div class="flex-shrink-0 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-teal-500" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2Z"/></svg>
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-xl font-semibold text-slate-800">Curhat AI</h2>
+                    <p class="text-slate-500 mt-2">
+                        Butuh teman bicara? Diskusikan ide atau keluh kesah Anda.
+                    </p>
+                </div>
+                <div class="mt-4 text-sm font-semibold text-teal-600">
+                    Buka Fitur &rarr;
+                </div>
+            </a>
+
+            <!-- Kartu Fitur: Asisten AI (PRO) (Gaya Cerah) -->
+            <a href="{{ url_for('writing_assistant') }}" class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col relative">
+                <span class="absolute top-4 right-4 text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-semibold">PRO</span>
+                <div class="flex-shrink-0 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-amber-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27Z"/></svg>
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-xl font-semibold text-slate-800">Asisten AI</h2>
+                    <p class="text-slate-500 mt-2">
+                        Dapatkan bantuan penulisan cerdas untuk skripsi Anda.
+                    </p>
+                </div>
+                <div class="mt-4 text-sm font-semibold text-amber-600">
+                    Buka Fitur &rarr;
+                </div>
+            </a>
+
+            <!-- Kartu Fitur: Analisis Data (PRO) (Gaya Cerah) -->
+            <a href="{{ url_for('data_analysis') }}" class="bg-white/70 backdrop-blur-sm border border-white/80 p-6 rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col relative">
+                <span class="absolute top-4 right-4 text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-semibold">PRO</span>
+                <div class="flex-shrink-0 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-amber-500" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20h4V4h-4v16Zm-6 0h4v-8H4v8Zm12-10v10h4v-10h-4Z"/></svg>
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-xl font-semibold text-slate-800">Analisis Data</h2>
+                    <p class="text-slate-500 mt-2">
+                        Analisis data penelitian Anda dengan bantuan AI.
+                    </p>
+                </div>
+                <div class="mt-4 text-sm font-semibold text-amber-600">
+                    Buka Fitur &rarr;
+                </div>
+            </a>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,312 @@
+{% extends "layout.html" %}
+
+{% block title %}Asisten AI (PRO) - OnThesis{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka untuk fitur baru -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+    // Inisialisasi worker untuk PDF.js
+    if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js`;
+    }
+</script>
+<style>
+    /* Gaya untuk Tab Aktif */
+    .assistant-tab.active-tab {
+        background-color: white;
+        color: #f97316; /* orange-500 */
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    /* Animasi untuk notifikasi */
+    @keyframes fade-in-out {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    .animate-fade-in-out {
+      animation: fade-in-out 4s ease-in-out forwards;
+    }
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #475569; /* slate-600 */
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .action-btn:hover {
+        background-color: white;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        color: #1e293b; /* slate-800 */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Kontainer utama dengan tema oranye cerah dan layout "fit" -->
+<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
+
+    <!-- Header Halaman -->
+    <header class="mb-8 flex-shrink-0 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Asisten Penulisan AI (PRO)</h1>
+        <p class="text-lg text-orange-800/80 mt-1">Akselerasi penulisan skripsi Anda dengan bantuan AI canggih.</p>
+    </header>
+
+    <!-- Navigasi Tab (Centered) -->
+    <div class="mb-6 flex-shrink-0 flex justify-center">
+        <nav class="flex space-x-2 p-1 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl shadow-md" aria-label="Tabs">
+            <button class="assistant-tab active-tab px-6 py-2 text-sm font-semibold text-slate-700 rounded-lg transition-all duration-300">Generator Kerangka</button>
+            <button class="assistant-tab px-6 py-2 text-sm font-semibold text-slate-700 rounded-lg transition-all duration-300">Generator Abstrak</button>
+        </nav>
+    </div>
+
+    <!-- Kontainer Konten Tab (mengisi sisa ruang) -->
+    <div class="flex-grow overflow-hidden">
+        <!-- Konten Tab: Generator Kerangka -->
+        <div id="assistant-tab-outline" class="assistant-tab-content h-full flex flex-col gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
+                <!-- Kolom Input -->
+                <div class="flex flex-col">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-3">Judul Skripsi</h2>
+                    <textarea id="outline-input-title" class="w-full h-full flex-grow p-4 bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl shadow-inner focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="Contoh: Pengaruh Kecerdasan Buatan Terhadap Motivasi Belajar Mahasiswa Informatika"></textarea>
+                </div>
+                <!-- Kolom Output -->
+                <div class="flex flex-col">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-3">Hasil Kerangka</h2>
+                    <div id="outline-output" class="w-full h-full flex-grow p-4 bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl shadow-inner prose prose-sm max-w-none overflow-y-auto">
+                        <p class="text-slate-500 italic">Hasil akan ditampilkan di sini.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-center items-center flex-shrink-0 pt-4">
+                <button id="generate-outline-btn" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-3 px-8 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">Buat Kerangka</button>
+            </div>
+        </div>
+
+        <!-- Konten Tab: Generator Abstrak -->
+        <div id="assistant-tab-abstract" class="assistant-tab-content h-full flex-col gap-6 hidden">
+            <input type="file" id="abstract-file-input" class="hidden" accept=".pdf,.docx">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
+                <!-- Kolom Input -->
+                <div class="flex flex-col">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-xl font-semibold text-slate-800">Teks Lengkap Skripsi</h2>
+                        <button id="import-abstract-btn" class="text-sm font-semibold text-orange-700 hover:text-orange-900 flex items-center gap-1.5 p-1 rounded-md hover:bg-orange-800/10 transition">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            <span>Impor File</span>
+                        </button>
+                    </div>
+                    <textarea id="abstract-input-fulltext" class="w-full h-full flex-grow p-4 bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl shadow-inner focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="Tempelkan seluruh teks skripsi atau impor dari file .docx/.pdf"></textarea>
+                </div>
+                <!-- Kolom Output -->
+                <div class="flex flex-col">
+                     <h2 class="text-xl font-semibold text-slate-800 mb-3">Hasil Abstrak</h2>
+                    <div id="abstract-output" class="w-full h-full flex-grow p-4 bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl shadow-inner prose prose-sm max-w-none overflow-y-auto">
+                        <p class="text-slate-500 italic">Hasil akan ditampilkan di sini.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between items-center flex-shrink-0 pt-4">
+                <div><!-- Placeholder --></div>
+                <button id="generate-abstract-btn" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-3 px-8 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">Buat Abstrak</button>
+                <div class="flex items-center gap-3">
+                    <button id="copy-abstract-btn" class="action-btn">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span>Salin</span>
+                    </button>
+                    <button id="export-abstract-doc-btn" class="action-btn">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span>DOC</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kontainer Notifikasi -->
+<div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Inisialisasi Elemen ---
+    const tabs = document.querySelectorAll('.assistant-tab');
+    const tabContents = document.querySelectorAll('.assistant-tab-content');
+    
+    const generateOutlineBtn = document.getElementById('generate-outline-btn');
+    const outlineInput = document.getElementById('outline-input-title');
+    const outlineOutput = document.getElementById('outline-output');
+    
+    const generateAbstractBtn = document.getElementById('generate-abstract-btn');
+    const abstractInput = document.getElementById('abstract-input-fulltext');
+    const abstractOutput = document.getElementById('abstract-output');
+    const importAbstractBtn = document.getElementById('import-abstract-btn');
+    const abstractFileInput = document.getElementById('abstract-file-input');
+    const copyAbstractBtn = document.getElementById('copy-abstract-btn');
+    const exportAbstractDocBtn = document.getElementById('export-abstract-doc-btn');
+
+    const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true, openLinksInNewWindow: true });
+
+    // --- Fungsi Notifikasi ---
+    const showNotification = (message, type = 'success') => {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+        
+        const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+        const notif = document.createElement('div');
+        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-out`;
+        notif.textContent = message;
+        
+        container.appendChild(notif);
+        setTimeout(() => { notif.remove(); }, 4000);
+    };
+
+    // --- Logika Navigasi Tab ---
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active-tab'));
+            tab.classList.add('active-tab');
+            
+            tabContents.forEach(content => content.classList.add('hidden'));
+            tabContents[index].classList.remove('hidden');
+            tabContents[index].classList.add('flex');
+        });
+    });
+
+    // --- Logika Impor File ---
+    importAbstractBtn.addEventListener('click', () => abstractFileInput.click());
+    abstractFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        showNotification('Memproses file...', 'success');
+        try {
+            let textContent = '';
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const text = await page.getTextContent();
+                    textContent += text.items.map(s => s.str).join(' ');
+                }
+            } else if (file.name.toLowerCase().endsWith('.docx')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                textContent = result.value;
+            } else {
+                throw new Error("Format file tidak didukung.");
+            }
+            abstractInput.value = textContent;
+            showNotification('File berhasil diimpor!', 'success');
+        } catch (error) {
+            showNotification(`Error: ${error.message}`, 'error');
+        } finally {
+            e.target.value = '';
+        }
+    });
+
+    // --- Logika Ekspor & Salin ---
+    const setupExportListeners = (copyBtn, docBtn, outputDiv) => {
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = outputDiv.innerText || outputDiv.textContent;
+            if (!textToCopy || outputDiv.querySelector('.italic')) {
+                 showNotification('Tidak ada hasil untuk disalin.', 'error');
+                 return;
+            }
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showNotification('Hasil berhasil disalin!');
+            });
+        });
+
+        docBtn.addEventListener('click', () => {
+            if (!outputDiv.innerText || outputDiv.querySelector('.italic')) {
+                 showNotification('Tidak ada hasil untuk diekspor.', 'error');
+                 return;
+            }
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+                "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+                "xmlns='http://www.w3.org/TR/REC-html40'>"+
+                "<head><meta charset='utf-8'><title>Export</title></head><body>";
+            const footer = "</body></html>";
+            const sourceHTML = header + outputDiv.innerHTML + footer;
+            
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = 'assistant_onthesis.doc';
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+            showNotification('Berhasil diekspor ke DOC!');
+        });
+    };
+    
+    setupExportListeners(copyAbstractBtn, exportAbstractDocBtn, abstractOutput);
+
+    // --- Fungsi Utama untuk Menghasilkan Konten AI ---
+    async function handleGeneration(button, input, output, task) {
+        const context = input.value.trim();
+        if (!context) {
+            showNotification('Input tidak boleh kosong.', 'error');
+            return;
+        }
+
+        const originalButtonHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `
+            <span class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></span>
+            <span>Memproses...</span>
+        `;
+        output.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-slate-500 italic">AI sedang bekerja, mohon tunggu...</p></div>`;
+
+        try {
+            const response = await fetch('/api/writing-assistant', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ task, context })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Gagal memproses permintaan.');
+            }
+            
+            output.innerHTML = converter.makeHtml(data.generated_text);
+
+        } catch (error) {
+            output.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            showNotification(error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalButtonHTML;
+        }
+    }
+
+    // --- Event Listeners untuk Tombol Generate ---
+    generateOutlineBtn.addEventListener('click', () => {
+        handleGeneration(generateOutlineBtn, outlineInput, outlineOutput, 'generate_outline');
+    });
+
+    generateAbstractBtn.addEventListener('click', () => {
+        handleGeneration(generateAbstractBtn, abstractInput, abstractOutput, 'generate_abstract');
+    });
+});
+</script>
+{% endblock %}

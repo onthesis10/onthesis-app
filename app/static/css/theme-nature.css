@@ -1,0 +1,185 @@
+/* Ganti seluruh isi file theme-nature.css Anda dengan kode ini */
+
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ======================================================================== */
+/* LIGHT MODE STYLES (DEFAULT) */
+/* ======================================================================== */
+:root {
+    --green-primary: #2E7D32;
+    --green-secondary: #66BB6A;
+    --bg-main: #F8F9FA;
+    --bg-card: #FFFFFF;
+    --text-header: #212121;
+    --text-body: #424242;
+    --text-muted: #757575;
+    --border-color: #E0E0E0;
+    --font-heading: 'Lora', serif;
+    --font-body: 'Poppins', sans-serif;
+}
+
+/* ======================================================================== */
+/* DARK MODE STYLES */
+/* ======================================================================== */
+html.dark {
+    --green-primary: #66BB6A;
+    --green-secondary: #4CAF50;
+    --bg-main: #121212;
+    --bg-card: #1E1E1E;
+    --text-header: #E0E0E0;
+    --text-body: #BDBDBD;
+    --text-muted: #9E9E9E;
+    --border-color: #424242;
+}
+
+/* ======================================================================== */
+/* BASE & LAYOUT STYLES */
+/* ======================================================================== */
+body {
+    font-family: var(--font-body);
+    background-color: var(--bg-main);
+    color: var(--text-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.themed-sidebar {
+    background-color: var(--bg-card);
+    border-right: 1px solid var(--border-color);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.sidebar-header {
+    font-family: var(--font-heading);
+    color: var(--green-primary);
+    font-weight: 700;
+    font-size: 1.75rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: color 0.3s, border-color 0.3s;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1.5rem;
+    margin: 0 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.2s ease-in-out;
+}
+.nav-link .nav-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--text-muted);
+    transition: color 0.3s;
+}
+.nav-link:hover {
+    background-color: var(--bg-main);
+    color: var(--green-primary);
+}
+.nav-link:hover .nav-icon {
+    color: var(--green-primary);
+}
+.nav-link.active { 
+    background-color: var(--green-primary);
+    color: white !important;
+    font-weight: 600;
+    box-shadow: 0 4px 12px -1px rgba(46, 125, 50, 0.4);
+}
+html.dark .nav-link.active {
+    box-shadow: 0 4px 15px -1px rgba(102, 187, 106, 0.3);
+}
+.nav-link.active .nav-icon {
+    color: white !important;
+}
+
+.themed-header {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* ======================================================================== */
+/* COMPONENT STYLES */
+/* ======================================================================== */
+.content-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+html.dark .content-card {
+    box-shadow: none;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+.btn-primary {
+    background-color: var(--green-primary);
+    color: white;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+html.dark .btn-primary:hover {
+    box-shadow: 0 4px 20px rgba(102, 187, 106, 0.25);
+}
+.btn-secondary {
+    background-color: transparent;
+    color: var(--text-body);
+    border-color: var(--border-color);
+}
+.btn-secondary:hover {
+    background-color: var(--bg-main);
+    border-color: var(--text-muted);
+}
+
+.form-field {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
+    color: var(--text-body);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+html.dark .form-field {
+    background-color: #2C2C2C;
+}
+.form-field:focus {
+    outline: none;
+    border-color: var(--green-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--green-primary) 25%, transparent);
+}
+
+/* ======================================================================== */
+/* UTILITY & TEXT STYLES */
+/* ======================================================================== */
+.text-header {
+    font-family: var(--font-heading);
+    color: var(--text-header);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+.text-body {
+    color: var(--text-body);
+}
+.text-muted {
+    color: var(--text-muted);
+}

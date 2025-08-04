@@ -1,0 +1,289 @@
+{% extends "layout.html" %}
+
+{% block title %}Parafrase AI - OnThesis{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka untuk fitur baru -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+    /* Animasi untuk notifikasi */
+    @keyframes fade-in-out {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    .animate-fade-in-out {
+      animation: fade-in-out 4s ease-in-out forwards;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Kontainer utama dengan tema oranye cerah dan layout "fit" -->
+<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
+
+    <!-- Header Halaman -->
+    <header class="mb-8 flex-shrink-0 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Parafrase AI</h1>
+        <p class="text-lg text-orange-800/80 mt-1">Ubah tulisan Anda menjadi lebih akademis dengan bantuan AI.</p>
+        
+        <!-- Widget penghitung kuota -->
+        <div id="usage-counter-display" class="hidden mt-4 inline-flex items-center gap-2 bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Sisa Kuota Hari Ini: <strong id="paraphrase-remaining-count">...</strong></span>
+        </div>
+
+    </header>
+
+    <!-- Kontainer utama untuk input, output, dan tombol -->
+    <div class="flex-grow flex flex-col gap-6 overflow-y-auto">
+        
+        <!-- Area Input dan Output (akan mengisi ruang yang tersedia) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
+            <!-- Kolom Teks Asli -->
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold text-slate-800">Teks Asli</h2>
+                    <button id="paste-btn" class="text-sm font-semibold text-orange-700 hover:text-orange-900 flex items-center gap-1.5 p-1 rounded-md hover:bg-orange-800/10 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                        <span>Tempel</span>
+                    </button>
+                </div>
+                <textarea id="paraphrase-input" class="w-full h-full flex-grow p-4 bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl shadow-inner focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="Tempel atau ketik teks yang ingin Anda parafrase di sini..."></textarea>
+            </div>
+            <!-- Kolom Hasil Parafrase -->
+            <div class="flex flex-col">
+                <h2 class="text-xl font-semibold text-slate-800 mb-3">Hasil Parafrase</h2>
+                <div id="paraphrase-output" class="w-full h-full flex-grow p-4 bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl shadow-inner prose prose-sm max-w-none">
+                    <p class="text-slate-500 italic">Hasil parafrase akan ditampilkan di sini setelah Anda menekan tombol.</p>
+                </div>
+                <!-- Tombol Aksi untuk Hasil -->
+                <div id="output-actions" class="flex items-center gap-3 mt-4 flex-shrink-0">
+                    <button id="copy-btn" class="action-btn">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span>Salin Teks</span>
+                    </button>
+                    <button id="export-doc-btn" class="action-btn">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span>Ekspor DOC</span>
+                    </button>
+                    <button id="export-pdf-btn" class="action-btn">
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Ekspor PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tombol Aksi Utama (selalu di bawah) -->
+        <div class="mt-auto pt-6 flex justify-center flex-shrink-0">
+            <button id="paraphrase-btn" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-3 px-10 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Parafrase Sekarang
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Kontainer Notifikasi -->
+<div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
+{% endblock %}
+
+{% block page_scripts %}
+<style>
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #475569; /* slate-600 */
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .action-btn:hover {
+        background-color: white;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        color: #1e293b; /* slate-800 */
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Inisialisasi Elemen ---
+    const paraphraseBtn = document.getElementById('paraphrase-btn');
+    const paraphraseInput = document.getElementById('paraphrase-input');
+    const paraphraseOutput = document.getElementById('paraphrase-output');
+    const pasteBtn = document.getElementById('paste-btn');
+    const copyBtn = document.getElementById('copy-btn');
+    const exportDocBtn = document.getElementById('export-doc-btn');
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true });
+    let isAwaitingResponse = false;
+
+    // --- Logika untuk mengambil dan menampilkan kuota ---
+    const fetchAndDisplayUsage = async () => {
+        const display = document.getElementById('usage-counter-display');
+        try {
+            const response = await fetch(`${window.location.origin}/api/get-usage-status`);
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data.status === 'free') {
+                const countEl = document.getElementById('paraphrase-remaining-count');
+                // PERBAIKAN: Mengakses properti 'limits' dengan benar
+                countEl.textContent = `${data.paraphrase_remaining}/${data.limits['paraphrase']}`;
+                display.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error("Gagal mengambil status kuota:", error);
+        }
+    };
+    fetchAndDisplayUsage();
+
+    // --- Fungsi Notifikasi ---
+    const showNotification = (message, type = 'success') => {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+        
+        const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+        const notif = document.createElement('div');
+        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-out`;
+        notif.textContent = message;
+        
+        container.appendChild(notif);
+        setTimeout(() => { notif.remove(); }, 4000);
+    };
+
+    // --- Event Handler untuk Tombol Aksi ---
+    pasteBtn.addEventListener('click', async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                paraphraseInput.value = text;
+                showNotification('Teks berhasil ditempel!');
+            } else {
+                showNotification('Clipboard kosong.', 'error');
+            }
+        } catch (err) {
+            showNotification('Gagal membaca clipboard. Pastikan Anda telah memberikan izin.', 'error');
+            console.error('Failed to read clipboard contents: ', err);
+        }
+    });
+
+    copyBtn.addEventListener('click', () => {
+        const textToCopy = paraphraseOutput.innerText || paraphraseOutput.textContent;
+        if (!textToCopy || paraphraseOutput.querySelector('.italic')) {
+             showNotification('Tidak ada hasil untuk disalin.', 'error');
+             return;
+        }
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showNotification('Hasil berhasil disalin!');
+        }, () => {
+            showNotification('Gagal menyalin teks.', 'error');
+        });
+    });
+
+    exportDocBtn.addEventListener('click', () => {
+        if (!paraphraseOutput.innerText || paraphraseOutput.querySelector('.italic')) {
+             showNotification('Tidak ada hasil untuk diekspor.', 'error');
+             return;
+        }
+        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+            "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+            "xmlns='http://www.w3.org/TR/REC-html40'>"+
+            "<head><meta charset='utf-8'><title>Export HTML to Word Document</title></head><body>";
+        const footer = "</body></html>";
+        const sourceHTML = header + paraphraseOutput.innerHTML + footer;
+        
+        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+        const fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = 'paraphrase_onthesis.doc';
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+        showNotification('Berhasil diekspor ke DOC!');
+    });
+
+    exportPdfBtn.addEventListener('click', () => {
+        if (!paraphraseOutput.innerText || paraphraseOutput.querySelector('.italic')) {
+             showNotification('Tidak ada hasil untuk diekspor.', 'error');
+             return;
+        }
+        const { jsPDF } = window.jspdf;
+        
+        html2canvas(paraphraseOutput, { scale: 2 }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = canvasWidth / canvasHeight;
+            const imgWidth = pdfWidth - 20; // with 10mm margin on each side
+            const imgHeight = imgWidth / ratio;
+            
+            let heightLeft = imgHeight;
+            let position = 10; // top margin
+
+            pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - 20);
+
+            while (heightLeft > 0) {
+                position = -imgHeight + heightLeft + 10;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                heightLeft -= (pdfHeight - 10);
+            }
+            
+            pdf.save('paraphrase_onthesis.pdf');
+            showNotification('Berhasil diekspor ke PDF!');
+        });
+    });
+
+    // --- Event Handler untuk Tombol Parafrase ---
+    paraphraseBtn.addEventListener('click', async () => {
+        const text = paraphraseInput.value.trim();
+        if (!text || isAwaitingResponse) return;
+
+        isAwaitingResponse = true;
+        paraphraseBtn.disabled = true;
+        const originalButtonHTML = paraphraseBtn.innerHTML;
+        paraphraseBtn.innerHTML = `
+            <span class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></span>
+            <span>Memproses...</span>
+        `;
+        
+        paraphraseOutput.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-slate-500 italic">AI sedang bekerja, mohon tunggu...</p></div>`;
+
+        try {
+            const response = await fetch('/paraphrase', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Gagal memparafrasekan teks.');
+            
+            paraphraseOutput.innerHTML = converter.makeHtml(data.paraphrased_text);
+            fetchAndDisplayUsage(); // Perbarui hitungan setelah berhasil
+
+        } catch (error) {
+            paraphraseOutput.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        } finally {
+            isAwaitingResponse = false;
+            paraphraseBtn.disabled = false;
+            paraphraseBtn.innerHTML = originalButtonHTML;
+        }
+    });
+});
+</script>
+{% endblock %}

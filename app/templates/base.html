@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnThesis - Prototipe Interaktif</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Pustaka Pihak Ketiga -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+    <!-- CSS Kustom Anda -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <style>
+        /* Gaya tambahan untuk memastikan kompatibilitas */
+        body { font-family: 'Inter', sans-serif; }
+        .themed-prose { max-width: none; }
+        .assistant-tab {
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            border-bottom-width: 2px;
+            border-color: transparent;
+        }
+        .analysis-tab {
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            border-bottom-width: 2px;
+            border-color: transparent;
+        }
+        .active-tab { 
+            border-color: #F59E0B; /* amber-500 */
+            color: #F59E0B; 
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900">
+
+    <!-- Layar Pemuatan untuk mencegah Race Condition -->
+    <div id="loading-overlay" class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center hidden">
+        <div class="flex flex-col items-center">
+            <svg class="animate-spin h-10 w-10 text-white mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-white text-lg font-semibold">Memuat profil Anda...</p>
+        </div>
+    </div>
+
+    <!-- Kontainer utama aplikasi -->
+    <div id="main-app-container" class="flex h-screen" style="visibility: hidden;">
+
+        <!-- Sidebar -->
+        <aside class="w-64 themed-sidebar flex flex-col flex-shrink-0">
+            <div class="p-4 border-b border-slate-200 dark:border-white/10">
+                <h1 class="text-2xl font-bold text-amber-600 dark:text-amber-400">OnThesis</h1>
+            </div>
+            <nav class="flex-grow p-4 space-y-2">
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg themed-text-body" data-target="page-dashboard">Dasbor</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg themed-text-body" data-target="page-search-references">Search References</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg themed-text-body" data-target="page-manajemen-sitasi">Manajemen Sitasi</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg themed-text-body" data-target="page-parafrase-ai">Parafrase AI</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 rounded-lg themed-text-body" data-target="page-curhat-ai">Curhat AI</a>
+                <a href="#" class="nav-link pro-feature flex items-center justify-between gap-3 px-4 py-2 rounded-lg themed-text-body" data-target="page-writing-assistant">
+                    <span>Asisten AI</span>
+                    <span class="pro-badge text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-semibold">PRO</span>
+                </a>
+                <a href="#" class="nav-link pro-feature flex items-center justify-between gap-3 px-4 py-2 rounded-lg themed-text-body" data-target="page-analisis-data">
+                    <span>Analisis Data</span>
+                    <span class="pro-badge text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-semibold">PRO</span>
+                </a>
+            </nav>
+            <div class="p-4 border-t border-slate-200 dark:border-white/10">
+                <button id="upgrade-pro-sidebar-btn" class="w-full bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-600 transition-all">Upgrade ke PRO</button>
+            </div>
+        </aside>
+
+        <!-- Konten Utama -->
+        <main class="flex-1 flex flex-col h-screen">
+            <!-- Header -->
+            <header class="flex-shrink-0 bg-white dark:bg-slate-800/50 border-b border-slate-200 dark:border-white/10 flex items-center justify-between p-4">
+                <div></div>
+                <div class="flex items-center gap-4">
+                    <button id="theme-toggle" type="button" class="themed-text-body p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                        <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1zM8 16a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"></path></svg>
+                    </button>
+                    <div class="flex items-center gap-3 cursor-pointer" id="user-profile-button">
+                        <img id="user-photo" class="w-10 h-10 rounded-full" src="https://ui-avatars.com/api/?name=U" alt="User Photo">
+                        <div>
+                            <p id="user-display-name" class="font-semibold themed-text-header">Pengguna</p>
+                            <button id="logout-btn" class="text-xs text-red-500 hover:underline">Keluar</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Area Konten Halaman -->
+            <div class="flex-1 overflow-y-auto p-8">
+                
+                <!-- Konten Dashboard -->
+                <div id="page-dashboard" class="page-content">
+                    <h1 class="text-4xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Selamat Datang!</h1>
+                    <p class="text-lg themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Akses cepat ke semua fitur andalan Anda.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+                        <div class="card-link laptop-card cursor-pointer group" data-target="page-search-references">
+                            <div class="aurora-border-container">
+                                <div class="laptop-screen p-6 flex flex-col justify-between">
+                                    <div>
+                                        <svg class="h-10 w-10 text-amber-500 dark:text-amber-400 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+                                        <h2 class="text-lg font-semibold themed-text-header">Search References</h2>
+                                        <p class="themed-text-body text-sm mt-2">Akses jutaan jurnal dan referensi ilmiah.</p>
+                                    </div>
+                                    <div class="mt-4 text-sm font-semibold text-amber-600 dark:text-amber-400 group-hover:text-amber-500 dark:group-hover:text-yellow-300">Buka Fitur &rarr;</div>
+                                </div>
+                            </div>
+                            <div class="laptop-base"></div>
+                        </div>
+                        <div class="card-link laptop-card cursor-pointer group" data-target="page-manajemen-sitasi">
+                            <div class="aurora-border-container">
+                                <div class="laptop-screen p-6 flex flex-col justify-between">
+                                    <div>
+                                        <svg class="h-10 w-10 text-amber-500 dark:text-amber-400 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                                        <h2 class="text-lg font-semibold themed-text-header">Manajemen Sitasi</h2>
+                                        <p class="themed-text-body text-sm mt-2">Kelola daftar pustaka dan format kutipan.</p>
+                                    </div>
+                                    <div class="mt-4 text-sm font-semibold text-amber-600 dark:text-amber-400 group-hover:text-amber-500 dark:group-hover:text-yellow-300">Buka Fitur &rarr;</div>
+                                </div>
+                            </div>
+                            <div class="laptop-base"></div>
+                        </div>
+                        <div class="card-link laptop-card cursor-pointer group" data-target="page-parafrase-ai">
+                            <div class="aurora-border-container">
+                                <div class="laptop-screen p-6 flex flex-col justify-between">
+                                    <div>
+                                        <svg class="h-10 w-10 text-amber-500 dark:text-amber-400 mb-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                                        <div class="flex items-center justify-between"><h2 class="text-lg font-semibold themed-text-header">Parafrase AI</h2></div>
+                                        <p class="themed-text-body text-sm mt-2">Ubah tulisan Anda menjadi lebih akademis.</p>
+                                    </div>
+                                    <div class="mt-4 text-sm font-semibold text-amber-600 dark:text-amber-400 group-hover:text-amber-500 dark:group-hover:text-yellow-300">Buka Fitur &rarr;</div>
+                                </div>
+                            </div>
+                            <div class="laptop-base"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Konten Search References -->
+                <div id="page-search-references" class="page-content hidden">
+                    <header class="mb-8"><h1 class="text-3xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Search References</h1><p class="themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Temukan jutaan referensi ilmiah.</p></header>
+                    <section class="themed-card p-6 rounded-xl shadow-lg">
+                        <div class="flex flex-col sm:flex-row gap-3"><input id="search-query-input" type="text" placeholder="Cari jurnal tentang kecerdasan buatan..." class="w-full px-4 py-3 themed-input rounded-lg focus:ring-2 focus:ring-amber-400 transition placeholder-slate-500 dark:placeholder-slate-400"><button id="search-references-btn" class="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold px-6 py-3 rounded-lg flex items-center justify-center gap-2">Cari</button></div>
+                        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="sumber-container"><label class="block text-sm font-medium themed-text-body mb-1">Sumber</label><select id="search-source-select" class="w-full p-2 themed-input rounded-md focus:ring-1 focus:ring-amber-400"><option value="core">CORE</option><option value="doaj">DOAJ</option><option value="google-scholar">Google Scholar (Tab Baru)</option><option value="sinta">Sinta (Tab Baru)</option></select></div>
+                            <div class="tahun-container"><label class="block text-sm font-medium themed-text-body mb-1">Dari Tahun</label><select id="search-year-select" class="w-full p-2 themed-input rounded-md focus:ring-1 focus:ring-amber-400"><option value="">Semua</option></select></div>
+                        </div>
+                    </section>
+                    <section id="search-results-container" class="mt-8"></section>
+                </div>
+
+                <!-- Konten Manajemen Sitasi -->
+                <div id="page-manajemen-sitasi" class="page-content hidden">
+                    <header class="mb-8 flex flex-wrap justify-between items-center gap-4">
+                        <div><h1 class="text-3xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Manajemen Sitasi</h1><p class="themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Kelola semua referensi Anda.</p></div>
+                        <div class="flex items-center gap-3"><button id="upload-article-btn" class="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg><span>Upload Artikel</span></button><button id="open-manual-add-btn" class="bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-900 font-semibold px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>Tambah Manual</span></button></div>
+                    </header>
+                    <input type="file" id="hidden-file-input" class="hidden" accept=".pdf,.docx">
+                    <section class="themed-card p-6 rounded-xl shadow-lg">
+                        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-semibold themed-text-header">Daftar Referensi</h2><div class="flex items-center gap-2"><label class="text-sm font-medium themed-text-body">Gaya Sitasi:</label><select id="citation-style-select" class="p-2 themed-input rounded-md focus:ring-1 focus:ring-amber-400 text-sm"><option value="apa">APA 7</option><option value="mla">MLA 9</option><option value="chicago">Chicago</option></select></div></div>
+                        <div id="references-list" class="space-y-4"></div>
+                    </section>
+                </div>
+
+                <!-- Konten Curhat AI -->
+                <div id="page-curhat-ai" class="page-content hidden">
+                    <header class="mb-8"><h1 class="text-3xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Curhat AI</h1><p class="themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Tanyakan apa saja seputar penelitian Anda.</p></header>
+                    <div class="themed-card rounded-xl shadow-lg flex flex-col h-[70vh]">
+                        <div id="chat-window" class="flex-1 p-6 space-y-6 overflow-y-auto"></div>
+                        <div class="p-6 border-t border-slate-200 dark:border-white/10"><div class="flex items-center gap-3"><input type="text" id="chat-input" placeholder="Ketik pertanyaan Anda..." class="w-full px-4 py-3 themed-input rounded-lg focus:ring-2 focus:ring-amber-400 transition placeholder-slate-500 dark:placeholder-slate-400"><button id="chat-send-btn" class="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold p-3 rounded-lg flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button></div></div>
+                    </div>
+                </div>
+
+                <!-- Konten Parafrase AI -->
+                <div id="page-parafrase-ai" class="page-content hidden">
+                    <header class="mb-8"><h1 class="text-3xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Parafrase AI</h1><p class="themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Ubah tulisan Anda menjadi lebih akademis dengan bantuan AI.</p></header>
+                    <div class="themed-card p-6 rounded-xl shadow-lg">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div><h2 class="text-xl font-semibold themed-text-header">Teks Asli</h2><textarea id="paraphrase-input" rows="12" class="mt-3 w-full p-3 themed-input rounded-lg focus:ring-2 focus:ring-amber-400 placeholder-slate-500 dark:placeholder-slate-400" placeholder="Tempel teks Anda di sini..."></textarea></div>
+                            <div><h2 class="text-xl font-semibold themed-text-header">Hasil Parafrase</h2><div id="paraphrase-output" class="mt-3 w-full p-3 h-full min-h-[260px] bg-slate-100 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-white/10 rounded-lg themed-prose prose-sm dark:prose-invert"></div></div>
+                        </div>
+                        <div class="mt-6 flex justify-center"><button id="paraphrase-btn" class="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">Parafrase Sekarang</button></div>
+                    </div>
+                </div>
+
+                <!-- Konten Asisten AI -->
+                <div id="page-writing-assistant" class="page-content hidden">
+                    <header class="mb-8"><h1 class="text-3xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Asisten Penulisan AI (PRO)</h1><p class="themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Akselerasi penulisan skripsi Anda dengan bantuan AI canggih.</p></header>
+                    <div class="mb-6 border-b border-slate-200 dark:border-white/10"><nav class="flex space-x-4" aria-label="Tabs"><button class="assistant-tab active-tab" data-target="assistant-tab-outline">Generator Kerangka</button><button class="assistant-tab" data-target="assistant-tab-abstract">Generator Abstrak</button></nav></div>
+                    <div id="assistant-tab-outline" class="assistant-tab-content"><div class="themed-card p-6 rounded-xl shadow-lg"><h2 class="text-xl font-semibold themed-text-header">Generator Kerangka Bab</h2><p class="themed-text-body text-sm mt-1 mb-4">Masukkan judul skripsi Anda, dan biarkan AI menyusun kerangka bab yang logis dan terstruktur.</p><textarea id="outline-input-title" rows="2" class="w-full p-3 themed-input rounded-lg focus:ring-2 focus:ring-amber-400 placeholder-slate-500 dark:placeholder-slate-400" placeholder="Contoh: Pengaruh Kecerdasan Buatan Terhadap Motivasi Belajar Mahasiswa Informatika"></textarea><div class="mt-4 flex justify-center"><button id="generate-outline-btn" class="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">Buat Kerangka</button></div><div class="mt-6"><h3 class="text-lg font-semibold themed-text-header">Hasil Kerangka:</h3><div id="outline-output" class="mt-3 w-full p-4 min-h-[200px] bg-slate-100 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-white/10 rounded-lg themed-prose prose-sm dark:prose-invert"></div></div></div></div>
+                    <div id="assistant-tab-abstract" class="assistant-tab-content hidden"><div class="themed-card p-6 rounded-xl shadow-lg"><h2 class="text-xl font-semibold themed-text-header">Generator Abstrak</h2><p class="themed-text-body text-sm mt-1 mb-4">Tempelkan seluruh isi skripsi Anda (atau bagian pentingnya), dan AI akan membuatkan draf abstrak yang ringkas dan padat.</p><textarea id="abstract-input-fulltext" rows="10" class="w-full p-3 themed-input rounded-lg focus:ring-2 focus:ring-amber-400 placeholder-slate-500 dark:placeholder-slate-400" placeholder="Tempelkan seluruh teks skripsi Anda di sini..."></textarea><div class="mt-4 flex justify-center"><button id="generate-abstract-btn" class="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">Buat Abstrak</button></div><div class="mt-6"><h3 class="text-lg font-semibold themed-text-header">Hasil Abstrak:</h3><div id="abstract-output" class="mt-3 w-full p-4 min-h-[200px] bg-slate-100 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-white/10 rounded-lg themed-prose prose-sm dark:prose-invert"></div></div></div></div>
+                </div>
+
+                <!-- Konten Profil Pengguna -->
+                <div id="page-profil-pengguna" class="page-content hidden">
+                    <header class="mb-8"><h1 class="text-3xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Profil Pengguna</h1><p class="themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Kelola informasi akun dan langganan Anda.</p></header>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="themed-card p-6 rounded-xl shadow-lg"><h2 class="text-xl font-semibold themed-text-header mb-4">Informasi Akun</h2><form id="profile-update-form"><div class="space-y-4"><div><label class="block text-sm font-medium themed-text-body">Foto Profil</label><img id="profile-page-photo" class="w-20 h-20 rounded-full mt-2" src="" alt="Foto Profil"></div><div><label for="profile-name-input" class="block text-sm font-medium themed-text-body">Nama Lengkap</label><input id="profile-name-input" type="text" class="mt-1 w-full p-2 themed-input rounded-md focus:ring-1 focus:ring-amber-400"></div><div><label class="block text-sm font-medium themed-text-body">Email</label><p id="profile-email-display" class="themed-text-header font-semibold mt-1"></p></div><button type="submit" id="save-profile-btn" class="w-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold px-4 py-2 rounded-lg">Simpan Perubahan</button></div></form></div>
+                        <div class="themed-card p-6 rounded-xl shadow-lg"><h2 class="text-xl font-semibold themed-text-header mb-4">Status Langganan</h2><div class="text-center p-8 bg-slate-100 dark:bg-slate-800/50 rounded-lg"><p class="themed-text-body">Status Anda saat ini:</p><p id="profile-status-badge" class="text-2xl font-bold mt-2"></p><button id="upgrade-now-btn" class="hidden mt-6 w-full bg-gradient-to-r from-green-500 to-emerald-400 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all">Upgrade ke PRO Sekarang</button></div></div>
+                    </div>
+                </div>
+
+                <!-- Konten Analisis Data -->
+                <div id="page-analisis-data" class="page-content hidden">
+                    <header class="mb-8"><h1 class="text-3xl font-bold themed-text-header" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Analisis Data Cerdas</h1><p class="themed-text-body" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Input data Anda dan dapatkan analisis statistik secara instan.</p></header>
+                    <div class="mb-6 border-b border-slate-200 dark:border-white/10"><nav class="-mb-px flex space-x-6" aria-label="Tabs"><button class="analysis-tab active-tab" data-target="analysis-tab-descriptive">Statistik Deskriptif</button><button class="analysis-tab" data-target="analysis-tab-frequency">Analisis Frekuensi</button><button class="analysis-tab" data-target="analysis-tab-correlation">Uji Korelasi</button></nav></div>
+                    <div id="analysis-tab-descriptive" class="analysis-tab-content"><div class="grid grid-cols-1 lg:grid-cols-5 gap-8"><div class="lg:col-span-3 themed-card p-6 rounded-xl shadow-lg"><h2 class="text-xl font-semibold themed-text-header mb-4">Input Data</h2><div class="flex items-center gap-4 mb-4"><button id="da-add-row-btn" class="bg-slate-200 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-700 text-amber-600 dark:text-amber-400 font-semibold px-4 py-2 rounded-lg text-sm w-full">+ Tambah Baris</button><button id="da-upload-csv-btn" class="bg-slate-200 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-700 text-amber-600 dark:text-amber-400 font-semibold px-4 py-2 rounded-lg text-sm w-full">Upload CSV</button><input type="file" id="da-csv-file-input" class="hidden" accept=".csv"></div><div class="max-h-96 overflow-y-auto pr-2"><table class="w-full text-sm text-left"><thead class="themed-text-body uppercase bg-slate-50 dark:bg-slate-800"><tr><th class="px-4 py-2 w-12">No.</th><th class="px-4 py-2">Label (Opsional)</th><th class="px-4 py-2">Nilai</th><th class="px-4 py-2 w-12"></th></tr></thead><tbody id="da-input-tbody"></tbody></table></div></div><div class="lg:col-span-2 themed-card p-6 rounded-xl shadow-lg"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold themed-text-header">Hasil Analisis</h2><button id="da-export-pdf-btn" class="hidden bg-red-500 hover:bg-red-600 text-white font-semibold px-3 py-1 rounded-lg text-xs">Export PDF</button></div><div id="da-results-container" class="space-y-3 mb-4"><p class="themed-text-body italic">Masukkan data untuk melihat hasilnya.</p></div><div id="da-ai-interpretation-section" class="hidden"><h3 class="text-lg font-semibold themed-text-header mt-6 mb-2">Interpretasi AI</h3><button id="da-interpret-btn" class="w-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 font-semibold px-4 py-2 rounded-lg mb-3">Jelaskan Hasil Ini</button><div id="da-interpretation-output" class="p-4 min-h-[100px] bg-slate-100 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-white/10 rounded-lg themed-prose prose-sm dark:prose-invert"></div></div></div></div><div id="da-visualization-section" class="themed-card p-6 rounded-xl shadow-lg mt-8 hidden"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold themed-text-header">Visualisasi Data</h2><select id="da-chart-type-select" class="p-2 themed-input rounded-md focus:ring-1 focus:ring-amber-400 text-sm"><option value="bar">Histogram</option><option value="pie">Pie Chart</option></select></div><canvas id="da-chart"></canvas></div></div>
+                    <div id="analysis-tab-frequency" class="analysis-tab-content hidden"><p class="themed-text-body text-center p-8">Fitur Analisis Frekuensi akan segera hadir.</p></div>
+                    <div id="analysis-tab-correlation" class="analysis-tab-content hidden"><p class="themed-text-body text-center p-8">Fitur Uji Korelasi akan segera hadir.</p></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Kontainer Notifikasi -->
+    <div id="notification-container" class="fixed top-5 right-5 z-50 w-80"></div>
+
+    <!-- Modal Upgrade PRO -->
+    <div id="pro-upgrade-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-8 max-w-sm w-full">
+            <h3 class="text-2xl font-bold themed-text-header mb-4">Upgrade ke PRO</h3>
+            <p class="themed-text-body mb-6">Buka semua fitur canggih untuk mempercepat skripsi Anda!</p>
+            <div class="flex justify-end gap-4">
+                <button id="close-upgrade-modal-btn" class="themed-text-body font-semibold py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">Nanti Saja</button>
+                <button id="confirm-upgrade-btn" class="bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-600">Upgrade Sekarang</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Tambah Manual -->
+    <div id="manualAddModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-8 max-w-lg w-full">
+            <h3 class="text-2xl font-bold themed-text-header mb-6">Tambah Referensi Manual</h3>
+            <form id="manual-add-form" class="space-y-4">
+                <input type="text" name="title" placeholder="Judul Artikel" class="w-full p-2 themed-input rounded-md" required>
+                <input type="text" name="author" placeholder="Penulis (e.g., Doe, J.)" class="w-full p-2 themed-input rounded-md" required>
+                <input type="number" name="year" placeholder="Tahun" class="w-full p-2 themed-input rounded-md" required>
+                <input type="text" name="journal" placeholder="Nama Jurnal/Publikasi" class="w-full p-2 themed-input rounded-md">
+                <div class="flex justify-end gap-4 pt-4">
+                    <button type="button" id="cancel-manual-add-btn" class="themed-text-body font-semibold py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">Batal</button>
+                    <button type="submit" class="bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-600">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+</body>
+</html>

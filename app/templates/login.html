@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - OnThesis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+        .overlay { background-color: rgba(0, 0, 0, 0.5); }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s ease-in-out infinite;
+        }
+        .spinner-light { border-top-color: #fff; }
+        .spinner-dark {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-top-color: #4a5568;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="overlay flex items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-md">
+            <div class="bg-white shadow-2xl rounded-2xl p-8">
+                <h1 class="text-3xl font-bold text-center text-teal-600 mb-2">OnThesis</h1>
+                <p class="text-center text-gray-500 mb-8">Silakan masuk untuk melanjutkan</p>
+                
+                <form id="login-form" method="POST" action="{{ url_for('login') }}">
+                    <div class="mb-4">
+                        <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Username</label>
+                        <input type="text" id="username" name="username" required class="shadow-inner appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div class="mb-6">
+                        <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                        <input type="password" id="password" name="password" required class="shadow-inner appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                      {% if messages %}
+                        {% for category, message in messages %}
+                          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
+                            <strong class="font-bold">Error!</strong>
+                            <span class="block sm:inline">{{ message }}</span>
+                          </div>
+                        {% endfor %}
+                      {% endif %}
+                    {% endwith %}
+
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="login-btn" type="submit" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center justify-center disabled:opacity-75">
+                            <span class="btn-text">Masuk</span>
+                            <div class="spinner spinner-light hidden ml-3"></div>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="flex items-center my-4">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink mx-4 text-gray-500 text-sm">ATAU</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+
+                <!-- Tombol Login dengan Google -->
+                <button id="google-login-btn" class="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-50 focus:outline-none focus:shadow-outline transition-colors duration-300 disabled:opacity-75">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="btn-icon w-5 h-5 mr-3">
+                    <span class="btn-text">Masuk dengan Google</span>
+                    <div class="spinner spinner-dark hidden ml-3"></div>
+                </button>
+                
+                <div id="login-error" class="text-red-500 text-sm text-center mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase JS SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        // Konfigurasi Firebase Anda
+        const firebaseConfig = {
+            apiKey: "AIzaSyAEkuE7wK6knIXwejAfjSb8oxArj4gsH5w",
+            authDomain: "onthesis.firebaseapp.com",
+            projectId: "onthesis",
+            storageBucket: "onthesis.firebasestorage.app",
+            messagingSenderId: "258634496518",
+            appId: "1:258634496518:web:5053a01aeb4d8367366187",
+            measurementId: "G-FMM4FZ6GN2"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const loginError = document.getElementById('login-error');
+        
+        const setLoadingState = (button, isLoading) => {
+            const text = button.querySelector('.btn-text');
+            const spinner = button.querySelector('.spinner');
+            const icon = button.querySelector('.btn-icon');
+
+            button.disabled = isLoading;
+            if (isLoading) {
+                text.classList.add('hidden');
+                if (icon) icon.classList.add('hidden');
+                spinner.classList.remove('hidden');
+            } else {
+                text.classList.remove('hidden');
+                if (icon) icon.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
+        };
+
+        loginForm.addEventListener('submit', () => setLoadingState(loginBtn, true));
+
+        googleLoginBtn.addEventListener('click', () => {
+            loginError.textContent = '';
+            setLoadingState(googleLoginBtn, true);
+            
+            signInWithPopup(auth, provider)
+                .then(result => result.user.getIdToken())
+                .then(idToken => {
+                    return fetch('/api/verify-google-token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: idToken }),
+                    });
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.message || 'Verifikasi server gagal.') });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success' && data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        throw new Error(data.message || 'Terjadi kesalahan tidak diketahui.');
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error saat login dengan Google:", error);
+                    loginError.textContent = `Gagal login: ${error.message}`;
+                })
+                .finally(() => {
+                    setLoadingState(googleLoginBtn, false);
+                });
+        });
+    </script>
+</body>
+</html>
