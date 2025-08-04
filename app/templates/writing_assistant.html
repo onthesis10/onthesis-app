@@ -62,6 +62,14 @@
     <header class="mb-8 flex-shrink-0 text-center">
         <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Asisten Penulisan AI (PRO)</h1>
         <p class="text-lg text-orange-800/80 mt-1">Akselerasi penulisan skripsi Anda dengan bantuan AI canggih.</p>
+        
+        <!-- Widget penghitung kuota percobaan -->
+        <div id="usage-counter-display" class="hidden mt-4 inline-flex items-center gap-2 bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Sisa Percobaan PRO: <strong id="assistant-remaining-count">...</strong></span>
+        </div>
     </header>
 
     <!-- Navigasi Tab (Centered) -->
@@ -160,6 +168,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportAbstractDocBtn = document.getElementById('export-abstract-doc-btn');
 
     const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true, openLinksInNewWindow: true });
+
+    // --- Logika untuk mengambil dan menampilkan kuota ---
+    const fetchAndDisplayUsage = async () => {
+        const display = document.getElementById('usage-counter-display');
+        try {
+            const response = await fetch(`${window.location.origin}/api/get-usage-status`);
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data.status === 'free') {
+                const countEl = document.getElementById('assistant-remaining-count');
+                countEl.textContent = `${data.writing_assistant_remaining}/${data.limits['writing_assistant']}`;
+                display.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error("Gagal mengambil status kuota:", error);
+        }
+    };
+    fetchAndDisplayUsage();
 
     // --- Fungsi Notifikasi ---
     const showNotification = (message, type = 'success') => {
@@ -285,10 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.message || 'Gagal memproses permintaan.');
+                throw new Error(data.error || 'Gagal memproses permintaan.');
             }
             
             output.innerHTML = converter.makeHtml(data.generated_text);
+            fetchAndDisplayUsage(); // Perbarui hitungan setelah berhasil
 
         } catch (error) {
             output.innerHTML = `<p class="text-red-500">${error.message}</p>`;
