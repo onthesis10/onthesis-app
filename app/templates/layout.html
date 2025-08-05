@@ -1,179 +1,109 @@
-<!-- ======================================================================== -->
-<!-- File: app/templates/layout.html                                          -->
-<!-- Versi ini sudah diperbaiki untuk tampilan mobile (Responsive)             -->
-<!-- ======================================================================== -->
 <!DOCTYPE html>
-<html lang="id"> <!-- class 'dark' akan ditambahkan oleh JS -->
+<html lang="id"> <!-- Kelas 'dark' akan ditambahkan oleh JS -->
 <head>
     <meta charset="UTF-8">
-    <!-- META TAG VIEWPORT YANG PENTING UNTUK RESPONSIVE -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OnThesis{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Menambahkan CSS kustom untuk layout baru -->
-    <style>
-        :root {
-            --sidebar-width: 16rem; /* 256px, Lebar sidebar statis */
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f4f7f9; /* Abu muda */
-        }
-
-        .dark body {
-            background-color: #1a202c;
-        }
-
-        .sidebar {
-            width: var(--sidebar-width);
-            transition: transform 0.3s ease-in-out; /* Transisi untuk mobile */
-        }
-
-        /* Styling untuk link navigasi */
-        .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px; /* Sudut melengkung penuh (pill shape) */
-            margin: 0.5rem;
-            color: #e0f2f1; /* Teks putih kehijauan */
-            transition: all 0.2s ease-in-out;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-        
-        .nav-link:hover {
-            background-color: #00695c; /* Teal lebih gelap saat hover */
-        }
-
-        /* Style untuk link yang aktif */
-        .nav-link.active {
-            background-color: #00796b; /* Background sedikit terang untuk aktif */
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        .nav-icon {
-            flex-shrink: 0;
-            width: 1.5rem; /* 24px */
-            height: 1.5rem; /* 24px */
-            margin-right: 1rem;
-            color: #ffffff;
-        }
-
-        .nav-text, .pro-badge {
-            opacity: 1; /* Teks selalu terlihat */
-            color: #ffffff;
-        }
-
-        /* Header styling */
-        .main-header {
-            background-color: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .dark .main-header {
-            background-color: #2d3748;
-            border-bottom: 1px solid #4a5568;
-        }
-
-        /* Penyesuaian untuk layar medium ke atas */
-        @media (min-width: 768px) {
-            .main-content {
-                margin-left: var(--sidebar-width);
-            }
-        }
-
-    </style>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Sistem Desain Clarity UI Baru -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
     {% block page_styles %}{% endblock %}
 </head>
-<body class="bg-gray-100 dark:bg-gray-900">
-    <div id="main-app-container" class="relative min-h-screen md:flex">
+<body>
+    <div class="relative min-h-screen md:flex">
         
         <!-- Tombol Hamburger untuk Mobile -->
-        <div class="md:hidden flex justify-between items-center p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-            <div class="font-bold text-xl text-teal-600 dark:text-teal-400">OnThesis</div>
-            <button id="mobile-menu-button" class="p-2 rounded-md text-gray-500 dark:text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+        <div class="md:hidden flex justify-between items-center p-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <h1 class="font-bold text-xl text-slate-800 dark:text-white">OnThesis</h1>
+            <button id="mobile-menu-button" class="p-2 rounded-md text-slate-500 dark:text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
         </div>
 
-        <!-- Sidebar Statis -->
-        <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 bg-teal-600 dark:bg-teal-800 z-30 flex-col flex-shrink-0 transform -translate-x-full md:translate-x-0 flex overflow-y-auto">
-            <div class="sidebar-header flex items-center justify-between h-20 px-6 flex-shrink-0">
-                <div class="text-2xl font-bold text-white">
-                    <span>OnThesis</span>
-                </div>
-                <button id="theme-toggle" type="button" class="p-2 rounded-full text-teal-200 hover:bg-teal-700">
-                    <svg id="theme-toggle-moon-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                    <svg id="theme-toggle-sun-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1zM8 16a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"></path></svg>
-                </button>
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-30 w-64 p-4 flex-col flex-shrink-0 transform -translate-x-full md:translate-x-0 flex overflow-y-auto">
+            <!-- Logo & Header Sidebar -->
+            <div class="sidebar-header flex items-center h-16 px-4 flex-shrink-0">
+                <h1 class="text-2xl font-bold text-slate-800 dark:text-white">OnThesis</h1>
             </div>
-            <nav class="flex-grow p-2">
+            
+            <!-- Navigasi Utama -->
+            <nav class="flex-grow mt-4">
                 {% set active_page = request.endpoint %}
                 <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3L2 12h3v8h5Z"/></svg>
-                    <span class="nav-text">Dasbor</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+                    <span>Dasbor</span>
                 </a>
                 <a href="{{ url_for('search_references') }}" class="nav-link {{ 'active' if active_page == 'search_references' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6Zm-1.5 13.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5Zm-4-8.5h4v4h-4v-4Z"/></svg>
-                    <span class="nav-text">Search References</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span>Search References</span>
                 </a>
                 <a href="{{ url_for('citation_management') }}" class="nav-link {{ 'active' if active_page == 'citation_management' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 17H4v2h10v-2Zm6-8H4v2h16V9Z M4 15h16v-2H4v2ZM4 5v2h16V5H4Z"/></svg>
-                    <span class="nav-text">Manajemen Sitasi</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+                    <span>Manajemen Sitasi</span>
                 </a>
                 <a href="{{ url_for('paraphrase_ai') }}" class="nav-link {{ 'active' if active_page == 'paraphrase_ai' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                    <span class="nav-text">Parafrase AI</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                    <span>Parafrase AI</span>
                 </a>
                 <a href="{{ url_for('chat_ai') }}" class="nav-link {{ 'active' if active_page == 'chat_ai' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2Z"/></svg>
-                    <span class="nav-text">Curhat AI</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>Curhat AI</span>
                 </a>
+                
+                <!-- Fitur PRO -->
+                <div class="mt-4 px-4">
+                    <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">Fitur PRO</p>
+                </div>
                 <a href="{{ url_for('writing_assistant') }}" class="nav-link pro-feature {{ 'active' if active_page == 'writing_assistant' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27Z"/></svg>
-                    <span class="nav-text">Asisten AI</span>
-                    <span class="pro-badge text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-semibold ml-auto">PRO</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span>Asisten AI</span>
+                    <span class="pro-badge ml-auto">PRO</span>
                 </a>
                 <a href="{{ url_for('data_analysis') }}" class="nav-link pro-feature {{ 'active' if active_page == 'data_analysis' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20h4V4h-4v16Zm-6 0h4v-8H4v8Zm12-10v10h4v-10h-4Z"/></svg>
-                    <span class="nav-text">Analisis Data</span>
-                    <span class="pro-badge text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-semibold ml-auto">PRO</span>
-                </a>
-                <a href="{{ url_for('user_profile') }}" class="nav-link {{ 'active' if active_page == 'user_profile' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span class="nav-text">Profil</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    <span>Analisis Data</span>
+                    <span class="pro-badge ml-auto">PRO</span>
                 </a>
             </nav>
+            
+            <!-- Footer Sidebar -->
+            <div class="mt-auto p-4 border-t border-slate-200 dark:border-slate-700">
+                <a href="{{ url_for('user_profile') }}" class="flex items-center gap-3">
+                    <img id="user-photo" class="w-10 h-10 rounded-full object-cover" src="https://ui-avatars.com/api/?name=U" alt="Foto Profil">
+                    <div>
+                        <p id="user-display-name" class="font-semibold text-sm text-slate-800 dark:text-slate-50">Pengguna</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Lihat Profil</p>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-white" title="Logout">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </a>
+                </a>
+            </div>
         </aside>
 
         <!-- Main Content -->
         <div class="main-content flex-1 flex flex-col">
-            <header class="main-header sticky top-0 z-10 flex-shrink-0 flex items-center justify-end p-4">
-                <!-- Header content can be added here if needed in the future -->
-            </header>
             <main class="flex-1 overflow-y-auto p-6 md:p-8">
                 {% block content %}{% endblock %}
             </main>
         </div>
     </div>
     
-    <!-- Overlay untuk mobile menu -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden"></div>
 
-    <script type="module" src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}" type="module"></script>
     <script>
-        // Skrip untuk fungsionalitas menu mobile
+        // Skrip untuk fungsionalitas UI dasar
         const mobileMenuButton = document.getElementById('mobile-menu-button');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebar-overlay');
@@ -186,181 +116,11 @@
         }
         if(overlay) {
             overlay.addEventListener('click', () => {
-                sidebar.classList.toggle('-translate-x-full');
-                overlay.classList.toggle('hidden');
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
             });
         }
-
-        // Skrip untuk tema
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        const sunIcon = document.getElementById('theme-toggle-sun-icon');
-        const moonIcon = document.getElementById('theme-toggle-moon-icon');
-
-        function applyTheme(theme) {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-                if(sunIcon) sunIcon.classList.remove('hidden');
-                if(moonIcon) moonIcon.classList.add('hidden');
-            } else {
-                document.documentElement.classList.remove('dark');
-                if(sunIcon) sunIcon.classList.add('hidden');
-                if(moonIcon) moonIcon.classList.remove('hidden');
-            }
-        }
-        
-        if(themeToggleBtn) {
-            themeToggleBtn.addEventListener('click', () => {
-                const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-                localStorage.setItem('theme', newTheme);
-                applyTheme(newTheme);
-            });
-        }
-
-        // Terapkan tema saat halaman dimuat
-        document.addEventListener('DOMContentLoaded', () => {
-            applyTheme(localStorage.getItem('theme') || 'light');
-        });
     </script>
     {% block page_scripts %}{% endblock %}
-    
-    <!-- ======================================================================== -->
-    <!-- FITUR BARU: Tombol dan Modal untuk Kritik & Saran                   -->
-    <!-- ======================================================================== -->
-
-    <!-- Tombol Melayang (Floating Action Button) -->
-    <button id="open-feedback-btn" title="Kirim Kritik & Saran" class="fixed bottom-6 right-6 bg-gradient-to-br from-orange-500 to-amber-600 text-white w-14 h-14 rounded-full shadow-lg hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 flex items-center justify-center z-40">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-    </button>
-
-    <!-- Modal/Jendela Pop-up untuk Form Feedback -->
-    <div id="feedback-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-8 transform transition-all opacity-0 -translate-y-4" id="feedback-modal-content">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">Kirim Kritik & Saran</h3>
-                <button id="close-feedback-modal-btn" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">&times;</button>
-            </div>
-            <form id="feedback-form" class="space-y-4">
-                <div>
-                    <label for="feedback-category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pilih Kategori</label>
-                    <select id="feedback-category" name="category" class="w-full pl-4 pr-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" required>
-                        <option value="Saran Fitur">Saran Fitur Baru</option>
-                        <option value="Laporan Bug">Laporan Bug/Error</option>
-                        <option value="Desain & Tampilan">Desain & Tampilan (UI/UX)</option>
-                        <option value="Lainnya">Lainnya</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="feedback-message" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pesan Anda</label>
-                    <textarea id="feedback-message" name="message" rows="5" class="w-full pl-4 pr-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="Tuliskan masukan Anda di sini..." required></textarea>
-                </div>
-                <div class="flex justify-end gap-4 pt-4">
-                    <button type="button" id="cancel-feedback-btn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">Batal</button>
-                    <button type="submit" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-2 px-4 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">Kirim</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Kontainer Notifikasi (jika belum ada) -->
-    <div id="notification-container" class="fixed top-5 right-5 z-[100] w-full max-w-xs"></div>
-
-    <script>
-    // --- Logika untuk Fitur Feedback ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const openBtn = document.getElementById('open-feedback-btn');
-        const modal = document.getElementById('feedback-modal');
-        const modalContent = document.getElementById('feedback-modal-content');
-        const closeBtn = document.getElementById('close-feedback-modal-btn');
-        const cancelBtn = document.getElementById('cancel-feedback-btn');
-        const form = document.getElementById('feedback-form');
-
-        const showModal = () => {
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modalContent.classList.remove('opacity-0', '-translate-y-4');
-            }, 10);
-        };
-
-        const hideModal = () => {
-            modalContent.classList.add('opacity-0', '-translate-y-4');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
-        };
-
-        if(openBtn) openBtn.addEventListener('click', showModal);
-        if(closeBtn) closeBtn.addEventListener('click', hideModal);
-        if(cancelBtn) cancelBtn.addEventListener('click', hideModal);
-        if(modal) modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                hideModal();
-            }
-        });
-
-        // --- Fungsi Notifikasi Global ---
-        const showNotification = (message, type = 'success') => {
-            const container = document.getElementById('notification-container');
-            if (!container) return;
-            
-            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
-            const notif = document.createElement('div');
-            notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 transition-all duration-300 transform translate-x-full`;
-            notif.textContent = message;
-            
-            container.appendChild(notif);
-            setTimeout(() => {
-                notif.classList.remove('translate-x-full');
-            }, 10);
-
-            setTimeout(() => {
-                notif.classList.add('translate-x-full');
-                setTimeout(() => notif.remove(), 300);
-            }, 4000);
-        };
-
-
-        // --- Logika Pengiriman Form ---
-        if(form) form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitButton = form.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            submitButton.textContent = 'Mengirim...';
-
-            const formData = new FormData(form);
-            const data = {
-                message: formData.get('message'),
-                category: formData.get('category'),
-                pageUrl: window.location.href // Mengirim URL halaman saat ini
-            };
-
-            try {
-                const response = await fetch('/api/submit-feedback', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.message || 'Gagal mengirim feedback.');
-                }
-
-                showNotification(result.message, 'success');
-                form.reset();
-                hideModal();
-
-            } catch (error) {
-                showNotification(error.message, 'error');
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Kirim';
-            }
-        });
-    });
-    </script>
 </body>
 </html>
