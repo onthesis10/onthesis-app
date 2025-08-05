@@ -1,5 +1,5 @@
 /* ======================================================================== */
-/* OnThesis - Aurora UI Design System                       */
+/* OnThesis - Aurora UI Design System (Mobile Responsive)   */
 /* ======================================================================== */
 
 /* 1. FONDASI & VARIABEL WARNA
@@ -9,7 +9,7 @@
     
     /* Palet Warna Utama (Dark Mode) */
     --bg-dark: #0c0a1d;
-    --glass-bg: rgba(17, 25, 40, 0.6); /* Warna kaca semi-transparan */
+    --glass-bg: rgba(17, 25, 40, 0.6);
     --glass-border: rgba(255, 255, 255, 0.1);
     --text-primary: #f0f0f0;
     --text-secondary: #a0a0a0;
@@ -25,7 +25,7 @@ body {
     font-family: var(--font-sans);
     background-color: var(--bg-dark);
     color: var(--text-secondary);
-    overflow: hidden; /* Mencegah scroll pada body */
+    overflow: hidden;
 }
 
 .aurora-background {
@@ -41,7 +41,7 @@ body {
 .aurora-shape {
     position: absolute;
     border-radius: 50%;
-    filter: blur(120px); /* Efek blur yang sangat kuat */
+    filter: blur(120px);
     opacity: 0.3;
     animation: aurora-flow 25s infinite linear alternate;
 }
@@ -77,12 +77,11 @@ body {
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--glass-border);
-    border-radius: 1rem; /* 16px */
+    border-radius: 1rem;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
 }
 
-/* Efek batas gradien halus saat hover */
 .glass-pane:hover {
     border-color: rgba(138, 147, 255, 0.3);
     box-shadow: 0 0 40px -10px rgba(138, 147, 255, 0.2);
@@ -114,13 +113,47 @@ body {
     color: var(--accent-primary) !important;
 }
 
-/* Badge PRO */
 .pro-badge {
     background-color: rgba(217, 70, 239, 0.2);
-    color: #f5d0fe; /* Warna teks terang agar kontras */
+    color: #f5d0fe;
     font-size: 0.7rem;
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 9999px;
     border: 1px solid rgba(217, 70, 239, 0.5);
+}
+
+/* ======================================================================== */
+/* 5. GAYA KHUSUS SELULER (BARU)
+/* ======================================================================== */
+.bottom-nav {
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    z-index: 40;
+    border-radius: 1.5rem; /* Lebih melengkung */
+    padding: 0.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.bottom-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    padding: 0.5rem 0;
+    border-radius: 1rem;
+    color: var(--text-secondary);
+    transition: all 0.2s ease-in-out;
+}
+.bottom-nav-link span {
+    font-size: 0.7rem; /* Ukuran teks lebih kecil */
+    margin-top: 4px;
+}
+.bottom-nav-link.active {
+    background-color: rgba(138, 147, 255, 0.2);
+    color: var(--accent-primary);
+    transform: translateY(-4px); /* Efek sedikit terangkat */
 }
