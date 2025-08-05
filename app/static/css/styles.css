@@ -1,5 +1,5 @@
 /* ======================================================================== */
-/* OnThesis - Clarity UI Design System                     */
+/* OnThesis - "The Cognition Canvas" Design System          */
 /* ======================================================================== */
 
 /* 1. FONDASI & VARIABEL WARNA
@@ -7,26 +7,20 @@
 :root {
     --font-sans: 'Poppins', sans-serif;
     
-    /* Warna Mode Terang */
-    --bg-main-light: #F8FAFC; /* slate-50 */
-    --bg-sidebar-light: #FFFFFF;
-    --bg-card-light: #FFFFFF;
-    --text-primary-light: #0F172A; /* slate-900 */
-    --text-secondary-light: #64748B; /* slate-500 */
-    --border-light: #E2E8F0; /* slate-200 */
-    
-    /* Warna Mode Gelap */
-    --bg-main-dark: #0F172A; /* slate-900 */
-    --bg-sidebar-dark: #1E293B; /* slate-800 */
-    --bg-card-dark: #1E293B; /* slate-800 */
-    --text-primary-dark: #F8FAFC; /* slate-50 */
-    --text-secondary-dark: #94A3B8; /* slate-400 */
-    --border-dark: #334155; /* slate-700 */
+    /* Palet Warna Utama (Dark Mode First) */
+    --bg-main: #0D1117; /* Warna dasar seperti GitHub Dark */
+    --bg-sidebar: rgba(22, 27, 34, 0.5); /* Semi-transparan */
+    --bg-content: #161B22; /* Sedikit lebih terang dari background */
 
-    /* Warna Aksen */
-    --primary-brand: #3B82F6; /* blue-500 */
-    --primary-brand-hover: #2563EB; /* blue-600 */
-    --accent-pro: #84CC16; /* lime-500 */
+    --glass-bg: rgba(22, 27, 34, 0.6);
+    --glass-border: rgba(138, 147, 255, 0.15);
+    --glass-glow: rgba(88, 101, 242, 0.1);
+
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    
+    --accent-primary: #58A6FF; /* Biru cerah */
+    --accent-pro: #3FB950; /* Hijau cerah */
 }
 
 /* ======================================================================== */
@@ -34,127 +28,81 @@
 /* ======================================================================== */
 body {
     font-family: var(--font-sans);
-    background-color: var(--bg-main-light);
-    color: var(--text-secondary-light);
+    background-color: var(--bg-main);
+    color: var(--text-secondary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-html.dark body {
-    background-color: var(--bg-main-dark);
-    color: var(--text-secondary-dark);
+    overflow: hidden; /* Mencegah scroll di level body */
 }
 
 h1, h2, h3, h4, h5, h6 {
-    color: var(--text-primary-light);
+    color: var(--text-primary);
     font-weight: 700;
 }
-html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
-    color: var(--text-primary-dark);
-}
+
+/* Kustomisasi scrollbar untuk nuansa premium */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+
 
 /* ======================================================================== */
-/* 3. LAYOUT UTAMA (SIDEBAR & KONTEN)
-/* ======================================================================== */
-.sidebar {
-    background-color: var(--bg-sidebar-light);
-    border-right: 1px solid var(--border-light);
-    transition: transform 0.3s ease-in-out, background-color 0.3s, border-color 0.3s;
-}
-html.dark .sidebar {
-    background-color: var(--bg-sidebar-dark);
-    border-right-color: var(--border-dark);
-}
-
-.main-content {
-    width: 100%;
-}
-@media (min-width: 768px) {
-    .main-content {
-        width: calc(100% - 16rem); /* 16rem = w-64 */
-    }
-}
-
-/* ======================================================================== */
-/* 4. KOMPONEN UI
+/* 3. KOMPONEN INTI
 /* ======================================================================== */
 
-/* Link Navigasi */
-.nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    color: var(--text-secondary-light);
-    transition: all 0.2s ease-in-out;
+/* Panel Kaca Cerdas (Glass Pane) */
+.glass-pane {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1rem; /* 16px */
+    box-shadow: 0 0 40px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
 }
-html.dark .nav-link {
-    color: var(--text-secondary-dark);
-}
-.nav-link:hover {
-    background-color: var(--bg-main-light);
-    color: var(--text-primary-light);
-}
-html.dark .nav-link:hover {
-    background-color: #334155; /* slate-700 */
-    color: var(--text-primary-dark);
-}
-.nav-link.active {
-    background-color: var(--primary-brand);
-    color: white !important;
-    font-weight: 600;
-    box-shadow: 0 4px 12px -1px rgba(59, 130, 246, 0.3);
-}
-.nav-link.active svg {
-    color: white !important;
-}
-
-/* Badge PRO */
-.pro-badge {
-    background-color: var(--accent-pro);
-    color: #1A2E05; /* Warna teks gelap agar kontras dengan hijau limau */
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 9999px;
+/* Efek batas gradien halus saat hover */
+.glass-pane:hover {
+    border-color: rgba(88, 101, 242, 0.3);
+    box-shadow: 0 0 50px -10px var(--glass-glow);
 }
 
 /* Tombol */
-.btn {
+.btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
     border-radius: 0.5rem;
-    padding: 0.625rem 1.25rem; /* 10px 20px */
-    transition: all 0.2s ease-in-out;
-    cursor: pointer;
-    border: 1px solid transparent;
-}
-.btn-primary {
-    background-color: var(--primary-brand);
+    padding: 0.625rem 1.25rem;
     color: white;
+    background: var(--accent-primary);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 2px 10px -2px rgba(88, 166, 255, 0.3);
+    transition: all 0.2s ease-in-out;
 }
 .btn-primary:hover {
-    background-color: var(--primary-brand-hover);
+    background: #6cb0ff;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px -2px rgba(88, 166, 255, 0.4);
 }
 
-/* Kartu */
-.content-card {
-    background-color: var(--bg-card-light);
-    border: 1px solid var(--border-light);
-    border-radius: 1rem; /* Sudut lebih bulat */
-    padding: 1.5rem;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
-    transition: all 0.3s ease;
+/* ======================================================================== */
+/* 4. ANIMASI
+/* ======================================================================== */
+@keyframes slide-in-from-bottom {
+    from {
+        opacity: 0;
+        transform: translateY(25px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
-html.dark .content-card {
-    background-color: var(--bg-card-dark);
-    border-color: var(--border-dark);
-    box-shadow: none;
+
+.animate-slide-in {
+    opacity: 0; /* Mulai dari transparan */
+    animation: slide-in-from-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
