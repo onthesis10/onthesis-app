@@ -25,7 +25,11 @@
         
         <!-- KOLOM 1: Navigasi Utama (Ikon) -->
         <aside class="main-nav bg-black/30 p-4 flex-col items-center space-y-4 border-r border-white/10 hidden md:flex">
-            <a href="{{ url_for('dashboard') }}" class="text-2xl font-bold text-white mb-4">O</a>
+            <!-- [BARU] Lokasi untuk Logo Anda -->
+            <a href="{{ url_for('dashboard') }}">
+                <!-- Ganti 'logo-placeholder.svg' dengan nama file logo Anda -->
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="w-12 h-12 mb-4">
+            </a>
             <nav class="flex flex-col items-center space-y-2 flex-1 w-full">
                 {% set active_page = request.endpoint %}
                 <a href="{{ url_for('dashboard') }}" title="Dasbor" class="main-nav-link {{ 'active' if active_page == 'dashboard' else '' }}">
@@ -45,17 +49,9 @@
             </div>
         </aside>
 
-        <!-- KOLOM 2: Sidebar Sekunder (Konteks) -->
-        <aside id="secondary-sidebar" class="secondary-sidebar glass-pane rounded-none flex-col flex-shrink-0 border-r border-white/10 p-4 hidden md:flex">
-            {% block secondary_sidebar %}
-            <!-- Konten sidebar sekunder akan diisi oleh setiap halaman -->
-            <div class="flex items-center h-12 px-2">
-                <h2 class="text-lg font-bold text-white">Navigasi</h2>
-            </div>
-            {% endblock %}
-        </aside>
+        <!-- [DIHAPUS] Sidebar Sekunder tidak lagi ada di layout utama -->
 
-        <!-- KOLOM 3: Kanvas Utama (Konten) -->
+        <!-- KANVAS UTAMA (Konten) -->
         <main class="main-canvas flex-1 flex flex-col">
             <div class="flex-1 overflow-y-auto p-6 md:p-8">
                 {% block content %}{% endblock %}
