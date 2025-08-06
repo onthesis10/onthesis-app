@@ -7,7 +7,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -16,65 +16,69 @@
     {% block page_styles %}{% endblock %}
 </head>
 <body>
-    <div class="aurora-background">
-        <div class="aurora-shape aurora-1"></div>
-        <div class="aurora-shape aurora-2"></div>
-    </div>
-
     <div class="flex h-screen w-full">
         
-        <!-- KOLOM 1: Navigasi Utama (Ikon) -->
-        <aside class="main-nav bg-black/30 p-4 flex-col items-center space-y-4 border-r border-white/10 hidden md:flex">
-            <!-- [BARU] Lokasi untuk Logo Anda -->
-            <a href="{{ url_for('dashboard') }}">
-                <!-- Ganti 'logo-placeholder.svg' dengan nama file logo Anda -->
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="w-12 h-12 mb-4">
-            </a>
-            <nav class="flex flex-col items-center space-y-2 flex-1 w-full">
+        <!-- Sidebar Utama (Semua Fitur di Sini) -->
+        <aside class="sidebar-creative p-6 flex-col flex-shrink-0 hidden md:flex">
+            <!-- Logo di Tengah Atas -->
+            <div class="flex justify-center py-4 mb-6">
+                <a href="{{ url_for('dashboard') }}">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="h-12">
+                </a>
+            </div>
+            
+            <!-- Navigasi Utama -->
+            <nav class="flex-grow space-y-2">
                 {% set active_page = request.endpoint %}
-                <a href="{{ url_for('dashboard') }}" title="Dasbor" class="main-nav-link {{ 'active' if active_page == 'dashboard' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+                <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
                     <span>Dasbor</span>
                 </a>
-                <a href="{{ url_for('search_references') }}" title="Search" class="main-nav-link {{ 'active' if active_page == 'search_references' else '' }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <span>Search</span>
+                <a href="{{ url_for('search_references') }}" class="nav-link {{ 'active' if active_page == 'search_references' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span>Search References</span>
                 </a>
-                <!-- Tambahkan ikon lain di sini -->
+                <a href="{{ url_for('citation_management') }}" class="nav-link {{ 'active' if active_page == 'citation_management' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+                    <span>Manajemen Sitasi</span>
+                </a>
+                <a href="{{ url_for('paraphrase_ai') }}" class="nav-link {{ 'active' if active_page == 'paraphrase_ai' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                    <span>Parafrase AI</span>
+                </a>
+                <a href="{{ url_for('chat_ai') }}" class="nav-link {{ 'active' if active_page == 'chat_ai' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>Curhat AI</span>
+                </a>
+                <a href="{{ url_for('writing_assistant') }}" class="nav-link {{ 'active' if active_page == 'writing_assistant' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span>Asisten AI</span>
+                </a>
+                <a href="{{ url_for('data_analysis') }}" class="nav-link {{ 'active' if active_page == 'data_analysis' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    <span>Analisis Data</span>
+                </a>
             </nav>
-            <div class="flex flex-col items-center space-y-4">
-                <a href="{{ url_for('user_profile') }}" title="Profil">
-                    <img id="user-photo" class="w-10 h-10 rounded-full cursor-pointer border-2 border-gray-700 hover:border-blue-400 transition-colors" src="https://ui-avatars.com/api/?name=U" alt="Foto Profil">
+            
+            <!-- Profil Pengguna di Bawah -->
+            <div class="mt-auto">
+                <a href="{{ url_for('user_profile') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5">
+                    <img id="user-photo" class="w-10 h-10 rounded-full object-cover" src="https://ui-avatars.com/api/?name=U" alt="Foto Profil">
+                    <div>
+                        <p id="user-display-name" class="font-semibold text-sm text-white">Pengguna</p>
+                        <p class="text-xs text-gray-400">Lihat Profil</p>
+                    </div>
                 </a>
             </div>
         </aside>
 
-        <!-- [DIHAPUS] Sidebar Sekunder tidak lagi ada di layout utama -->
-
-        <!-- KANVAS UTAMA (Konten) -->
+        <!-- Kanvas Utama (Konten) -->
         <main class="main-canvas flex-1 flex flex-col">
-            <div class="flex-1 overflow-y-auto p-6 md:p-8">
+            <div class="flex-1 overflow-y-auto p-6 md:p-10">
                 {% block content %}{% endblock %}
             </div>
         </main>
     </div>
-    
-    <!-- Navigasi Bawah untuk Seluler (menggantikan sidebar utama) -->
-    <nav class="md:hidden glass-pane fixed bottom-4 left-4 right-4 z-40 flex justify-around p-2 rounded-2xl shadow-lg">
-        {% set active_page = request.endpoint %}
-        <a href="{{ url_for('dashboard') }}" class="main-nav-link flex-grow {{ 'active' if active_page == 'dashboard' else '' }}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
-            <span>Dasbor</span>
-        </a>
-        <a href="{{ url_for('search_references') }}" class="main-nav-link flex-grow {{ 'active' if active_page == 'search_references' else '' }}">
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <span>Search</span>
-        </a>
-        <a href="{{ url_for('user_profile') }}" class="main-nav-link flex-grow {{ 'active' if active_page == 'user_profile' else '' }}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span>Profil</span>
-        </a>
-    </nav>
 
     <script src="{{ url_for('static', filename='js/script.js') }}" type="module"></script>
     {% block page_scripts %}{% endblock %}
