@@ -1,25 +1,20 @@
 /* ======================================================================== */
-/* OnThesis - Aurora UI Design System (Mobile Responsive)   */
+/* OnThesis - Gipsy x Aurora Design System                  */
 /* ======================================================================== */
 
-/* 1. FONDASI & VARIABEL WARNA
-/* ======================================================================== */
 :root {
     --font-sans: 'Poppins', sans-serif;
-    
-    /* Palet Warna Utama (Dark Mode) */
     --bg-dark: #0c0a1d;
-    --glass-bg: rgba(17, 25, 40, 0.6);
+    --glass-bg: rgba(17, 25, 40, 0.65);
     --glass-border: rgba(255, 255, 255, 0.1);
     --text-primary: #f0f0f0;
     --text-secondary: #a0a0a0;
-    
     --accent-primary: #8A93FF; /* Biru Lavender */
     --accent-secondary: #d946ef; /* Magenta */
 }
 
 /* ======================================================================== */
-/* 2. GAYA DASAR & LATAR BELAKANG AURORA
+/* 1. GAYA DASAR & LATAR BELAKANG AURORA
 /* ======================================================================== */
 body {
     font-family: var(--font-sans);
@@ -30,130 +25,112 @@ body {
 
 .aurora-background {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    overflow: hidden;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1; overflow: hidden;
 }
-
 .aurora-shape {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(120px);
-    opacity: 0.3;
+    position: absolute; border-radius: 50%;
+    filter: blur(120px); opacity: 0.3;
     animation: aurora-flow 25s infinite linear alternate;
 }
-
 .aurora-1 {
-    width: 50vmax;
-    height: 50vmax;
+    width: 50vmax; height: 50vmax;
     background: radial-gradient(circle, var(--accent-primary), transparent 60%);
-    top: -20vh;
-    left: -20vw;
+    top: -20vh; left: -20vw;
 }
-
 .aurora-2 {
-    width: 60vmax;
-    height: 60vmax;
+    width: 60vmax; height: 60vmax;
     background: radial-gradient(circle, var(--accent-secondary), transparent 60%);
-    bottom: -25vh;
-    right: -20vw;
-    animation-direction: alternate-reverse;
-    animation-delay: -8s;
+    bottom: -25vh; right: -20vw;
+    animation-direction: alternate-reverse; animation-delay: -8s;
 }
-
 @keyframes aurora-flow {
     from { transform: translate(-10%, 5%) rotate(0deg) scale(1); }
     to { transform: translate(10%, -5%) rotate(360deg) scale(1.2); }
 }
 
 /* ======================================================================== */
-/* 3. KOMPONEN KACA (GLASSMORPHISM)
+/* 2. KOMPONEN KACA (GLASSMORPHISM)
 /* ======================================================================== */
 .glass-pane {
     background: var(--glass-bg);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--glass-border);
-    border-radius: 1rem;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
 }
 
-.glass-pane:hover {
-    border-color: rgba(138, 147, 255, 0.3);
-    box-shadow: 0 0 40px -10px rgba(138, 147, 255, 0.2);
+/* ======================================================================== */
+/* 3. STRUKTUR LAYOUT TIGA KOLOM
+/* ======================================================================== */
+.main-nav {
+    width: 5rem; /* 80px */
+}
+.secondary-sidebar {
+    width: 18rem; /* 288px */
+    transform: translateX(0);
+    transition: transform 0.3s ease-in-out;
+}
+.main-canvas {
+    flex-grow: 1;
+}
+
+/* Untuk mobile, sembunyikan sidebar sekunder */
+@media (max-width: 768px) {
+    .secondary-sidebar {
+        position: fixed;
+        z-index: 35;
+        height: 100%;
+        transform: translateX(-100%);
+    }
+    .secondary-sidebar.open {
+        transform: translateX(0);
+    }
 }
 
 /* ======================================================================== */
-/* 4. LAYOUT & NAVIGASI
+/* 4. GAYA KOMPONEN LAINNYA
 /* ======================================================================== */
-.nav-link {
+.main-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.75rem 0;
+    border-radius: 0.75rem;
+    color: var(--text-secondary);
+    transition: all 0.2s ease-in-out;
+}
+.main-nav-link span {
+    font-size: 0.7rem;
+    margin-top: 4px;
+}
+.main-nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+.main-nav-link.active {
+    background-color: rgba(138, 147, 255, 0.15);
+    color: var(--accent-primary);
+}
+
+.secondary-nav-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    padding: 0.6rem 1rem;
     border-radius: 0.5rem;
     font-weight: 500;
     color: var(--text-secondary);
     transition: all 0.2s ease-in-out;
 }
-.nav-link:hover {
+.secondary-nav-link:hover {
     background-color: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
 }
-.nav-link.active {
-    background-color: rgba(138, 147, 255, 0.15);
-    color: var(--accent-primary) !important;
+.secondary-nav-link.active {
+    background-color: rgba(138, 147, 255, 0.1);
+    color: var(--text-primary);
     font-weight: 600;
-}
-.nav-link.active svg {
-    color: var(--accent-primary) !important;
-}
-
-.pro-badge {
-    background-color: rgba(217, 70, 239, 0.2);
-    color: #f5d0fe;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 9999px;
-    border: 1px solid rgba(217, 70, 239, 0.5);
-}
-
-/* ======================================================================== */
-/* 5. GAYA KHUSUS SELULER (BARU)
-/* ======================================================================== */
-.bottom-nav {
-    position: fixed;
-    bottom: 1rem;
-    left: 1rem;
-    right: 1rem;
-    z-index: 40;
-    border-radius: 1.5rem; /* Lebih melengkung */
-    padding: 0.5rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-}
-
-.bottom-nav-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 1;
-    padding: 0.5rem 0;
-    border-radius: 1rem;
-    color: var(--text-secondary);
-    transition: all 0.2s ease-in-out;
-}
-.bottom-nav-link span {
-    font-size: 0.7rem; /* Ukuran teks lebih kecil */
-    margin-top: 4px;
-}
-.bottom-nav-link.active {
-    background-color: rgba(138, 147, 255, 0.2);
-    color: var(--accent-primary);
-    transform: translateY(-4px); /* Efek sedikit terangkat */
 }
