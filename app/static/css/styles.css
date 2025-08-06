@@ -13,10 +13,12 @@
     --text-secondary: #A0A1B0;
     
     --accent-gradient: linear-gradient(90deg, #8A5CFE, #3B82F6);
+    --accent-1: #8A5CFE; /* Ungu */
+    --accent-2: #3B82F6; /* Biru */
 }
 
 /* ======================================================================== */
-/* 1. GAYA DASAR & LATAR BELAKANG GRADASI
+/* 1. GAYA DASAR & LATAR BELAKANG
 /* ======================================================================== */
 body {
     font-family: var(--font-sans);
@@ -78,21 +80,59 @@ body {
     background-color: rgba(90, 103, 222, 0.1);
     color: var(--text-primary);
     font-weight: 600;
-    border-left-color: #8A5CFE;
+    border-left-color: var(--accent-1);
 }
 
-/* Kartu Konten */
-.content-card {
+/* [BARU] Tombol Sekunder dengan Bingkai */
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem; /* 8px */
+    padding: 0.5rem 1rem; /* 8px 16px */
+    border-radius: 0.5rem; /* 8px */
+    font-weight: 500;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-panel);
+    background-color: transparent;
+    transition: all 0.2s ease-in-out;
+}
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: #4A4B57;
+}
+
+/* Kartu Konten dengan Bingkai Warna Bertumpuk */
+.content-card-creative {
     background-color: var(--bg-panel);
     border: 1px solid var(--border-panel);
     border-radius: 1rem;
     padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
     transition: all 0.3s ease;
+    z-index: 1;
 }
-.content-card:hover {
+.content-card-creative::before,
+.content-card-creative::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -2px; /* Sedikit lebih besar dari kartu */
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    transition: all 0.4s ease;
+}
+.content-card-creative::before {
+    filter: blur(10px);
+    opacity: 0;
+}
+.content-card-creative:hover::before {
+    opacity: 0.5;
+}
+.content-card-creative:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    border-color: #4A4B57;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
 /* ======================================================================== */
