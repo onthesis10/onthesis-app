@@ -2,122 +2,130 @@
 
 {% block title %}Dasbor - OnThesis{% endblock %}
 
-{% block page_styles %}
-<style>
-    /* Animasi untuk memunculkan elemen secara berurutan */
-    @keyframes slide-in-from-bottom {
-        from {
-            opacity: 0;
-            transform: translateY(25px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animate-slide-in {
-        opacity: 0; /* Mulai dari transparan */
-        animation: slide-in-from-bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-</style>
+{% block secondary_sidebar %}
+<!-- Sidebar Sekunder Khusus untuk Dasbor -->
+<div class="flex flex-col h-full">
+    <div class="flex items-center h-16 px-2 flex-shrink-0">
+        <h2 class="text-lg font-bold text-white">Proyek Terbaru</h2>
+    </div>
+    <nav class="flex-grow overflow-y-auto space-y-1 pr-2">
+        <a href="#" class="secondary-nav-link active">
+            <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+            <span>Analisis Sentimen</span>
+        </a>
+        <a href="#" class="secondary-nav-link">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span>Tinjauan Literatur</span>
+        </a>
+        <a href="#" class="secondary-nav-link">
+            <span class="w-2 h-2 rounded-full bg-green-400"></span>
+            <span>Bab 3: Metodologi</span>
+        </a>
+    </nav>
+    <div class="flex-shrink-0 pt-4">
+        <button class="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 font-semibold transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Proyek Baru
+        </button>
+    </div>
+</div>
 {% endblock %}
 
-
 {% block content %}
-<!-- Header Utama Dasbor -->
+<!-- Header Kanvas Utama -->
 <header class="animate-slide-in" style="animation-delay: 100ms;">
-    <h1 class="text-3xl md:text-4xl font-bold text-white">Selamat Datang Kembali!</h1>
-    <p class="text-gray-400 mt-1">Akses cepat ke semua fitur andalan Anda di bawah ini.</p>
+    <h1 class="text-3xl md:text-4xl font-bold text-white">Selamat Datang, {{ current_user.username }}!</h1>
+    <p class="text-gray-400 mt-1">Pilih fitur untuk memulai atau lanjutkan proyek terakhir Anda.</p>
 </header>
 
-<!-- Grid untuk Kartu Fitur Kaca -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+<!-- Grid Kartu Fitur yang "Hidup" dan Lengkap -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-8">
 
     <!-- Kartu: Search References -->
-    <a href="{{ url_for('search_references') }}" class="glass-pane p-6 group animate-slide-in" style="animation-delay: 200ms;">
-        <div class="flex justify-between items-start">
-            <h3 class="text-lg font-bold text-white">Search References</h3>
-            <div class="p-3 bg-gray-700/50 rounded-lg group-hover:bg-accent-primary/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 group-hover:text-accent-primary transition-colors"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <a href="{{ url_for('search_references') }}" class="glass-pane p-6 flex flex-col group animate-slide-in rounded-2xl" style="animation-delay: 200ms;">
+        <div class="flex-grow">
+            <div class="p-3 bg-gray-700/50 rounded-lg w-min mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
+            <h3 class="text-lg font-bold text-white">Search References</h3>
+            <p class="text-sm text-gray-400 mt-2">Temukan jutaan jurnal dan referensi ilmiah.</p>
         </div>
-        <p class="text-sm text-gray-400 mt-2 flex-grow">Akses jutaan jurnal dan referensi ilmiah dari sumber terpercaya.</p>
         <div class="mt-4 text-sm font-semibold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity">
-            Buka Fitur &rarr;
+            Mulai Mencari &rarr;
         </div>
     </a>
 
     <!-- Kartu: Manajemen Sitasi -->
-    <a href="{{ url_for('citation_management') }}" class="glass-pane p-6 group animate-slide-in" style="animation-delay: 300ms;">
-        <div class="flex justify-between items-start">
-            <h3 class="text-lg font-bold text-white">Manajemen Sitasi</h3>
-            <div class="p-3 bg-gray-700/50 rounded-lg group-hover:bg-accent-primary/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 group-hover:text-accent-primary transition-colors"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+    <a href="{{ url_for('citation_management') }}" class="glass-pane p-6 flex flex-col group animate-slide-in rounded-2xl" style="animation-delay: 300ms;">
+         <div class="flex-grow">
+            <div class="p-3 bg-gray-700/50 rounded-lg w-min mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
             </div>
+            <h3 class="text-lg font-bold text-white">Manajemen Sitasi</h3>
+            <p class="text-sm text-gray-400 mt-2">Kelola daftar pustaka secara otomatis.</p>
         </div>
-        <p class="text-sm text-gray-400 mt-2 flex-grow">Kelola daftar pustaka dan format kutipan secara otomatis.</p>
         <div class="mt-4 text-sm font-semibold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity">
-            Buka Fitur &rarr;
+            Buka Pustaka &rarr;
         </div>
     </a>
 
     <!-- Kartu: Parafrase AI -->
-    <a href="{{ url_for('paraphrase_ai') }}" class="glass-pane p-6 group animate-slide-in" style="animation-delay: 400ms;">
-        <div class="flex justify-between items-start">
-            <h3 class="text-lg font-bold text-white">Parafrase AI</h3>
-            <div class="p-3 bg-gray-700/50 rounded-lg group-hover:bg-accent-primary/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 group-hover:text-accent-primary transition-colors"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+    <a href="{{ url_for('paraphrase_ai') }}" class="glass-pane p-6 flex flex-col group animate-slide-in rounded-2xl" style="animation-delay: 400ms;">
+         <div class="flex-grow">
+            <div class="p-3 bg-gray-700/50 rounded-lg w-min mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
             </div>
+            <h3 class="text-lg font-bold text-white">Parafrase AI</h3>
+            <p class="text-sm text-gray-400 mt-2">Ubah tulisan menjadi lebih akademis.</p>
         </div>
-        <p class="text-sm text-gray-400 mt-2 flex-grow">Ubah tulisan Anda menjadi lebih akademis dan bebas plagiarisme.</p>
         <div class="mt-4 text-sm font-semibold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity">
-            Buka Fitur &rarr;
+            Mulai Menulis Ulang &rarr;
         </div>
     </a>
 
     <!-- Kartu: Curhat AI -->
-    <a href="{{ url_for('chat_ai') }}" class="glass-pane p-6 group animate-slide-in" style="animation-delay: 500ms;">
-        <div class="flex justify-between items-start">
-            <h3 class="text-lg font-bold text-white">Curhat AI</h3>
-            <div class="p-3 bg-gray-700/50 rounded-lg group-hover:bg-accent-primary/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 group-hover:text-accent-primary transition-colors"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <a href="{{ url_for('chat_ai') }}" class="glass-pane p-6 flex flex-col group animate-slide-in rounded-2xl" style="animation-delay: 500ms;">
+         <div class="flex-grow">
+            <div class="p-3 bg-gray-700/50 rounded-lg w-min mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
+            <h3 class="text-lg font-bold text-white">Curhat AI</h3>
+            <p class="text-sm text-gray-400 mt-2">Diskusikan ide atau keluh kesah Anda.</p>
         </div>
-        <p class="text-sm text-gray-400 mt-2 flex-grow">Butuh teman bicara? Diskusikan ide atau keluh kesah Anda.</p>
         <div class="mt-4 text-sm font-semibold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity">
-            Buka Fitur &rarr;
+            Mulai Percakapan &rarr;
         </div>
     </a>
 
     <!-- Kartu: Asisten AI (PRO) -->
-    <a href="{{ url_for('writing_assistant') }}" class="glass-pane p-6 group animate-slide-in relative" style="animation-delay: 600ms;">
-        <span class="absolute top-4 right-4 pro-badge">PRO</span>
-        <div class="flex justify-between items-start">
-            <h3 class="text-lg font-bold text-white">Asisten AI</h3>
-            <div class="p-3 bg-gray-700/50 rounded-lg group-hover:bg-accent-secondary/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 group-hover:text-accent-secondary transition-colors"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    <a href="{{ url_for('writing_assistant') }}" class="glass-pane p-6 flex flex-col group animate-slide-in rounded-2xl relative" style="animation-delay: 600ms;">
+        <span class="absolute top-4 right-4 text-xs bg-purple-500/30 text-purple-300 px-3 py-1 rounded-full font-semibold border border-purple-400/50">PRO</span>
+        <div class="flex-grow">
+            <div class="p-3 bg-gray-700/50 rounded-lg w-min mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
+            <h3 class="text-lg font-bold text-white">Asisten Penulisan</h3>
+            <p class="text-sm text-gray-400 mt-2">Akselerasi penulisan dengan AI canggih.</p>
         </div>
-        <p class="text-sm text-gray-400 mt-2 flex-grow">Dapatkan bantuan penulisan cerdas untuk skripsi Anda.</p>
         <div class="mt-4 text-sm font-semibold text-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity">
-            Buka Fitur &rarr;
+            Buka Asisten &rarr;
         </div>
     </a>
 
     <!-- Kartu: Analisis Data (PRO) -->
-    <a href="{{ url_for('data_analysis') }}" class="glass-pane p-6 group animate-slide-in relative" style="animation-delay: 700ms;">
-        <span class="absolute top-4 right-4 pro-badge">PRO</span>
-        <div class="flex justify-between items-start">
-            <h3 class="text-lg font-bold text-white">Analisis Data</h3>
-            <div class="p-3 bg-gray-700/50 rounded-lg group-hover:bg-accent-secondary/20 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 group-hover:text-accent-secondary transition-colors"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    <a href="{{ url_for('data_analysis') }}" class="glass-pane p-6 flex flex-col group animate-slide-in rounded-2xl relative" style="animation-delay: 700ms;">
+        <span class="absolute top-4 right-4 text-xs bg-purple-500/30 text-purple-300 px-3 py-1 rounded-full font-semibold border border-purple-400/50">PRO</span>
+        <div class="flex-grow">
+            <div class="p-3 bg-gray-700/50 rounded-lg w-min mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
             </div>
+            <h3 class="text-lg font-bold text-white">Analisis Data</h3>
+            <p class="text-sm text-gray-400 mt-2">Lakukan uji statistik dengan bantuan AI.</p>
         </div>
-        <p class="text-sm text-gray-400 mt-2 flex-grow">Analisis data penelitian Anda dengan bantuan AI.</p>
         <div class="mt-4 text-sm font-semibold text-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity">
-            Buka Fitur &rarr;
+            Mulai Menganalisis &rarr;
         </div>
     </a>
+
 </div>
 {% endblock %}
