@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Manajemen Proyek - OnThesis{% endblock %}
+ {% block title %}Manajemen Proyek - OnThesis{% endblock %}
 
 {% block content %}
 <div class="animate-fade-in-up">
@@ -56,7 +56,10 @@
                     </div>
                 </div>
                 <div class="flex justify-end pt-4">
-                    <button type="submit" class="btn-primary">Simpan Proyek</button>
+                    <button type="submit" id="submit-project-btn" class="btn-primary">
+                        <span class="btn-text">Simpan Proyek</span>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    </button>
                 </div>
             </div>
         </form>
@@ -84,14 +87,26 @@
         const projectStatusInput = document.getElementById('project-status');
         const projectStartDateInput = document.getElementById('project-start-date');
         const projectEndDateInput = document.getElementById('project-end-date');
+        const submitProjectBtn = document.getElementById('submit-project-btn');
 
         let currentProjects = [];
+
+        // --- Fungsi Notifikasi ---
+        const showNotification = (message, type = 'success') => {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+            const notif = document.createElement('div');
+            notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-up`;
+            notif.textContent = message;
+            container.appendChild(notif);
+            setTimeout(() => notif.remove(), 4000);
+        };
 
         // --- Fungsi Helper ---
         const formatDateForInput = (timestamp) => {
             if (!timestamp) return '';
             const date = timestamp.toDate();
-            // Format YYYY-MM-DD
             return date.toISOString().split('T')[0];
         };
 
@@ -107,7 +122,7 @@
             const diffTime = endDate - now;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            if (diffDays === 0) return { text: 'Hari ini', color: 'text-accent-cyan' };
+            if (diffDays <= 0) return { text: 'Tenggat hari ini', color: 'text-accent-cyan' };
             return { text: `Sisa ${diffDays} hari`, color: 'text-yellow-500' };
         };
 
@@ -206,27 +221,58 @@
         closeProjectModalBtn.addEventListener('click', closeModal);
         projectModal.addEventListener('click', (e) => e.target === projectModal && closeModal());
 
+        // --- PERBAIKAN PADA FUNGSI SUBMIT ---
         projectForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = projectIdInput.value;
-            const projectData = {
-                title: projectTitleInput.value,
-                progress: parseInt(projectProgressInput.value),
-                status: projectStatusInput.value,
-                startDate: Timestamp.fromDate(new Date(projectStartDateInput.value)),
-                endDate: Timestamp.fromDate(new Date(projectEndDateInput.value)),
-                userId: auth.currentUser.uid,
-                lastUpdated: serverTimestamp()
-            };
+            const btnText = submitProjectBtn.querySelector('.btn-text');
+            const spinner = submitProjectBtn.querySelector('.spinner');
 
-            if (id) {
-                const projectRef = doc(db, "projects", id);
-                await updateDoc(projectRef, projectData);
-            } else {
-                projectData.createdAt = serverTimestamp();
-                await addDoc(collection(db, "projects"), projectData);
+            // Validasi tanggal
+            if (!projectStartDateInput.value || !projectEndDateInput.value) {
+                showNotification('Tanggal mulai dan selesai harus diisi.', 'error');
+                return;
             }
-            closeModal();
+            if (new Date(projectEndDateInput.value) < new Date(projectStartDateInput.value)) {
+                showNotification('Tanggal selesai tidak boleh sebelum tanggal mulai.', 'error');
+                return;
+            }
+
+            // Tampilkan loading
+            btnText.textContent = 'Menyimpan...';
+            spinner.classList.remove('hidden');
+            submitProjectBtn.disabled = true;
+
+            try {
+                const id = projectIdInput.value;
+                const projectData = {
+                    title: projectTitleInput.value,
+                    progress: parseInt(projectProgressInput.value),
+                    status: projectStatusInput.value,
+                    startDate: Timestamp.fromDate(new Date(projectStartDateInput.value)),
+                    endDate: Timestamp.fromDate(new Date(projectEndDateInput.value)),
+                    userId: auth.currentUser.uid,
+                    lastUpdated: serverTimestamp()
+                };
+
+                if (id) {
+                    const projectRef = doc(db, "projects", id);
+                    await updateDoc(projectRef, projectData);
+                    showNotification('Proyek berhasil diperbarui!');
+                } else {
+                    projectData.createdAt = serverTimestamp();
+                    await addDoc(collection(db, "projects"), projectData);
+                    showNotification('Proyek baru berhasil ditambahkan!');
+                }
+                closeModal();
+            } catch (error) {
+                console.error("Error saving project:", error);
+                showNotification('Gagal menyimpan proyek. Coba lagi.', 'error');
+            } finally {
+                // Kembalikan tombol ke keadaan normal
+                btnText.textContent = 'Simpan Proyek';
+                spinner.classList.add('hidden');
+                submitProjectBtn.disabled = false;
+            }
         });
 
         // --- Sinkronisasi dengan Firestore ---
@@ -235,9 +281,7 @@
                 const q = query(collection(db, "projects"), where("userId", "==", user.uid));
                 onSnapshot(q, (snapshot) => {
                     currentProjects = [];
-                    snapshot.forEach(doc => {
-                        currentProjects.push({ id: doc.id, ...doc.data() });
-                    });
+                    snapshot.forEach(doc => currentProjects.push({ id: doc.id, ...doc.data() }));
                     currentProjects.sort((a, b) => (b.lastUpdated?.toDate() || 0) - (a.lastUpdated?.toDate() || 0));
                     renderProjects();
                 });

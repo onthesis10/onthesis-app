@@ -12,6 +12,7 @@ import google.generativeai as genai
 import time
 import midtransclient
 from datetime import date
+from werkzeug.utils import secure_filename
 
 # --- Impor dari __init__.py ---
 from app import app, db, login_manager
@@ -51,11 +52,26 @@ except Exception as e:
     print(f"Peringatan: Gagal mengkonfigurasi Midtrans. Error: {e}")
     midtrans_snap = None
 
+# =========================================================================
+# FUNGSI HELPER UNTUK MEMBACA FILE
+# =========================================================================
+def read_pdf(file_stream):
+    """Membaca teks dari file PDF."""
+    reader = PyPDF2.PdfReader(file_stream)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() or ""
+    return text
+
+def read_docx(file_stream):
+    """Membaca teks dari file DOCX."""
+    doc = docx.Document(file_stream)
+    text = "\n".join([para.text for para in doc.paragraphs])
+    return text
 
 # =========================================================================
 # MODEL PENGGUNA & LOADER
 # =========================================================================
-
 class User(UserMixin):
     def __init__(self, id, displayName, password_hash=None, email=None, is_pro=False, picture=None):
         self.id = id
@@ -72,20 +88,12 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    if not db:
-        return None
+    if not db: return None
     try:
         user_doc = db.collection('users').document(user_id).get()
         if user_doc.exists:
             user_data = user_doc.to_dict()
-            return User(
-                id=user_id,
-                displayName=user_data.get('displayName'),
-                email=user_data.get('email'),
-                password_hash=user_data.get('password_hash'),
-                is_pro=user_data.get('isPro', False),
-                picture=user_data.get('picture')
-            )
+            return User(id=user_id, displayName=user_data.get('displayName'), email=user_data.get('email'), password_hash=user_data.get('password_hash'), is_pro=user_data.get('isPro', False), picture=user_data.get('picture'))
         return None
     except Exception as e:
         print(f"Error saat memuat pengguna dari Firestore: {e}")
@@ -137,7 +145,6 @@ def check_and_update_pro_trial(user_id, feature_name):
         return False, f"Anda telah menggunakan semua percobaan gratis ({limit}x) untuk fitur PRO ini. Silakan upgrade."
     user_ref.update({f'usage_limits.{count_key}': firestore.Increment(1)})
     return True, "OK"
-
 
 # =========================================================================
 # RUTE-RUTE HALAMAN
@@ -339,24 +346,43 @@ def analyze_document():
     if file.filename == '':
         return jsonify({'error': 'Nama file kosong.'}), 400
     try:
-        mock_references = [
-            {"title": "A Neural Algorithm of Artistic Style", "author": "Gatys, L. A., Ecker, A. S., & Bethge, M.", "year": 2015, "journal": "arXiv preprint arXiv:1508.06576"},
-            {"title": "Attention is All You Need", "author": "Vaswani, A., et al.", "year": 2017, "journal": "Advances in neural information processing systems"}
-        ]
-        return jsonify({'references': mock_references})
+        filename = secure_filename(file.filename).lower()
+        content = ""
+        if filename.endswith('.pdf'):
+            content = read_pdf(file.stream)
+        elif filename.endswith('.docx'):
+            content = read_docx(file.stream)
+        else:
+            return jsonify({'error': 'Format file tidak didukung. Harap unggah PDF atau DOCX.'}), 400
+        if not content.strip():
+            return jsonify({'error': 'Tidak ada teks yang dapat diekstrak dari file ini.'}), 400
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"""
+        Analisis teks berikut dan ekstrak semua item daftar pustaka (bibliografi). 
+        Untuk setiap item, berikan informasi berikut dalam format JSON: title, author, year, dan journal.
+        Pastikan outputnya adalah array JSON yang valid.
+
+        Teks Dokumen:
+        ---
+        {content[:10000]}
+        ---
+        """
+        response = model.generate_content(prompt)
+        clean_json_string = re.sub(r'```json\s*|\s*```', '', response.text.strip(), flags=re.DOTALL)
+        references = json.loads(clean_json_string)
+        return jsonify({'references': references})
+    except json.JSONDecodeError:
+        return jsonify({'error': 'AI tidak dapat memformat daftar pustaka dengan benar. Coba lagi.'}), 500
     except Exception as e:
         print(f"Error saat menganalisis dokumen: {e}")
-        return jsonify({'error': 'Terjadi kesalahan internal saat memproses file.'}), 500
+        return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
 
 @app.route('/api/get-usage-status')
 @login_required
 def get_usage_status():
     if current_user.is_pro:
         return jsonify({'status': 'pro', 'message': 'Akses Penuh Tanpa Batas'})
-    LIMITS = {
-        'paraphrase': 5, 'chat': 10, 'search': 5, 'citation': 15,
-        'writing_assistant': 3, 'data_analysis': 3
-    }
+    LIMITS = {'paraphrase': 5, 'chat': 10, 'search': 5, 'citation': 15, 'writing_assistant': 3, 'data_analysis': 3}
     user_ref = db.collection('users').document(current_user.id)
     user_doc = user_ref.get()
     if not user_doc.exists: return jsonify({'error': 'User not found'}), 404
