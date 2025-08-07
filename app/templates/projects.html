@@ -6,7 +6,7 @@
 <div class="animate-fade-in-up">
     <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
         <div>
-            <h1 class="text-4xl font-extrabold text-white">Manajemen Proyek</h1>
+            <h1 class="text-4xl font-extrabold text-text-primary">Manajemen Proyek</h1>
             <p class="text-lg text-text-secondary mt-1">Lacak semua progres penulisan skripsi dan jurnal Anda.</p>
         </div>
         <button id="add-project-btn" class="btn-primary">
@@ -19,14 +19,15 @@
     </div>
 </div>
 
-<!-- Modal Tambah Proyek -->
+<!-- Modal Tambah/Edit Proyek -->
 <div id="project-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden feedback-modal">
     <div class="w-full max-w-lg feedback-modal-content rounded-lg shadow-lg p-8 transform transition-all opacity-0 -translate-y-4" id="project-modal-card">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-2xl font-bold text-white">Proyek Baru</h3>
-            <button id="close-project-modal-btn" class="text-text-secondary hover:text-white text-3xl">&times;</button>
+            <h3 id="project-modal-title" class="text-2xl font-bold text-text-primary">Proyek Baru</h3>
+            <button id="close-project-modal-btn" class="text-text-secondary hover:text-text-primary text-3xl">&times;</button>
         </div>
         <form id="project-form">
+            <input type="hidden" id="project-id">
             <div class="space-y-4">
                 <div>
                     <label for="project-title" class="block text-sm font-medium text-text-secondary mb-2">Judul Proyek</label>
@@ -35,6 +36,10 @@
                 <div>
                     <label for="project-progress" class="block text-sm font-medium text-text-secondary mb-2">Progres Awal (%)</label>
                     <input id="project-progress" type="number" class="feedback-form-input" value="0" min="0" max="100" required>
+                </div>
+                 <div>
+                    <label for="project-status" class="block text-sm font-medium text-text-secondary mb-2">Status</label>
+                    <input id="project-status" type="text" class="feedback-form-input" placeholder="Contoh: Draft Awal" required>
                 </div>
                 <div class="flex justify-end pt-4">
                     <button type="submit" class="btn-primary">Simpan Proyek</button>
@@ -48,7 +53,7 @@
 {% block page_scripts %}
 <script type="module">
     import { db, auth } from '/static/js/firebase.js';
-    import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
         const projectsListContainer = document.getElementById('projects-list');
@@ -57,6 +62,11 @@
         const projectModalCard = document.getElementById('project-modal-card');
         const closeProjectModalBtn = document.getElementById('close-project-modal-btn');
         const projectForm = document.getElementById('project-form');
+        const projectModalTitle = document.getElementById('project-modal-title');
+        const projectIdInput = document.getElementById('project-id');
+        const projectTitleInput = document.getElementById('project-title');
+        const projectProgressInput = document.getElementById('project-progress');
+        const projectStatusInput = document.getElementById('project-status');
 
         let currentProjects = [];
 
@@ -66,17 +76,19 @@
                 projectsListContainer.innerHTML = `<div class="text-center py-16 apex-card"><p class="text-text-secondary">Anda belum memiliki proyek. Klik 'Proyek Baru' untuk memulai.</p></div>`;
                 return;
             }
+
             projectsListContainer.innerHTML = currentProjects.map(p => `
-                <div class="apex-card p-6" data-id="${p.id}">
+                <div class="apex-card p-6" data-id="${p.id}" data-title="${p.title}" data-progress="${p.progress}" data-status="${p.status || ''}">
                     <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
                         <div class="flex-grow">
-                            <h4 class="font-bold text-white text-xl">${p.title}</h4>
+                            <h4 class="font-bold text-text-primary text-xl">${p.title}</h4>
                             <div class="flex items-center gap-4 mt-4">
                                 <input type="range" min="0" max="100" value="${p.progress}" class="w-full h-2 bg-border-panel rounded-lg appearance-none cursor-pointer progress-slider">
-                                <span class="font-semibold text-white text-lg">${p.progress}%</span>
+                                <span class="font-semibold text-text-primary text-lg">${p.progress}%</span>
                             </div>
                         </div>
                         <div class="flex-shrink-0 flex items-center gap-2 mt-4 md:mt-0">
+                            <button class="btn-secondary text-xs edit-btn">Edit</button>
                             <button class="btn-secondary text-xs text-red-400 hover:bg-red-500/10 hover:border-red-500/50 delete-btn">Hapus</button>
                         </div>
                     </div>
@@ -85,6 +97,7 @@
         };
         
         const setupProjectListeners = () => {
+            // Listener untuk update progress slider
             projectsListContainer.addEventListener('input', (e) => {
                 if (e.target.classList.contains('progress-slider')) {
                     const id = e.target.closest('.apex-card').dataset.id;
@@ -94,9 +107,23 @@
                 }
             });
 
+            // Listener untuk tombol edit dan hapus
             projectsListContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.apex-card');
+                if (!card) return;
+
+                const id = card.dataset.id;
+
+                if (e.target.classList.contains('edit-btn')) {
+                    projectModalTitle.textContent = 'Edit Proyek';
+                    projectIdInput.value = id;
+                    projectTitleInput.value = card.dataset.title;
+                    projectProgressInput.value = card.dataset.progress;
+                    projectStatusInput.value = card.dataset.status;
+                    openModal();
+                }
+
                 if (e.target.classList.contains('delete-btn')) {
-                    const id = e.target.closest('.apex-card').dataset.id;
                     if (confirm('Apakah Anda yakin ingin menghapus proyek ini?')) {
                         deleteDoc(doc(db, "projects", id));
                     }
@@ -108,9 +135,15 @@
             projectModal.classList.remove('hidden');
             setTimeout(() => projectModalCard.classList.remove('opacity-0', '-translate-y-4'), 10);
         };
+
         const closeModal = () => {
             projectModalCard.classList.add('opacity-0', '-translate-y-4');
-            setTimeout(() => { projectModal.classList.add('hidden'); projectForm.reset(); }, 300);
+            setTimeout(() => {
+                projectModal.classList.add('hidden');
+                projectForm.reset();
+                projectIdInput.value = ''; // Pastikan ID dikosongkan
+                projectModalTitle.textContent = 'Proyek Baru';
+            }, 300);
         };
 
         addProjectBtn.addEventListener('click', openModal);
@@ -119,16 +152,24 @@
 
         projectForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const title = document.getElementById('project-title').value;
-            const progress = document.getElementById('project-progress').value;
-            
-            await addDoc(collection(db, "projects"), {
-                title: title,
-                progress: parseInt(progress),
-                status: 'Baru',
+            const id = projectIdInput.value;
+            const projectData = {
+                title: projectTitleInput.value,
+                progress: parseInt(projectProgressInput.value),
+                status: projectStatusInput.value,
                 userId: auth.currentUser.uid,
-                createdAt: new Date()
-            });
+                lastUpdated: serverTimestamp()
+            };
+
+            if (id) {
+                // Mode Edit
+                const projectRef = doc(db, "projects", id);
+                await updateDoc(projectRef, projectData);
+            } else {
+                // Mode Tambah Baru
+                projectData.createdAt = serverTimestamp();
+                await addDoc(collection(db, "projects"), projectData);
+            }
             closeModal();
         });
 
@@ -140,9 +181,15 @@
                     snapshot.forEach(doc => {
                         currentProjects.push({ id: doc.id, ...doc.data() });
                     });
+                    // Urutkan berdasarkan tanggal update terbaru
+                    currentProjects.sort((a, b) => (b.lastUpdated?.toDate() || 0) - (a.lastUpdated?.toDate() || 0));
                     renderProjects();
                 });
                 setupProjectListeners();
+            } else {
+                // Kosongkan daftar jika user logout
+                currentProjects = [];
+                renderProjects();
             }
         });
     });

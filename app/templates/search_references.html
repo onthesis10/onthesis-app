@@ -4,29 +4,6 @@
 
 {% block page_styles %}
 <style>
-    /* Animasi untuk notifikasi */
-    @keyframes fade-in-out {
-      0% { opacity: 0; transform: translateY(-20px); }
-      10% { opacity: 1; transform: translateY(0); }
-      90% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-20px); }
-    }
-    .animate-fade-in-out {
-      animation: fade-in-out 4s ease-in-out forwards;
-    }
-    /* Animasi spinner sederhana */
-    .loader {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #fb923c; /* orange-400 */
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
     /* Utility untuk memotong teks panjang (abstract) */
     .truncate-3-lines {
         display: -webkit-box;
@@ -39,57 +16,48 @@
 {% endblock %}
 
 {% block content %}
-<!-- Kontainer utama dengan tema oranye cerah -->
-<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
-    
+<div class="animate-fade-in-up">
     <!-- Header Halaman -->
-    <header class="mb-8 flex-shrink-0 text-center">
-        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Search References</h1>
-        <p class="text-lg text-orange-800/80 mt-1">Temukan jutaan referensi ilmiah dari berbagai sumber terpercaya.</p>
+    <header class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold text-text-primary">Search References</h1>
+        <p class="text-lg text-text-secondary mt-1">Temukan jutaan referensi ilmiah dari berbagai sumber terpercaya.</p>
     </header>
 
-    <!-- Kontrol dan Daftar Hasil dengan latar belakang transparan -->
-    <div class="flex-grow overflow-y-auto pr-2 flex flex-col bg-yellow-200/40 backdrop-blur-sm border border-yellow-200/60 p-6 rounded-2xl shadow-inner">
-        
-        <!-- Panel Pencarian -->
-        <div class="flex-shrink-0 mb-8">
-            <div class="flex flex-col sm:flex-row items-center gap-4">
-                <div class="relative flex-grow w-full">
-                    <svg class="w-6 h-6 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" id="search-query" placeholder="Cari judul, penulis, atau kata kunci..." class="w-full pl-12 pr-4 py-3 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 ease-in-out">
-                </div>
-                <button id="search-btn" class="w-full sm:w-auto bg-orange-500 text-white font-semibold py-3 px-8 rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300 shadow-md hover:shadow-lg">
-                    Cari
-                </button>
+    <!-- Panel Pencarian dengan Gaya Baru -->
+    <div class="apex-card p-6 mb-8">
+        <div class="flex flex-col sm:flex-row items-center gap-4">
+            <div class="relative flex-grow w-full">
+                <svg class="w-5 h-5 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="search-query" placeholder="Cari judul, penulis, atau kata kunci..." class="feedback-form-input w-full pl-12 pr-4 py-3">
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                <select id="source-select" class="w-full bg-white border border-slate-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-orange-500">
-                    <option value="core" selected>Dari Sumber: CORE</option>
-                    <option value="crossref">Dari Sumber: Crossref</option>
-                </select>
-                <select id="year-select" class="w-full bg-white border border-slate-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-orange-500">
-                    <option value="">Dari Tahun: Semua</option>
-                </select>
-            </div>
-            <!-- PERUBAHAN: Widget kuota dipindahkan ke sini -->
-            <div id="usage-counter-display" class="hidden mt-4 flex justify-center items-center gap-2 bg-teal-100/80 text-teal-800 text-sm font-medium px-3 py-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Sisa Pencarian Hari Ini: <strong id="search-remaining-count">...</strong></span>
-            </div>
+            <button id="search-btn" class="btn-primary w-full sm:w-auto">Cari</button>
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <select id="source-select" class="feedback-form-input">
+                <option value="core" selected>Sumber: CORE</option>
+                <option value="crossref">Sumber: Crossref</option>
+            </select>
+            <select id="year-select" class="feedback-form-input">
+                <option value="">Tahun: Semua</option>
+            </select>
+        </div>
+        <div id="usage-counter-display" class="hidden mt-4 flex justify-center items-center gap-2 text-text-secondary text-sm font-medium px-3 py-2 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Sisa Pencarian Hari Ini: <strong id="search-remaining-count" class="text-text-primary">...</strong></span>
+        </div>
+    </div>
 
-        <!-- Area Hasil Pencarian (Scrollable) -->
-        <div id="results-container" class="flex-grow space-y-4">
-             <div id="initial-message" class="text-center text-orange-800/70 italic py-10 h-full flex items-center justify-center">
-                <p>Mulai pencarian Anda untuk melihat hasilnya di sini.</p>
-            </div>
+    <!-- Area Hasil Pencarian -->
+    <div id="results-container" class="space-y-6">
+         <div id="initial-message" class="text-center text-text-secondary italic py-10">
+            <p>Mulai pencarian Anda untuk melihat hasilnya di sini.</p>
         </div>
     </div>
 </div>
 
-<!-- Kontainer Notifikasi -->
+<!-- Kontainer Notifikasi (menggunakan gaya dari layout) -->
 <div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
 {% endblock %}
 
@@ -103,11 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const yearSelect = document.getElementById('year-select');
     const resultsContainer = document.getElementById('results-container');
 
-    // --- BARU: Logika untuk mengambil dan menampilkan kuota ---
     const fetchAndDisplayUsage = async () => {
         const display = document.getElementById('usage-counter-display');
         try {
-            const response = await fetch(`${window.location.origin}/api/get-usage-status`);
+            const response = await fetch('/api/get-usage-status');
             if (!response.ok) return;
             const data = await response.json();
             if (data.status === 'free') {
@@ -119,9 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Gagal mengambil status kuota:", error);
         }
     };
-    fetchAndDisplayUsage(); // Panggil saat halaman dimuat
+    fetchAndDisplayUsage();
 
-    // --- Initialization ---
     const currentYear = new Date().getFullYear();
     for (let year = currentYear; year >= 1980; year--) {
         const option = document.createElement('option');
@@ -130,175 +96,117 @@ document.addEventListener('DOMContentLoaded', () => {
         yearSelect.appendChild(option);
     }
 
-    // --- Notification Function ---
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         if (!container) return;
+        
         const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
         const notif = document.createElement('div');
-        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-out`;
+        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-up`;
         notif.textContent = message;
+        
         container.appendChild(notif);
-        setTimeout(() => notif.remove(), 4000);
+        setTimeout(() => { notif.remove(); }, 4000);
     };
 
-    // --- Main Search Handler ---
     const handleSearch = async () => {
         const query = searchQueryInput.value.trim();
-        const source = sourceSelect.value;
-        const year = yearSelect.value;
-
         if (!query) {
             showNotification('Mohon masukkan kata kunci pencarian.', 'error');
             return;
         }
 
-        resultsContainer.innerHTML = `<div class="flex flex-col items-center justify-center py-16"><div class="loader"></div><p class="mt-4 text-slate-600">Mencari referensi...</p></div>`;
+        resultsContainer.innerHTML = `<div class="flex flex-col items-center justify-center py-16"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-cyan"></div><p class="mt-4 text-text-secondary">Mencari referensi...</p></div>`;
 
         try {
-            const response = await fetch(`${window.location.origin}/api/search-references`, {
+            const response = await fetch('/api/search-references', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    source: source,
-                    query: query,
-                    year: year
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: sourceSelect.value, query: query, year: yearSelect.value })
             });
-
             const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Terjadi kesalahan pada server.');
-            }
+            if (!response.ok) throw new Error(data.error || 'Terjadi kesalahan pada server.');
             
-            processAndRenderResults(data, source);
-            fetchAndDisplayUsage(); // Perbarui hitungan setelah berhasil
-
+            processAndRenderResults(data, sourceSelect.value);
+            fetchAndDisplayUsage();
         } catch (error) {
-            console.error('Search Error:', error);
-            resultsContainer.innerHTML = `<div class="text-center text-red-500 py-16 px-6 bg-red-50 rounded-xl border border-dashed border-red-200"><h3 class="text-xl font-semibold">Terjadi Kesalahan</h3><p class="mt-1">${error.message}</p></div>`;
+            resultsContainer.innerHTML = `<div class="text-center text-red-500 py-16 px-6 apex-card"><h3 class="text-xl font-semibold">Terjadi Kesalahan</h3><p class="mt-1">${error.message}</p></div>`;
         }
     };
 
-    // --- Function to Process Data from Backend ---
     const processAndRenderResults = (data, source) => {
         let results = [];
-        
-        if (source === 'core') {
-            if (!data.results || data.results.length === 0) {
-                renderResults([]);
-                return;
-            }
-            results = data.results.map(item => {
-                const authorList = (item.authors || []).map(author => 
-                    typeof author === 'string' ? author : author.name
-                ).filter(Boolean);
-                return {
-                    id: item.id,
-                    title: item.title || 'Judul tidak tersedia',
-                    author: authorList.join(', ') || 'Penulis tidak diketahui',
-                    year: item.yearPublished || 'N/A',
-                    journal: item.publisher || 'Publikasi tidak tersedia',
-                    pdfUrl: item.downloadUrl,
-                    doi: item.doi,
-                    abstract: item.abstract || 'Abstrak tidak tersedia.'
-                };
-            });
-        } else if (source === 'crossref') {
-            if (!data.results || data.results.length === 0) {
-                renderResults([]);
-                return;
-            }
-            results = data.results.map(item => {
-                const authors = (item.author || []).map(a => `${a.given || ''} ${a.family || ''}`.trim()).join(', ');
-                const year = item.created?.['date-parts']?.[0]?.[0] || 'N/A';
-                const journal = (item['container-title'] && item['container-title'].length > 0) ? item['container-title'][0] : 'Publikasi tidak tersedia';
-                const title = (item.title && item.title.length > 0) ? item.title[0] : 'Judul tidak tersedia';
-                
-                return {
-                    id: item.DOI,
-                    title: title,
-                    author: authors || 'Penulis tidak diketahui',
-                    year: year,
-                    journal: journal,
-                    pdfUrl: item.URL,
-                    doi: item.DOI,
-                    abstract: 'Abstrak tidak tersedia dari Crossref.'
-                };
-            });
+        if (source === 'core' && data.results) {
+            results = data.results.map(item => ({
+                id: item.id,
+                title: item.title || 'Judul tidak tersedia',
+                author: (item.authors || []).map(author => typeof author === 'string' ? author : author.name).filter(Boolean).join(', ') || 'Penulis tidak diketahui',
+                year: item.yearPublished || 'N/A',
+                journal: item.publisher || 'Publikasi tidak tersedia',
+                pdfUrl: item.downloadUrl,
+                doi: item.doi,
+                abstract: item.abstract || 'Abstrak tidak tersedia.'
+            }));
+        } else if (source === 'crossref' && data.results) {
+            results = data.results.map(item => ({
+                id: item.DOI,
+                title: (item.title && item.title.length > 0) ? item.title[0] : 'Judul tidak tersedia',
+                author: (item.author || []).map(a => `${a.given || ''} ${a.family || ''}`.trim()).join(', ') || 'Penulis tidak diketahui',
+                year: item.created?.['date-parts']?.[0]?.[0] || 'N/A',
+                journal: (item['container-title'] && item['container-title'].length > 0) ? item['container-title'][0] : 'Publikasi tidak tersedia',
+                pdfUrl: item.URL,
+                doi: item.DOI,
+                abstract: 'Abstrak tidak tersedia dari Crossref.'
+            }));
         }
-        
         renderResults(results);
     };
 
-    // --- Render Results Function ---
     const renderResults = (results) => {
         if (results.length === 0) {
-            resultsContainer.innerHTML = `<div class="text-center text-orange-800/70 italic py-10 h-full flex items-center justify-center"><h3 class="text-xl font-semibold">Tidak Ada Hasil</h3><p class="mt-1">Coba gunakan kata kunci yang berbeda.</p></div>`;
+            resultsContainer.innerHTML = `<div class="text-center text-text-secondary italic py-10 apex-card"><h3 class="text-xl font-semibold text-text-primary">Tidak Ada Hasil</h3><p class="mt-1">Coba gunakan kata kunci yang berbeda.</p></div>`;
             return;
         }
 
-        resultsContainer.innerHTML = `<h3 class="text-xl font-semibold text-orange-900 mb-4">Hasil Ditemukan (${results.length})</h3>` + 
-            results.map(ref => {
-                const linkButtonText = ref.pdfUrl && ref.pdfUrl.endsWith('.pdf') ? 'Lihat PDF' : 'Kunjungi Sumber';
-                return `
-                <div class="bg-white/80 p-5 rounded-xl shadow-sm border border-slate-200 transition-all hover:shadow-md hover:border-orange-200">
-                    ${ref.pdfUrl 
-                        ? `<a href="${ref.pdfUrl}" target="_blank" class="hover:underline"><h4 class="font-bold text-lg text-teal-800">${ref.title}</h4></a>` 
-                        : `<h4 class="font-bold text-lg text-teal-800">${ref.title}</h4>`
-                    }
-                    <div class="text-sm text-slate-600 mt-2 space-y-1">
-                        <p><span class="font-semibold">Penulis:</span> ${ref.author}</p>
-                        <p><span class="font-semibold">Publikasi:</span> ${ref.journal} (${ref.year})</p>
-                    </div>
-                    <p class="text-sm text-slate-500 mt-3 pt-3 border-t border-slate-200 truncate-3-lines">${ref.abstract}</p>
-                    <div class="mt-4 flex flex-wrap gap-3 items-center">
-                        <button data-ref='${JSON.stringify(ref)}' class="add-to-citation-btn bg-orange-100 text-orange-800 text-xs font-semibold py-1 px-3 rounded-md hover:bg-orange-200 transition-colors">+ Tambah ke Sitasi</button>
-                        ${ref.pdfUrl ? `<a href="${ref.pdfUrl}" target="_blank" class="bg-teal-500 text-white text-xs font-semibold py-1 px-3 rounded-md hover:bg-teal-600 transition-colors flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>${linkButtonText}</a>` : ''}
-                        ${ref.doi ? `<a href="https://doi.org/${ref.doi}" target="_blank" class="text-slate-500 hover:text-slate-800 text-xs font-semibold py-1 px-3 rounded-md bg-slate-100 hover:bg-slate-200 transition-colors">DOI: ${ref.doi}</a>` : ''}
-                    </div>
-                </div>`
-            }).join('');
+        resultsContainer.innerHTML = `<h3 class="text-xl font-semibold text-text-primary mb-4">Hasil Ditemukan (${results.length})</h3>` + 
+            results.map(ref => `
+            <div class="apex-card p-5">
+                <a href="${ref.pdfUrl || '#'}" target="_blank" class="hover:underline"><h4 class="font-bold text-lg text-text-primary">${ref.title}</h4></a>
+                <div class="text-sm text-text-secondary mt-2 space-y-1">
+                    <p><span class="font-semibold text-text-secondary/80">Penulis:</span> ${ref.author}</p>
+                    <p><span class="font-semibold text-text-secondary/80">Publikasi:</span> ${ref.journal} (${ref.year})</p>
+                </div>
+                <p class="text-sm text-text-secondary mt-3 pt-3 border-t border-border-panel truncate-3-lines">${ref.abstract}</p>
+                <div class="mt-4 flex flex-wrap gap-3 items-center">
+                    <button data-ref='${JSON.stringify(ref)}' class="add-to-citation-btn btn-secondary text-xs !py-1 !px-3">+ Tambah ke Sitasi</button>
+                    ${ref.pdfUrl ? `<a href="${ref.pdfUrl}" target="_blank" class="btn-secondary text-xs !py-1 !px-3 flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>Lihat Sumber</a>` : ''}
+                    ${ref.doi ? `<a href="https://doi.org/${ref.doi}" target="_blank" class="text-text-secondary hover:text-text-primary text-xs font-semibold py-1 px-3 rounded-md bg-white/5 dark:bg-black/10 hover:bg-white/10 dark:hover:bg-black/20 transition-colors">DOI</a>` : ''}
+                </div>
+            </div>`).join('');
     };
     
-    // --- Add to Citation Function ---
     const handleAddToCitation = (e) => {
         if (!e.target.classList.contains('add-to-citation-btn')) return;
 
         const refData = JSON.parse(e.target.dataset.ref);
         let references = JSON.parse(localStorage.getItem('onthesis_references')) || [];
-        const isDuplicate = references.some(r => r.id && r.id === refData.id);
-
-        if (isDuplicate) {
+        if (references.some(r => r.id && r.id === refData.id)) {
             showNotification('Referensi ini sudah ada di daftar sitasi Anda.', 'error');
             return;
         }
 
-        references.unshift({
-            id: refData.id,
-            title: refData.title,
-            author: refData.author,
-            year: refData.year,
-            journal: refData.journal
-        });
-
+        references.unshift({ id: refData.id, title: refData.title, author: refData.author, year: refData.year, journal: refData.journal });
         localStorage.setItem('onthesis_references', JSON.stringify(references));
-        showNotification('Referensi berhasil ditambahkan ke Manajemen Sitasi!');
+        showNotification('Referensi berhasil ditambahkan!');
         
         e.target.textContent = '✔ Ditambahkan';
         e.target.disabled = true;
-        e.target.classList.remove('bg-orange-100', 'hover:bg-orange-200');
-        e.target.classList.add('bg-green-500', 'text-white', 'cursor-not-allowed');
+        e.target.classList.remove('btn-secondary');
+        e.target.classList.add('!bg-green-500/20', '!text-green-500', '!border-green-500/30', 'cursor-not-allowed');
     };
 
-    // --- Event Listeners ---
     searchBtn.addEventListener('click', handleSearch);
-    searchQueryInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSearch();
-    });
+    searchQueryInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleSearch());
     resultsContainer.addEventListener('click', handleAddToCitation);
 });
 </script>
