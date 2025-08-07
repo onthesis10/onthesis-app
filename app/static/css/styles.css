@@ -11,12 +11,10 @@
     --text-secondary: #A0A1B0;
     --accent-1: #8A5CFE; /* Ungu */
     --accent-2: #3B82F6; /* Biru */
-    --accent-3: #7c3aed; /* Ungu lebih gelap */
-    --accent-4: #4f46e5; /* Biru lebih gelap */
 }
 
 /* ======================================================================== */
-/* 1. GAYA DASAR & KANVAS PARTIKEL
+/* 1. GAYA DASAR & KANVAS BINTANG
 /* ======================================================================== */
 body {
     font-family: var(--font-sans);
@@ -24,10 +22,10 @@ body {
     color: var(--text-secondary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow: hidden; /* Mencegah scroll di body utama */
+    overflow: hidden;
 }
 
-#particle-canvas {
+#star-canvas {
     position: fixed;
     top: 0;
     left: 0;
@@ -79,55 +77,44 @@ body {
     border-left-color: var(--accent-1);
 }
 
-/* [DIUBAH] Kartu 3D Dua Lapis */
+/* [DIUBAH] Kartu Bingkai Putih Estetis */
 .neural-card {
     display: block;
     aspect-ratio: 1 / 1;
-    border-radius: 1.5rem; /* 24px */
     text-decoration: none;
-    transform-style: preserve-3d; /* Penting untuk efek 3D */
-    will-change: transform;
-}
-
-.neural-card-inner {
     position: relative;
-    width: 100%;
-    height: 100%;
-    border-radius: inherit;
-    overflow: hidden;
-    transform: translateZ(20px); /* Memberi kedalaman */
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.card-layer-bottom {
-    position: absolute; inset: 0;
-    border-radius: inherit;
-    display: flex; justify-content: center; align-items: flex-end;
-    padding: 1rem; text-align: center;
-    font-size: 0.875rem; font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.card-layer-top {
+.card-layer-bottom { /* Lapisan Bingkai Putih */
     position: absolute;
-    inset: 6px;
-    bottom: 28%;
-    background-color: var(--bg-panel);
-    border: 1px solid var(--border-panel);
-    border-radius: 1.25rem;
-    display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
-    padding: 1rem;
-    /* [BARU] Latar belakang sirkuit yang bersinar */
-    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 1rem 1rem;
+    inset: 0;
+    background-color: #FFFFFF;
+    border-radius: 1.5rem; /* 24px */
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* Variasi Warna */
-.neural-card.accent-blue .card-layer-bottom {
-    background-image: linear-gradient(160deg, var(--accent-4) 0%, var(--accent-2) 100%);
+.card-layer-top { /* Lapisan Konten Utama */
+    position: absolute;
+    inset: 4px; /* Memberi jarak 4px dari bingkai putih */
+    background-color: var(--bg-panel);
+    border-radius: 1.25rem; /* Sudut lebih kecil dari bingkai */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Mendorong konten ke atas dan bawah */
+    padding: 1.25rem;
+    text-align: left;
 }
-.neural-card.accent-purple .card-layer-bottom {
-    background-image: linear-gradient(160deg, var(--accent-3) 0%, var(--accent-1) 100%);
+
+/* Animasi Halus saat Hover */
+.neural-card:hover {
+    transform: translateY(-12px) scale(1.05);
+}
+.neural-card.accent-blue:hover .card-layer-bottom {
+    box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.3);
+}
+.neural-card.accent-purple:hover .card-layer-bottom {
+    box-shadow: 0 20px 40px -10px rgba(138, 92, 254, 0.3);
 }
 
 /* ======================================================================== */
