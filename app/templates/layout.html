@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- Menghapus class 'dark' agar tema diatur oleh CSS/JS -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -12,19 +11,17 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Memuat CSS baru -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     
     {% block page_styles %}{% endblock %}
 </head>
 <body>
-    <div class="flex h-screen w-full bg-bg-canvas">
+    <!-- Menambahkan kelas untuk latar belakang animasi -->
+    <div class="flex h-screen w-full bg-bg-canvas bg-animated-grid">
         
-        <!-- Sidebar dengan gaya baru -->
         <aside class="primary-sidebar p-6 flex-col flex-shrink-0 hidden md:flex">
             <div class="flex justify-center py-4 mb-6">
                 <a href="{{ url_for('dashboard') }}">
-                    <!-- Menggunakan logo yang sama, akan terlihat bagus di background gelap -->
                     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="h-12">
                 </a>
             </div>
@@ -34,6 +31,11 @@
                 <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
                     <span>Dasbor</span>
+                </a>
+                <!-- Tautan Baru: Manajemen Proyek -->
+                <a href="{{ url_for('projects') }}" class="nav-link {{ 'active' if active_page == 'projects' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    <span>Manajemen Proyek</span>
                 </a>
                 <a href="{{ url_for('search_references') }}" class="nav-link {{ 'active' if active_page == 'search_references' else '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -51,7 +53,6 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     <span>Curhat AI</span>
                 </a>
-                <!-- Link PRO dengan badge -->
                 <a href="{{ url_for('writing_assistant') }}" class="nav-link relative {{ 'active' if active_page == 'writing_assistant' else '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     <span>Asisten AI</span>
@@ -72,7 +73,8 @@
                     <span>Kembali</span>
                 </button>
                 <div class="flex items-center gap-4">
-                    <button title="Kirim Feedback" class="text-text-secondary hover:text-white transition-colors">
+                    <!-- Tombol Feedback diberi ID untuk JavaScript -->
+                    <button id="feedback-btn" title="Kirim Feedback" class="text-text-secondary hover:text-white transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>
                     </button>
                     <a href="{{ url_for('user_profile') }}" title="Profil">
@@ -87,8 +89,116 @@
         </main>
     </div>
     
-    <!-- Script utama tidak perlu diubah, karena sudah modular -->
+    <!-- Modal Feedback -->
+    <div id="feedback-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden feedback-modal">
+        <div class="w-full max-w-lg feedback-modal-content rounded-lg shadow-lg p-8 transform transition-all opacity-0 -translate-y-4" id="feedback-modal-card">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-white">Kirim Masukan</h3>
+                <button id="close-feedback-modal-btn" class="text-text-secondary hover:text-white text-3xl">&times;</button>
+            </div>
+            <div id="feedback-form-container">
+                <form id="feedback-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="feedback-category" class="block text-sm font-medium text-text-secondary mb-2">Kategori</label>
+                            <select id="feedback-category" name="category" class="feedback-form-input">
+                                <option>Saran Fitur</option>
+                                <option>Laporan Bug</option>
+                                <option>Desain & UI/UX</option>
+                                <option>Lainnya</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="feedback-message" class="block text-sm font-medium text-text-secondary mb-2">Pesan Anda</label>
+                            <textarea id="feedback-message" name="message" rows="4" class="feedback-form-input" placeholder="Jelaskan masukan Anda di sini..." required></textarea>
+                        </div>
+                        <div class="flex justify-end pt-4">
+                            <button type="submit" id="submit-feedback-btn" class="btn-primary">
+                                <span class="btn-text">Kirim Masukan</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div id="feedback-success-message" class="hidden text-center py-8">
+                <p class="text-2xl mb-4">✅</p>
+                <h4 class="text-xl font-bold text-white">Terima Kasih!</h4>
+                <p class="text-text-secondary mt-2">Masukan Anda telah kami terima dan sangat kami hargai.</p>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/script.js') }}" type="module"></script>
-    {% block page_scripts %}{% endblock %}
+    {% block page_scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Logika Modal Feedback
+            const feedbackBtn = document.getElementById('feedback-btn');
+            const feedbackModal = document.getElementById('feedback-modal');
+            const feedbackModalCard = document.getElementById('feedback-modal-card');
+            const closeFeedbackBtn = document.getElementById('close-feedback-modal-btn');
+            const feedbackForm = document.getElementById('feedback-form');
+            const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+            const formContainer = document.getElementById('feedback-form-container');
+            const successMessage = document.getElementById('feedback-success-message');
+
+            const openModal = () => {
+                feedbackModal.classList.remove('hidden');
+                setTimeout(() => {
+                    feedbackModalCard.classList.remove('opacity-0', '-translate-y-4');
+                }, 10);
+            };
+
+            const closeModal = () => {
+                feedbackModalCard.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => {
+                    feedbackModal.classList.add('hidden');
+                    formContainer.classList.remove('hidden');
+                    successMessage.classList.add('hidden');
+                    feedbackForm.reset();
+                }, 300);
+            };
+
+            if (feedbackBtn) feedbackBtn.addEventListener('click', openModal);
+            if (closeFeedbackBtn) closeFeedbackBtn.addEventListener('click', closeModal);
+            if (feedbackModal) feedbackModal.addEventListener('click', (e) => e.target === feedbackModal && closeModal());
+
+            if (feedbackForm) {
+                feedbackForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    submitFeedbackBtn.disabled = true;
+                    submitFeedbackBtn.querySelector('.btn-text').textContent = 'Mengirim...';
+
+                    const formData = new FormData(feedbackForm);
+                    const data = {
+                        category: formData.get('category'),
+                        message: formData.get('message'),
+                        pageUrl: window.location.pathname
+                    };
+
+                    try {
+                        const response = await fetch('/api/submit-feedback', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message || 'Gagal mengirim masukan.');
+                        
+                        formContainer.classList.add('hidden');
+                        successMessage.classList.remove('hidden');
+                        setTimeout(closeModal, 2500);
+
+                    } catch (error) {
+                        alert(`Error: ${error.message}`); // Ganti dengan notifikasi yang lebih baik
+                    } finally {
+                        submitFeedbackBtn.disabled = false;
+                        submitFeedbackBtn.querySelector('.btn-text').textContent = 'Kirim Masukan';
+                    }
+                });
+            }
+        });
+    </script>
+    {% endblock %}
 </body>
 </html>

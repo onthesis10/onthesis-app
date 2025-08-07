@@ -1,21 +1,15 @@
 /* ======================================================================== */
 /* OnThesis - "Apex Command Center" Design System */
-/* Dibuat berdasarkan artikel konsep desain futuristik. */
 /* ======================================================================== */
 
 :root {
-    /* Menggunakan font Poppins yang sudah ada di layout.html */
     --font-sans: 'Poppins', sans-serif;
-    
-    /* Palet Warna Futuristik (Dark Mode) */
-    --bg-canvas: #0D1117; /* GitHub Dark */
-    --bg-panel: #161B22; /* Sedikit lebih terang dari canvas */
-    --border-panel: #30363D; /* Batas yang lembut */
-    --text-primary: #E6EDF3; /* Putih lembut untuk teks utama */
-    --text-secondary: #8B949E; /* Abu-abu untuk teks pendukung */
-    
-    /* Warna Aksen Khas */
-    --accent-cyan: #22d3ee; /* Tailwind Cyan-400 */
+    --bg-canvas: #0D1117;
+    --bg-panel: #161B22;
+    --border-panel: #30363D;
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    --accent-cyan: #22d3ee;
     --accent-cyan-glow: rgba(34, 211, 238, 0.3);
 }
 
@@ -29,24 +23,36 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-canvas); }
+::-webkit-scrollbar-thumb { background-color: var(--border-panel); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background-color: #4b5563; }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
+/* ======================================================================== */
+/* 2. LATAR BELAKANG ANIMASI
+/* ======================================================================== */
+@keyframes move-grid {
+    from { background-position: 0 0; }
+    to { background-position: 0 -100px; }
 }
-::-webkit-scrollbar-track {
-    background: var(--bg-canvas);
+.bg-animated-grid {
+    position: relative;
+    z-index: 0;
 }
-::-webkit-scrollbar-thumb {
-    background-color: var(--border-panel);
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background-color: #4b5563; /* Gray-600 */
+.bg-animated-grid::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: 
+        linear-gradient(to right, var(--border-panel) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--border-panel) 1px, transparent 1px);
+    background-size: 50px 50px;
+    opacity: 0.2;
+    animation: move-grid 4s linear infinite;
+    z-index: -1;
 }
 
 /* ======================================================================== */
-/* 2. LAYOUT & SIDEBAR
+/* 3. LAYOUT & SIDEBAR
 /* ======================================================================== */
 .primary-sidebar {
     width: 18rem;
@@ -54,120 +60,95 @@ body {
     border-right: 1px solid var(--border-panel);
     transition: transform 0.3s ease-in-out;
 }
-
-.main-canvas {
-    width: 100%;
-}
-
-@media (min-width: 768px) {
-    .main-canvas {
-        width: calc(100% - 18rem);
-    }
-}
+.main-canvas { width: 100%; }
+@media (min-width: 768px) { .main-canvas { width: calc(100% - 18rem); } }
 
 /* ======================================================================== */
-/* 3. KOMPONEN UI
+/* 4. KOMPONEN UI
 /* ======================================================================== */
-
-/* Navigasi Sidebar */
 .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    transition: all 0.2s ease-in-out;
-    border-left: 3px solid transparent; /* Garis indikator */
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1.5rem; border-radius: 0.5rem;
+    font-weight: 500; color: var(--text-secondary);
+    transition: all 0.2s ease-in-out; border-left: 3px solid transparent;
 }
-.nav-link:hover {
-    background-color: rgba(34, 211, 238, 0.05);
-    color: var(--text-primary);
-}
+.nav-link:hover { background-color: rgba(34, 211, 238, 0.05); color: var(--text-primary); }
 .nav-link.active {
     background-color: rgba(34, 211, 238, 0.1);
-    color: var(--accent-cyan);
-    font-weight: 600;
+    color: var(--accent-cyan); font-weight: 600;
     border-left-color: var(--accent-cyan);
 }
-.nav-link.active svg {
-    color: var(--accent-cyan);
-}
+.nav-link.active svg { color: var(--accent-cyan); }
 
-/* Tombol Sekunder (Contoh: Tombol Kembali) */
 .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background-color: var(--bg-panel);
-    color: var(--text-secondary);
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--border-panel);
-    border-radius: 0.5rem;
-    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background-color: var(--bg-panel); color: var(--text-secondary);
+    padding: 0.5rem 1rem; border: 1px solid var(--border-panel);
+    border-radius: 0.5rem; font-weight: 500;
     transition: all 0.2s ease-in-out;
 }
-.btn-secondary:hover {
-    background-color: #2c333a;
-    border-color: #4a5563;
-    color: var(--text-primary);
+.btn-secondary:hover { background-color: #2c333a; border-color: #4a5563; color: var(--text-primary); }
+
+.btn-primary {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 600; border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem; border: 1px solid transparent;
+    transition: all 0.2s ease-in-out; cursor: pointer;
+    background-color: var(--accent-cyan); color: var(--bg-panel);
 }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-
-/* Kartu Futuristik "Apex Card" */
 .apex-card {
-    background-color: var(--bg-panel);
-    border: 1px solid var(--border-panel);
-    border-radius: 1rem; /* Lebih bulat */
-    padding: 1.5rem;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); /* Transisi lebih halus */
-    text-decoration: none;
-    color: inherit;
+    background-color: var(--bg-panel); border: 1px solid var(--border-panel);
+    border-radius: 1rem; padding: 1.5rem; position: relative;
+    overflow: hidden; transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    text-decoration: none; color: inherit;
 }
-
-/* Efek Glow di atas kartu */
 .apex-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--accent-cyan);
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--accent-cyan);
     box-shadow: 0 0 12px 2px var(--accent-cyan-glow);
-    transform: scaleX(0);
-    transform-origin: center;
+    transform: scaleX(0); transform-origin: center;
     transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
 }
-
 .apex-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    border-color: #48515b;
+    transform: translateY(-8px) scale(1.02); border-color: #48515b;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
+.apex-card:hover::before { transform: scaleX(1); }
 
-.apex-card:hover::before {
-    transform: scaleX(1);
+/* ======================================================================== */
+/* 5. GAYA MODAL
+/* ======================================================================== */
+.feedback-modal {
+    background-color: rgba(13, 17, 23, 0.8);
+    backdrop-filter: blur(5px);
+}
+.feedback-modal-content {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-panel);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.feedback-form-input {
+    background-color: var(--bg-canvas);
+    border: 1px solid var(--border-panel);
+    color: var(--text-primary);
+    border-radius: 0.5rem; padding: 0.75rem 1rem;
+    transition: all 0.2s ease; width: 100%;
+}
+.feedback-form-input:focus {
+    outline: none; border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px var(--accent-cyan-glow);
 }
 
 /* ======================================================================== */
-/* 4. ANIMASI & TIPOGRAFI
+/* 6. ANIMASI & TIPOGRAFI
 /* ======================================================================== */
 @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in-up {
-    animation: fade-in-up 0.6s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    color: var(--text-primary);
-}
-
-.text-accent-cyan {
-    color: var(--accent-cyan);
-}
+.animate-fade-in-up { animation: fade-in-up 0.6s cubic-bezier(0.215, 0.610, 0.355, 1.000) both; }
+h1, h2, h3, h4, h5, h6 { color: var(--text-primary); }
+.text-accent-cyan { color: var(--accent-cyan); }
