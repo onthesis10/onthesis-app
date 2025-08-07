@@ -84,48 +84,62 @@ body {
     border-left-color: var(--accent-1);
 }
 
-/* [BARU] Kartu Dua Lapis yang Estetis */
+/* [DIUBAH] Kartu Dua Lapis yang Estetis */
 .card-layered {
-    display: flex;
-    flex-direction: column;
+    position: relative;
+    display: block;
     aspect-ratio: 1 / 1; /* Menjaga bentuk kartu tetap kotak */
-    border-radius: 1.5rem; /* Sudut sangat melengkung */
-    overflow: hidden;
-    background-color: var(--bg-panel);
-    border: 1px solid var(--border-panel);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border-radius: 1.5rem; /* 24px */
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     text-decoration: none;
 }
-.card-layered:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    border-color: #4A4B57;
+
+.card-layer-bottom { /* Lapisan Bingkai Berwarna */
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Menjajarkan teks keterangan ke bawah */
+    text-align: center;
+    font-size: 0.875rem; /* 14px */
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
 }
 
-.card-layer-top {
-    flex-grow: 1;
-    padding: 1.5rem;
+.card-layer-top { /* Lapisan Konten Utama */
+    position: absolute;
+    inset: 8px; /* Memberi jarak 8px dari bingkai */
+    bottom: 33%; /* Menyisakan ruang untuk teks di lapisan bawah */
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-panel);
+    border-radius: 1.25rem; /* Sudut lebih kecil dari bingkai */
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.card-layer-bottom {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-panel);
-    font-size: 0.875rem; /* 14px */
-    text-align: center;
-    color: rgba(255, 255, 255, 0.8);
+/* Animasi Halus saat Hover */
+.card-layered:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+}
+
+.card-layered:hover .card-layer-top {
+    bottom: 40%; /* Lapisan atas sedikit terangkat */
+    border-color: #4A4B57;
 }
 
 /* Variasi Warna untuk Lapisan Bawah */
 .card-layered.accent-blue .card-layer-bottom {
-    background-image: linear-gradient(45deg, var(--accent-2), var(--accent-4));
+    background-image: linear-gradient(160deg, var(--accent-4) 0%, var(--accent-2) 100%);
 }
 .card-layered.accent-purple .card-layer-bottom {
-    background-image: linear-gradient(45deg, var(--accent-1), var(--accent-3));
+    background-image: linear-gradient(160deg, var(--accent-3) 0%, var(--accent-1) 100%);
 }
 
 /* ======================================================================== */

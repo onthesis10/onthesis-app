@@ -4,9 +4,9 @@
 
 {% block content %}
 <div class="animate-fade-in-up">
-    <!-- [DIUBAH] Margin dikurangi agar kartu tidak terlalu bawah -->
+    <!-- [DIUBAH] Ukuran logo disesuaikan menjadi h-24 (96px) -->
     <div class="flex justify-center mb-8">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="h-50">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="h-24">
     </div>
 
     <header class="text-center mb-10">
@@ -14,7 +14,7 @@
         <p class="text-lg text-gray-400 mt-2 max-w-2xl mx-auto">Semua alat bantu skripsi Lu ada di sini. Pilih fitur Sesuai kebutuhan Lu!.</p>
     </header>
 
-    <!-- [DIUBAH] Grid Kartu dengan struktur dua lapis -->
+    <!-- [DIUBAH] Grid Kartu dengan struktur dua lapis yang baru -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         
         <!-- Kartu: Search References -->
