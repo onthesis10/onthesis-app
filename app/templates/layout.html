@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<!-- Menghapus class 'dark' agar tema diatur oleh CSS/JS -->
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,23 +12,23 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Memuat CSS baru -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     
     {% block page_styles %}{% endblock %}
 </head>
 <body>
-    <div class="flex h-screen w-full">
+    <div class="flex h-screen w-full bg-bg-canvas">
         
-        <!-- Sidebar Utama dengan Semua Fitur -->
+        <!-- Sidebar dengan gaya baru -->
         <aside class="primary-sidebar p-6 flex-col flex-shrink-0 hidden md:flex">
-            <!-- Logo di Tengah Atas (Lebih Besar) -->
             <div class="flex justify-center py-4 mb-6">
                 <a href="{{ url_for('dashboard') }}">
-                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="h-16">
+                    <!-- Menggunakan logo yang sama, akan terlihat bagus di background gelap -->
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OnThesis Logo" class="h-12">
                 </a>
             </div>
             
-            <!-- Navigasi Utama -->
             <nav class="flex-grow space-y-2 overflow-y-auto">
                 {% set active_page = request.endpoint %}
                 <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}">
@@ -50,33 +51,32 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     <span>Curhat AI</span>
                 </a>
-                <a href="{{ url_for('writing_assistant') }}" class="nav-link {{ 'active' if active_page == 'writing_assistant' else '' }}">
+                <!-- Link PRO dengan badge -->
+                <a href="{{ url_for('writing_assistant') }}" class="nav-link relative {{ 'active' if active_page == 'writing_assistant' else '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     <span>Asisten AI</span>
+                    <span class="absolute top-2 right-2 text-xs bg-accent-cyan/20 text-accent-cyan font-bold px-2 py-0.5 rounded-full">PRO</span>
                 </a>
-                <a href="{{ url_for('data_analysis') }}" class="nav-link {{ 'active' if active_page == 'data_analysis' else '' }}">
+                <a href="{{ url_for('data_analysis') }}" class="nav-link relative {{ 'active' if active_page == 'data_analysis' else '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                     <span>Analisis Data</span>
+                    <span class="absolute top-2 right-2 text-xs bg-accent-cyan/20 text-accent-cyan font-bold px-2 py-0.5 rounded-full">PRO</span>
                 </a>
             </nav>
         </aside>
 
-        <!-- Kanvas Utama (Konten) -->
         <main class="main-canvas flex-1 flex flex-col">
-            <!-- [DIUBAH] Header di dalam Kanvas Utama -->
             <header class="flex-shrink-0 flex items-center justify-between p-6">
-                <!-- [DIUBAH] Widget Kembali dengan gaya dan fungsi baru -->
                 <button onclick="window.history.back()" class="btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     <span>Kembali</span>
                 </button>
-                <!-- Ikon Kanan: Feedback & Profil -->
                 <div class="flex items-center gap-4">
-                    <button title="Kirim Feedback" class="text-gray-400 hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <button title="Kirim Feedback" class="text-text-secondary hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>
                     </button>
                     <a href="{{ url_for('user_profile') }}" title="Profil">
-                        <img id="user-photo-header" class="w-10 h-10 rounded-full cursor-pointer border-2 border-gray-700 hover:border-blue-400 transition-colors" src="https://ui-avatars.com/api/?name=U" alt="Foto Profil">
+                        <img id="user-photo-header" class="w-10 h-10 rounded-full cursor-pointer border-2 border-border-panel hover:border-accent-cyan transition-colors" src="{{ current_user.picture or 'https://ui-avatars.com/api/?name=' + (current_user.username|urlencode) + '&background=161B22&color=E6EDF3' }}" alt="Foto Profil">
                     </a>
                 </div>
             </header>
@@ -87,6 +87,7 @@
         </main>
     </div>
     
+    <!-- Script utama tidak perlu diubah, karena sudah modular -->
     <script src="{{ url_for('static', filename='js/script.js') }}" type="module"></script>
     {% block page_scripts %}{% endblock %}
 </body>

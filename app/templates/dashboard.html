@@ -5,31 +5,48 @@
 {% block content %}
 <div class="animate-fade-in-up">
     
+    <!-- Header dengan sapaan personal -->
     <header class="mb-10">
-        <h1 class="text-4xl md:text-5xl font-extrabold text-white">Selamat Datang Bor!, {{ current_user.username }}!</h1>
-        <p class="text-lg text-gray-400 mt-2 max-w-2xl">Semua alat bantu skripsi Lu ada di sini. Pilih fitur Sesuai kebutuhan Lu!.</p>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-white">
+            Hai, <span class="text-accent-cyan">{{ current_user.username or 'Chandz' }}</span>!
+        </h1>
+        <p class="text-lg text-text-secondary mt-2 max-w-3xl">
+            Selamat datang di pusat kendali akademik Anda. Semua alat bantu skripsi ada di sini, siap memaksimalkan produktivitas Anda.
+        </p>
     </header>
 
-    <!-- [BARU] Widget Statistik Utama -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+    <!-- Kartu Statistik Utama -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
         <div class="apex-card p-6">
-            <p class="text-sm font-medium text-gray-400">Proyek Aktif</p>
-            <p class="text-3xl font-bold text-white mt-2">3</p>
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-text-secondary">Proyek Aktif</p>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-secondary h-5 w-5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <!-- Data ini bisa dihubungkan ke backend nantinya -->
+            <p class="text-4xl font-bold text-white mt-2">1</p>
         </div>
         <div class="apex-card p-6">
-            <p class="text-sm font-medium text-gray-400">Referensi Tersimpan</p>
-            <p class="text-3xl font-bold text-white mt-2">124</p>
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-text-secondary">Referensi Tersimpan</p>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-secondary h-5 w-5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+            </div>
+            <!-- Data ini diambil dari Local Storage -->
+            <p id="stats-references-count" class="text-4xl font-bold text-white mt-2">0</p>
         </div>
         <div class="apex-card p-6">
-            <p class="text-sm font-medium text-gray-400">Parafrase Hari Ini</p>
-            <p class="text-3xl font-bold text-white mt-2">2 / 5</p>
+             <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-text-secondary">Parafrase Hari Ini</p>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-secondary h-5 w-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            </div>
+            <!-- Data ini diambil dari API -->
+            <p id="stats-paraphrase-count" class="text-4xl font-bold text-white mt-2">- / -</p>
         </div>
     </div>
 
-    <!-- Grid Kartu Fitur Utama -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+    <!-- Grid Kartu Navigasi Fitur -->
+    <h3 class="text-2xl font-bold text-white mb-6">Pusat Fitur</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         
-        <!-- Kartu: Search References -->
         <a href="{{ url_for('search_references') }}" class="apex-card group">
              <div class="flex items-center gap-4 mb-4">
                 <div class="p-3 bg-gray-800 rounded-lg">
@@ -37,10 +54,9 @@
                 </div>
                 <h3 class="text-lg font-bold text-white">Search References</h3>
              </div>
-             <p class="text-sm text-gray-400">Temukan jutaan jurnal dan artikel ilmiah dari database global untuk memperkuat argumen Anda.</p>
+             <p class="text-sm text-text-secondary">Akses jutaan jurnal dan referensi ilmiah global.</p>
         </a>
 
-        <!-- Kartu: Manajemen Sitasi -->
         <a href="{{ url_for('citation_management') }}" class="apex-card group">
              <div class="flex items-center gap-4 mb-4">
                 <div class="p-3 bg-gray-800 rounded-lg">
@@ -48,10 +64,9 @@
                 </div>
                 <h3 class="text-lg font-bold text-white">Manajemen Sitasi</h3>
              </div>
-             <p class="text-sm text-gray-400">Kelola semua referensi Anda di satu tempat dan buat daftar pustaka secara otomatis.</p>
+             <p class="text-sm text-text-secondary">Kelola daftar pustaka dan format kutipan otomatis.</p>
         </a>
 
-        <!-- Kartu: Parafrase AI -->
         <a href="{{ url_for('paraphrase_ai') }}" class="apex-card group">
              <div class="flex items-center gap-4 mb-4">
                 <div class="p-3 bg-gray-800 rounded-lg">
@@ -59,10 +74,9 @@
                 </div>
                 <h3 class="text-lg font-bold text-white">Parafrase AI</h3>
              </div>
-             <p class="text-sm text-gray-400">Ubah tulisan Anda menjadi lebih akademis dan bebas plagiarisme dengan gaya baru.</p>
+             <p class="text-sm text-text-secondary">Ubah tulisan menjadi lebih akademis dan bebas plagiarisme.</p>
         </a>
 
-        <!-- Kartu: Curhat AI -->
         <a href="{{ url_for('chat_ai') }}" class="apex-card group">
              <div class="flex items-center gap-4 mb-4">
                 <div class="p-3 bg-gray-800 rounded-lg">
@@ -70,31 +84,51 @@
                 </div>
                 <h3 class="text-lg font-bold text-white">Curhat AI</h3>
              </div>
-             <p class="text-sm text-gray-400">Butuh teman diskusi? Atasi kebuntuan menulis atau kelola stres skripsi Anda.</p>
+             <p class="text-sm text-text-secondary">Diskusi, atasi kebuntuan, dan kelola stres skripsi Anda.</p>
         </a>
-
-        <!-- Kartu: Asisten AI -->
-        <a href="{{ url_for('writing_assistant') }}" class="apex-card group">
-             <div class="flex items-center gap-4 mb-4">
-                <div class="p-3 bg-gray-800 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                </div>
-                <h3 class="text-lg font-bold text-white">Asisten AI</h3>
-             </div>
-             <p class="text-sm text-gray-400">Buat kerangka, hasilkan abstrak, dan sempurnakan draf skripsi Anda.</p>
-        </a>
-
-        <!-- Kartu: Analisis Data -->
-        <a href="{{ url_for('data_analysis') }}" class="apex-card group">
-             <div class="flex items-center gap-4 mb-4">
-                <div class="p-3 bg-gray-800 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                </div>
-                <h3 class="text-lg font-bold text-white">Analisis Data</h3>
-             </div>
-             <p class="text-sm text-gray-400">Lakukan uji statistik dengan interpretasi AI yang mudah dipahami.</p>
-        </a>
-
     </div>
 </div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Fungsi untuk mengambil jumlah referensi dari Local Storage
+    const updateReferenceCount = () => {
+        const references = JSON.parse(localStorage.getItem('onthesis_references')) || [];
+        const countElement = document.getElementById('stats-references-count');
+        if (countElement) {
+            countElement.textContent = references.length;
+        }
+    };
+
+    // Fungsi untuk mengambil status penggunaan dari API
+    const updateUsageStats = async () => {
+        const paraphraseCountElement = document.getElementById('stats-paraphrase-count');
+        if (!paraphraseCountElement) return;
+
+        try {
+            const response = await fetch('/api/get-usage-status');
+            if (!response.ok) {
+                paraphraseCountElement.textContent = 'Error';
+                return;
+            }
+            const data = await response.json();
+            if (data.status === 'pro') {
+                paraphraseCountElement.textContent = 'Unlimited';
+            } else if (data.status === 'free') {
+                const used = data.limits.paraphrase - data.paraphrase_remaining;
+                paraphraseCountElement.textContent = `${used} / ${data.limits.paraphrase}`;
+            }
+        } catch (error) {
+            console.error("Gagal mengambil status penggunaan:", error);
+            paraphraseCountElement.textContent = 'N/A';
+        }
+    };
+
+    // Panggil kedua fungsi saat halaman dimuat
+    updateReferenceCount();
+    updateUsageStats();
+});
+</script>
 {% endblock %}
