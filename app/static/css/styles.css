@@ -1,20 +1,23 @@
 /* ======================================================================== */
-/* OnThesis - "The Neural Canvas" Design System ($15M)      */
+/* OnThesis - "The Apex Command Center" Design System ($15M) */
 /* ======================================================================== */
 
 :root {
-    --font-sans: 'Poppins', sans-serif;
-    --bg-canvas: #0A0A10;
-    --bg-panel: #16161F;
-    --border-panel: #2A2A38;
-    --text-primary: #FFFFFF;
-    --text-secondary: #A0A1B0;
-    --accent-1: #8A5CFE; /* Ungu */
-    --accent-2: #3B82F6; /* Biru */
+    --font-sans: 'google font', sans-serif;
+    
+    /* Palet Warna Eksekutif */
+    --bg-canvas: #0D1117; /* GitHub Dark */
+    --bg-panel: #161B22;
+    --border-panel: #30363D;
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    
+    --accent-cyan: #39D3F1;
+    --accent-cyan-glow: rgba(57, 211, 241, 0.3);
 }
 
 /* ======================================================================== */
-/* 1. GAYA DASAR & KANVAS BINTANG
+/* 1. GAYA DASAR
 /* ======================================================================== */
 body {
     font-family: var(--font-sans);
@@ -22,16 +25,6 @@ body {
     color: var(--text-secondary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow: hidden;
-}
-
-#star-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
 }
 
 /* ======================================================================== */
@@ -42,12 +35,10 @@ body {
     background-color: var(--bg-panel);
     border-right: 1px solid var(--border-panel);
     transition: transform 0.3s ease-in-out;
-    z-index: 10;
 }
 
 .main-canvas {
     width: 100%;
-    position: relative;
 }
 
 @media (min-width: 768px) {
@@ -72,49 +63,46 @@ body {
     color: var(--text-primary);
 }
 .nav-link.active {
-    background-color: rgba(90, 103, 222, 0.1);
+    background-color: rgba(57, 211, 241, 0.1);
     color: var(--text-primary); font-weight: 600;
-    border-left-color: var(--accent-1);
+    border-left-color: var(--accent-cyan);
 }
 
-/* [DIUBAH] Kartu Bingkai Putih Estetis */
-.neural-card {
-    display: block;
-    aspect-ratio: 1 / 1;
-    text-decoration: none;
-    position: relative;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.card-layer-bottom { /* Lapisan Bingkai Putih */
-    position: absolute;
-    inset: 0;
-    background-color: #FFFFFF;
-    border-radius: 1.5rem; /* 24px */
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.card-layer-top { /* Lapisan Konten Utama */
-    position: absolute;
-    inset: 4px; /* Memberi jarak 4px dari bingkai putih */
+/* [DIUBAH] Kartu "Glow Border" yang Profesional */
+.apex-card {
     background-color: var(--bg-panel);
-    border-radius: 1.25rem; /* Sudut lebih kecil dari bingkai */
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* Mendorong konten ke atas dan bawah */
-    padding: 1.25rem;
-    text-align: left;
+    border: 1px solid var(--border-panel);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    text-decoration: none;
 }
 
-/* Animasi Halus saat Hover */
-.neural-card:hover {
-    transform: translateY(-12px) scale(1.05);
+/* Garis cahaya di atas kartu */
+.apex-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 10px 2px var(--accent-cyan-glow);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
 }
-.neural-card.accent-blue:hover .card-layer-bottom {
-    box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.3);
+
+.apex-card:hover {
+    transform: translateY(-6px);
+    border-color: #4A4B57;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
-.neural-card.accent-purple:hover .card-layer-bottom {
-    box-shadow: 0 20px 40px -10px rgba(138, 92, 254, 0.3);
+
+.apex-card:hover::before {
+    transform: scaleX(1);
 }
 
 /* ======================================================================== */
