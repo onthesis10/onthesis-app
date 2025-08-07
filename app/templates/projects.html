@@ -1,10 +1,9 @@
 {% extends "layout.html" %}
 
- {% block title %}Manajemen Proyek - OnThesis{% endblock %}
+{% block title %}Manajemen Proyek - OnThesis{% endblock %}
 
 {% block content %}
 <div class="animate-fade-in-up">
-    <!-- Header dengan teks di tengah -->
     <header class="flex flex-wrap justify-between items-center gap-4 mb-8 text-center md:text-left">
         <div class="w-full md:w-auto">
             <h1 class="text-4xl font-extrabold text-text-primary">Manajemen Proyek</h1>
@@ -34,7 +33,6 @@
                     <label for="project-title" class="block text-sm font-medium text-text-secondary mb-2">Judul Proyek</label>
                     <input id="project-title" type="text" class="feedback-form-input" placeholder="Contoh: Skripsi Bab 1" required>
                 </div>
-                <!-- Input Tanggal Mulai dan Selesai -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="project-start-date" class="block text-sm font-medium text-text-secondary mb-2">Tanggal Mulai</label>
@@ -73,7 +71,6 @@
     import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Inisialisasi Elemen ---
         const projectsListContainer = document.getElementById('projects-list');
         const addProjectBtn = document.getElementById('add-project-btn');
         const projectModal = document.getElementById('project-modal');
@@ -91,7 +88,6 @@
 
         let currentProjects = [];
 
-        // --- Fungsi Notifikasi ---
         const showNotification = (message, type = 'success') => {
             const container = document.getElementById('notification-container');
             if (!container) return;
@@ -103,37 +99,28 @@
             setTimeout(() => notif.remove(), 4000);
         };
 
-        // --- Fungsi Helper ---
         const formatDateForInput = (timestamp) => {
             if (!timestamp) return '';
-            const date = timestamp.toDate();
-            return date.toISOString().split('T')[0];
+            return timestamp.toDate().toISOString().split('T')[0];
         };
 
         const calculateDuration = (start, end) => {
             if (!start || !end) return { text: 'Jadwal belum diatur', color: 'text-text-secondary' };
-            const startDate = start.toDate();
             const endDate = end.toDate();
             const now = new Date();
             now.setHours(0, 0, 0, 0);
-
             if (now > endDate) return { text: 'Selesai', color: 'text-green-500' };
-            
-            const diffTime = endDate - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+            const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
             if (diffDays <= 0) return { text: 'Tenggat hari ini', color: 'text-accent-cyan' };
             return { text: `Sisa ${diffDays} hari`, color: 'text-yellow-500' };
         };
 
-        // --- Fungsi Render ---
         const renderProjects = () => {
             if (!projectsListContainer) return;
             if (currentProjects.length === 0) {
                 projectsListContainer.innerHTML = `<div class="text-center py-16 apex-card"><p class="text-text-secondary">Anda belum memiliki proyek. Klik 'Proyek Baru' untuk memulai.</p></div>`;
                 return;
             }
-
             projectsListContainer.innerHTML = currentProjects.map(p => {
                 const duration = calculateDuration(p.startDate, p.endDate);
                 return `
@@ -161,23 +148,18 @@
             }).join('');
         };
         
-        // --- Event Listeners ---
         const setupProjectListeners = () => {
             projectsListContainer.addEventListener('input', (e) => {
                 if (e.target.classList.contains('progress-slider')) {
                     const id = e.target.closest('.apex-card').dataset.id;
-                    const newProgress = e.target.value;
-                    const projectRef = doc(db, "projects", id);
-                    updateDoc(projectRef, { progress: parseInt(newProgress) });
+                    updateDoc(doc(db, "projects", id), { progress: parseInt(e.target.value) });
                 }
             });
-
             projectsListContainer.addEventListener('click', (e) => {
                 const card = e.target.closest('.apex-card');
                 if (!card) return;
                 const id = card.dataset.id;
                 const projectData = currentProjects.find(p => p.id === id);
-
                 if (e.target.classList.contains('edit-btn')) {
                     projectModalTitle.textContent = 'Edit Proyek';
                     projectIdInput.value = id;
@@ -188,7 +170,6 @@
                     projectEndDateInput.value = formatDateForInput(projectData.endDate);
                     openModal();
                 }
-
                 if (e.target.classList.contains('delete-btn')) {
                     if (confirm('Apakah Anda yakin ingin menghapus proyek ini?')) {
                         deleteDoc(doc(db, "projects", id));
@@ -197,7 +178,6 @@
             });
         };
 
-        // --- Logika Modal ---
         const openModal = () => {
             projectModal.classList.remove('hidden');
             setTimeout(() => projectModalCard.classList.remove('opacity-0', '-translate-y-4'), 10);
@@ -225,7 +205,6 @@
             e.preventDefault();
             const btnText = submitProjectBtn.querySelector('.btn-text');
             const spinner = submitProjectBtn.querySelector('.spinner');
-
             if (!projectStartDateInput.value || !projectEndDateInput.value) {
                 showNotification('Tanggal mulai dan selesai harus diisi.', 'error');
                 return;
@@ -234,11 +213,9 @@
                 showNotification('Tanggal selesai tidak boleh sebelum tanggal mulai.', 'error');
                 return;
             }
-
             btnText.textContent = 'Menyimpan...';
             spinner.classList.remove('hidden');
             submitProjectBtn.disabled = true;
-
             try {
                 const id = projectIdInput.value;
                 const projectData = {
@@ -250,10 +227,8 @@
                     userId: auth.currentUser.uid,
                     lastUpdated: serverTimestamp()
                 };
-
                 if (id) {
-                    const projectRef = doc(db, "projects", id);
-                    await updateDoc(projectRef, projectData);
+                    await updateDoc(doc(db, "projects", id), projectData);
                     showNotification('Proyek berhasil diperbarui!');
                 } else {
                     projectData.createdAt = serverTimestamp();
@@ -262,7 +237,6 @@
                 }
                 closeModal();
             } catch (error) {
-                console.error("Error saving project:", error);
                 showNotification('Gagal menyimpan proyek. Coba lagi.', 'error');
             } finally {
                 btnText.textContent = 'Simpan Proyek';
@@ -271,7 +245,6 @@
             }
         });
 
-        // --- Sinkronisasi dengan Firestore ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 const q = query(collection(db, "projects"), where("userId", "==", user.uid));

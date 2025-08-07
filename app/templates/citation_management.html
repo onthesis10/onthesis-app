@@ -68,7 +68,6 @@
     import { collection, onSnapshot, addDoc, doc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Inisialisasi Elemen ---
         const citationStyleSelect = document.getElementById('citation-style-select');
         const referencesList = document.getElementById('references-list');
         const openManualAddBtn = document.getElementById('open-manual-add-btn');
@@ -81,7 +80,6 @@
 
         let currentReferences = [];
 
-        // --- Fungsi Notifikasi ---
         const showNotification = (message, type = 'success') => {
             const container = document.getElementById('notification-container');
             const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
@@ -92,7 +90,6 @@
             setTimeout(() => notif.remove(), 4000);
         };
 
-        // --- Fungsi Render ---
         const formatReference = (ref, style) => {
             const author = ref.author || 'N/A';
             const year = ref.year || 'N/A';
@@ -101,7 +98,7 @@
             switch(style) {
                 case 'mla': return `${author}. "${title}." ${journal}, ${year}.`;
                 case 'chicago': return `${author}. ${year}. "${title}." ${journal}.`;
-                default: return `${author} (${year}). ${title}. ${journal}`; // APA
+                default: return `${author} (${year}). ${title}. ${journal}`;
             }
         };
 
@@ -123,21 +120,17 @@
                 </div>`).join('');
         };
 
-        // --- Fungsi Unggah & Analisis ---
         const handleFileUpload = async (file) => {
             if (!file) return;
             uploadBtnText.textContent = 'Menganalisis...';
             uploadSpinner.classList.remove('hidden');
             uploadDocBtn.disabled = true;
-
             const formData = new FormData();
             formData.append('document', file);
-
             try {
                 const response = await fetch('/api/analyze-document', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Gagal menganalisis dokumen.');
-
                 if (data.references && data.references.length > 0) {
                     const userId = auth.currentUser.uid;
                     const promises = data.references.map(ref => 
@@ -158,7 +151,6 @@
             }
         };
 
-        // --- Event Handlers ---
         referencesList.addEventListener('click', (e) => {
             const copyBtn = e.target.closest('.copy-ref-btn');
             const deleteBtn = e.target.closest('.delete-ref-btn');
@@ -180,7 +172,6 @@
         uploadDocBtn.addEventListener('click', () => docFileInput.click());
         docFileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
 
-        // --- Modal Handlers ---
         const manualForm = document.getElementById('manual-add-form');
         const closeModal = () => {
             manualAddModal.querySelector('#manual-add-modal-card').classList.add('opacity-0', '-translate-y-4');
@@ -202,7 +193,6 @@
             closeModal();
         });
 
-        // --- Sinkronisasi dengan Firestore ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 const q = query(collection(db, "citations"), where("userId", "==", user.uid));
