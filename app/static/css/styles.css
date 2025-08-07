@@ -1,17 +1,14 @@
 /* ======================================================================== */
-/* OnThesis - "Creative Canvas" Design System v3            */
+/* OnThesis - "The Neural Canvas" Design System ($15M)      */
 /* ======================================================================== */
 
 :root {
     --font-sans: 'Poppins', sans-serif;
-    
-    /* Palet Warna Utama (Terinspirasi Figma) */
-    --bg-canvas: #111119;
-    --bg-panel: #1A1B26;
-    --border-panel: #30313D;
+    --bg-canvas: #0A0A10;
+    --bg-panel: #16161F;
+    --border-panel: #2A2A38;
     --text-primary: #FFFFFF;
     --text-secondary: #A0A1B0;
-    
     --accent-1: #8A5CFE; /* Ungu */
     --accent-2: #3B82F6; /* Biru */
     --accent-3: #7c3aed; /* Ungu lebih gelap */
@@ -19,7 +16,7 @@
 }
 
 /* ======================================================================== */
-/* 1. GAYA DASAR & LATAR BELAKANG
+/* 1. GAYA DASAR & KANVAS PARTIKEL
 /* ======================================================================== */
 body {
     font-family: var(--font-sans);
@@ -27,14 +24,16 @@ body {
     color: var(--text-secondary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow: hidden; /* Mencegah scroll di body utama */
 }
 
-.main-canvas {
-    background-image: 
-        radial-gradient(at 20% 20%, hsla(224,71%,25%,0.3) 0px, transparent 50%),
-        radial-gradient(at 80% 20%, hsla(286,74%,25%,0.3) 0px, transparent 50%),
-        radial-gradient(at 20% 80%, hsla(262,74%,25%,0.3) 0px, transparent 50%),
-        radial-gradient(at 80% 80%, hsla(224,71%,25%,0.3) 0px, transparent 50%);
+#particle-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
 }
 
 /* ======================================================================== */
@@ -45,10 +44,12 @@ body {
     background-color: var(--bg-panel);
     border-right: 1px solid var(--border-panel);
     transition: transform 0.3s ease-in-out;
+    z-index: 10;
 }
 
 .main-canvas {
     width: 100%;
+    position: relative;
 }
 
 @media (min-width: 768px) {
@@ -63,15 +64,10 @@ body {
 
 /* Navigasi */
 .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    transition: all 0.2s ease-in-out;
-    border-left: 3px solid transparent;
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1.5rem; border-radius: 0.5rem;
+    font-weight: 500; color: var(--text-secondary);
+    transition: all 0.2s ease-in-out; border-left: 3px solid transparent;
 }
 .nav-link:hover {
     background-color: rgba(255, 255, 255, 0.03);
@@ -79,66 +75,58 @@ body {
 }
 .nav-link.active {
     background-color: rgba(90, 103, 222, 0.1);
-    color: var(--text-primary);
-    font-weight: 600;
+    color: var(--text-primary); font-weight: 600;
     border-left-color: var(--accent-1);
 }
 
-/* [DIUBAH] Kartu Dua Lapis yang Estetis */
-.card-layered {
-    position: relative;
+/* [DIUBAH] Kartu 3D Dua Lapis */
+.neural-card {
     display: block;
-    aspect-ratio: 1 / 1; /* Menjaga bentuk kartu tetap kotak */
+    aspect-ratio: 1 / 1;
     border-radius: 1.5rem; /* 24px */
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     text-decoration: none;
+    transform-style: preserve-3d; /* Penting untuk efek 3D */
+    will-change: transform;
 }
 
-.card-layer-bottom { /* Lapisan Bingkai Berwarna */
-    position: absolute;
-    inset: 0;
+.neural-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
     border-radius: inherit;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end; /* Menjajarkan teks keterangan ke bawah */
-    text-align: center;
-    font-size: 0.875rem; /* 14px */
-    font-weight: 500;
+    overflow: hidden;
+    transform: translateZ(20px); /* Memberi kedalaman */
+}
+
+.card-layer-bottom {
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    display: flex; justify-content: center; align-items: flex-end;
+    padding: 1rem; text-align: center;
+    font-size: 0.875rem; font-weight: 500;
     color: rgba(255, 255, 255, 0.9);
 }
 
-.card-layer-top { /* Lapisan Konten Utama */
+.card-layer-top {
     position: absolute;
-    inset: 8px; /* Memberi jarak 8px dari bingkai */
-    bottom: 33%; /* Menyisakan ruang untuk teks di lapisan bawah */
+    inset: 6px;
+    bottom: 28%;
     background-color: var(--bg-panel);
     border: 1px solid var(--border-panel);
-    border-radius: 1.25rem; /* Sudut lebih kecil dari bingkai */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border-radius: 1.25rem;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 1rem;
+    /* [BARU] Latar belakang sirkuit yang bersinar */
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 1rem 1rem;
 }
 
-/* Animasi Halus saat Hover */
-.card-layered:hover {
-    transform: translateY(-10px) scale(1.03);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-}
-
-.card-layered:hover .card-layer-top {
-    bottom: 40%; /* Lapisan atas sedikit terangkat */
-    border-color: #4A4B57;
-}
-
-/* Variasi Warna untuk Lapisan Bawah */
-.card-layered.accent-blue .card-layer-bottom {
+/* Variasi Warna */
+.neural-card.accent-blue .card-layer-bottom {
     background-image: linear-gradient(160deg, var(--accent-4) 0%, var(--accent-2) 100%);
 }
-.card-layered.accent-purple .card-layer-bottom {
+.neural-card.accent-purple .card-layer-bottom {
     background-image: linear-gradient(160deg, var(--accent-3) 0%, var(--accent-1) 100%);
 }
 
