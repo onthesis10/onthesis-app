@@ -1,5 +1,5 @@
 /* ======================================================================== */
-/* OnThesis - "Apex Command Center" Design System */
+/* OnThesis - "Apex Command Center" Design System v3 (Glassmorphism) */
 /* ======================================================================== */
 
 :root {
@@ -11,11 +11,12 @@
     --text-secondary: #8B949E;
     --accent-cyan: #22d3ee;
     --accent-cyan-glow: rgba(34, 211, 238, 0.3);
+    /* Properti baru untuk efek kaca */
+    --glass-bg: rgba(22, 27, 34, 0.7); /* bg-panel dengan transparansi */
+    --glass-border: rgba(48, 54, 61, 0.5); /* border-panel dengan transparansi */
 }
 
-/* ======================================================================== */
-/* 1. GAYA DASAR & SCROLLBAR
-/* ======================================================================== */
+/* ... (Gaya dasar, scrollbar, dan animasi latar tetap sama) ... */
 body {
     font-family: var(--font-sans);
     background-color: var(--bg-canvas);
@@ -28,17 +29,11 @@ body {
 ::-webkit-scrollbar-thumb { background-color: var(--border-panel); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background-color: #4b5563; }
 
-/* ======================================================================== */
-/* 2. LATAR BELAKANG ANIMASI
-/* ======================================================================== */
 @keyframes move-grid {
     from { background-position: 0 0; }
     to { background-position: 0 -100px; }
 }
-.bg-animated-grid {
-    position: relative;
-    z-index: 0;
-}
+.bg-animated-grid { position: relative; z-index: 0; }
 .bg-animated-grid::before {
     content: ''; position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -52,23 +47,30 @@ body {
 }
 
 /* ======================================================================== */
-/* 3. LAYOUT & SIDEBAR
+/* 3. LAYOUT & SIDEBAR (DENGAN EFEK KACA)
 /* ======================================================================== */
 .primary-sidebar {
-    width: 18rem;
-    background-color: var(--bg-panel);
-    border-right: 1px solid var(--border-panel);
-    transition: transform 0.3s ease-in-out;
+    width: 19rem; /* Sedikit lebih lebar */
+    margin: 1rem; /* Memberi jarak dari tepi layar */
+    height: calc(100vh - 2rem); /* Menyesuaikan tinggi */
+    
+    /* Efek Kaca (Glassmorphism) */
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    
+    border-radius: 1.5rem; /* Sudut yang sangat melengkung */
+    transition: all 0.3s ease-in-out;
 }
-.main-canvas { width: 100%; }
-@media (min-width: 768px) { .main-canvas { width: calc(100% - 18rem); } }
 
-/* ======================================================================== */
-/* 4. KOMPONEN UI
-/* ======================================================================== */
+.main-canvas { width: 100%; }
+@media (min-width: 768px) { .main-canvas { width: calc(100% - 19rem - 2rem); } }
+
+/* ... (Sisa kode CSS tetap sama) ... */
 .nav-link {
     display: flex; align-items: center; gap: 0.75rem;
-    padding: 0.75rem 1.5rem; border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem; border-radius: 0.75rem; /* Disesuaikan dengan sidebar */
     font-weight: 500; color: var(--text-secondary);
     transition: all 0.2s ease-in-out; border-left: 3px solid transparent;
 }
@@ -118,9 +120,6 @@ body {
 }
 .apex-card:hover::before { transform: scaleX(1); }
 
-/* ======================================================================== */
-/* 5. GAYA MODAL
-/* ======================================================================== */
 .feedback-modal {
     background-color: rgba(13, 17, 23, 0.8);
     backdrop-filter: blur(5px);
@@ -142,9 +141,6 @@ body {
     box-shadow: 0 0 0 3px var(--accent-cyan-glow);
 }
 
-/* ======================================================================== */
-/* 6. ANIMASI & TIPOGRAFI
-/* ======================================================================== */
 @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
