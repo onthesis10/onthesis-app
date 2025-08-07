@@ -2,367 +2,221 @@
 
 {% block title %}Manajemen Sitasi - OnThesis{% endblock %}
 
-{% block page_styles %}
-<style>
-    /* Animasi untuk notifikasi */
-    @keyframes fade-in-out {
-      0% { opacity: 0; transform: translateY(-20px); }
-      10% { opacity: 1; transform: translateY(0); }
-      90% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-20px); }
-    }
-    .animate-fade-in-out {
-      animation: fade-in-out 4s ease-in-out forwards;
-    }
-    /* Menambahkan style untuk spinner */
-    .spinner {
-        border: 2px solid rgba(0, 0, 0, 0.1);
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border-left-color: white;
-        animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<!-- Kontainer utama dengan tema oranye cerah sesuai layout asli -->
-<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
-    
+<div class="animate-fade-in-up">
     <!-- Header Halaman -->
-    <header class="mb-8 flex-shrink-0 text-center">
-        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Manajemen Sitasi</h1>
-        <p class="text-lg text-orange-800/80 mt-1">Kelola, format, dan ekspor semua referensi Anda dengan mudah.</p>
+    <header class="flex flex-wrap justify-between items-center gap-4 mb-8 text-center md:text-left">
+        <div class="w-full md:w-auto">
+            <h1 class="text-4xl font-extrabold text-text-primary">Manajemen Sitasi</h1>
+            <p class="text-lg text-text-secondary mt-1">Kelola, format, dan ekspor semua referensi Anda dengan mudah.</p>
+        </div>
     </header>
 
-    <!-- Kontrol dan Daftar Referensi dengan latar belakang kuning menyala -->
-    <div class="flex-grow overflow-y-auto pr-2 flex flex-col bg-yellow-200/40 backdrop-blur-sm border border-yellow-200/60 p-6 rounded-2xl shadow-inner">
+    <!-- Kontrol Utama & Daftar Referensi -->
+    <div class="apex-card p-6">
         <!-- Panel Kontrol Atas -->
-        <div class="flex flex-wrap justify-between items-center gap-4 mb-6 flex-shrink-0">
-            <!-- Grup Tombol Aksi -->
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6 pb-6 border-b border-border-panel">
             <div class="flex items-center gap-4">
-                <button id="open-manual-add-btn" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-2 px-4 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                    Tambah Manual
-                </button>
-                
-                <button id="upload-doc-btn" class="bg-gradient-to-br from-teal-500 to-cyan-700 text-white font-semibold py-2 px-4 rounded-lg hover:from-teal-600 hover:to-cyan-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <button id="open-manual-add-btn" class="btn-primary text-sm">+ Tambah Manual</button>
+                <button id="upload-doc-btn" class="btn-secondary text-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     <span id="upload-btn-text">Unggah & Analisis</span>
-                    <div id="upload-spinner" class="spinner hidden"></div>
+                    <div id="upload-spinner" class="hidden w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                 </button>
                 <input type="file" id="doc-file-input" class="hidden" accept=".pdf,.doc,.docx">
-
-                <!-- Widget penghitung kuota -->
-                <div id="usage-counter-display" class="hidden items-center gap-2 bg-white/80 text-slate-700 text-sm font-medium px-3 py-2 rounded-lg shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM5 11a1 1 0 100 2h4a1 1 0 100-2H5z" />
-                    </svg>
-                    <span>Sisa Slot: <strong id="citation-remaining-count">...</strong></span>
-                </div>
             </div>
-
-            <!-- Grup Kontrol Gaya & Ekspor -->
             <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-white rounded-lg shadow-sm">
-                    <label for="citation-style-select" class="text-sm font-medium text-slate-600 pl-3">Gaya:</label>
-                    <select id="citation-style-select" class="w-auto py-2 text-sm bg-transparent border-0 rounded-lg focus:ring-2 focus:ring-orange-500">
-                        <option value="apa">APA 7</option>
-                        <option value="mla">MLA 9</option>
-                        <option value="chicago">Chicago</option>
-                    </select>
-                </div>
-                <button id="export-references-btn" class="bg-white text-teal-600 font-semibold py-2 px-4 rounded-lg hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    Ekspor
-                </button>
+                <select id="citation-style-select" class="feedback-form-input text-sm !py-2">
+                    <option value="apa">Gaya: APA 7</option>
+                    <option value="mla">Gaya: MLA 9</option>
+                    <option value="chicago">Gaya: Chicago</option>
+                </select>
+                <button id="export-references-btn" class="btn-secondary text-sm">Ekspor</button>
             </div>
         </div>
         
         <!-- Daftar Referensi (Scrollable) -->
-        <div id="references-list" class="space-y-3 flex-grow overflow-y-auto">
+        <div id="references-list" class="space-y-3">
             <!-- Daftar referensi akan dirender di sini oleh JavaScript -->
         </div>
     </div>
 </div>
 
 <!-- Modal untuk Tambah Referensi Manual -->
-<div id="manualAddModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-amber-50 rounded-2xl shadow-2xl max-w-lg w-full p-8">
-        <h3 class="text-2xl font-bold text-orange-900 mb-6">Tambah Referensi Manual</h3>
+<div id="manualAddModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden feedback-modal">
+    <div class="w-full max-w-lg feedback-modal-content rounded-lg shadow-lg p-8 transform transition-all opacity-0 -translate-y-4" id="manual-add-modal-card">
+        <h3 class="text-2xl font-bold text-text-primary mb-6 text-center">Tambah Referensi Manual</h3>
         <form id="manual-add-form" class="space-y-4">
-            <input type="text" name="title" placeholder="Judul Artikel" class="w-full pl-4 pr-4 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 ease-in-out" required>
-            <input type="text" name="author" placeholder="Penulis (e.g., Doe, J.)" class="w-full pl-4 pr-4 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 ease-in-out" required>
-            <input type="number" name="year" placeholder="Tahun" class="w-full pl-4 pr-4 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 ease-in-out" required>
-            <input type="text" name="journal" placeholder="Nama Jurnal/Publikasi" class="w-full pl-4 pr-4 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 ease-in-out">
-            <div class="flex justify-end gap-4 pt-4">
-                <button type="button" id="cancel-manual-add-btn" class="bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all duration-300 shadow-sm hover:shadow-md">Batal</button>
-                <button type="submit" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white font-semibold py-2 px-4 rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg">Simpan</button>
+            <input type="text" name="title" placeholder="Judul Artikel" class="feedback-form-input" required>
+            <input type="text" name="author" placeholder="Penulis (e.g., Doe, J.)" class="feedback-form-input" required>
+            <input type="number" name="year" placeholder="Tahun" class="feedback-form-input" required>
+            <input type="text" name="journal" placeholder="Nama Jurnal/Publikasi" class="feedback-form-input">
+            <div class="flex justify-center gap-4 pt-4">
+                <button type="button" id="cancel-manual-add-btn" class="btn-secondary">Batal</button>
+                <button type="submit" class="btn-primary">Simpan</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Kontainer Notifikasi -->
 <div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
 {% endblock %}
 
 {% block page_scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Inisialisasi Elemen ---
-    const citationStyleSelect = document.getElementById('citation-style-select');
-    const referencesList = document.getElementById('references-list');
-    const openManualAddBtn = document.getElementById('open-manual-add-btn');
-    const manualAddModal = document.getElementById('manualAddModal');
-    const exportBtn = document.getElementById('export-references-btn');
-    const uploadDocBtn = document.getElementById('upload-doc-btn');
-    const docFileInput = document.getElementById('doc-file-input');
-    const uploadBtnText = document.getElementById('upload-btn-text');
-    const uploadSpinner = document.getElementById('upload-spinner');
+<script type="module">
+    import { db, auth } from '/static/js/firebase.js';
+    import { collection, onSnapshot, addDoc, doc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // --- State Management ---
-    let references = JSON.parse(localStorage.getItem('onthesis_references')) || [];
-    const saveReferences = () => localStorage.setItem('onthesis_references', JSON.stringify(references));
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Inisialisasi Elemen ---
+        const citationStyleSelect = document.getElementById('citation-style-select');
+        const referencesList = document.getElementById('references-list');
+        const openManualAddBtn = document.getElementById('open-manual-add-btn');
+        const manualAddModal = document.getElementById('manualAddModal');
+        const exportBtn = document.getElementById('export-references-btn');
+        const uploadDocBtn = document.getElementById('upload-doc-btn');
+        const docFileInput = document.getElementById('doc-file-input');
+        const uploadBtnText = document.getElementById('upload-btn-text');
+        const uploadSpinner = document.getElementById('upload-spinner');
 
-    // --- Logika untuk mengambil dan menampilkan kuota ---
-    const fetchAndDisplayUsage = async () => {
-        const display = document.getElementById('usage-counter-display');
-        try {
-            const response = await fetch(`${window.location.origin}/api/get-usage-status`);
-            if (!response.ok) return;
-            const data = await response.json();
-            if (data.status === 'free') {
-                const countEl = document.getElementById('citation-remaining-count');
-                const remaining = data.citation_remaining;
-                // PERBAIKAN: Mengakses properti 'limits' dengan benar
-                const limit = data.limits ? data.limits['citation'] : 3;
+        let currentReferences = [];
 
-                if (typeof remaining === 'number' && typeof limit === 'number') {
-                    countEl.textContent = `${remaining}/${limit}`;
-                    display.classList.remove('hidden');
-                    display.classList.add('flex');
-                } else {
-                    console.error("Data kuota sitasi tidak valid:", data);
-                }
+        // --- Fungsi Notifikasi ---
+        const showNotification = (message, type = 'success') => {
+            const container = document.getElementById('notification-container');
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+            const notif = document.createElement('div');
+            notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-up`;
+            notif.textContent = message;
+            container.appendChild(notif);
+            setTimeout(() => notif.remove(), 4000);
+        };
+
+        // --- Fungsi Render ---
+        const formatReference = (ref, style) => {
+            const author = ref.author || 'N/A';
+            const year = ref.year || 'N/A';
+            const title = ref.title || 'N/A';
+            const journal = ref.journal ? `<em>${ref.journal}</em>` : '';
+            switch(style) {
+                case 'mla': return `${author}. "${title}." ${journal}, ${year}.`;
+                case 'chicago': return `${author}. ${year}. "${title}." ${journal}.`;
+                default: return `${author} (${year}). ${title}. ${journal}`; // APA
             }
-        } catch (error) {
-            console.error("Gagal mengambil status kuota:", error);
-        }
-    };
-    fetchAndDisplayUsage();
+        };
 
-    // --- Fungsi Notifikasi ---
-    const showNotification = (message, type = 'success') => {
-        const container = document.getElementById('notification-container');
-        if (!container) return;
-        
-        const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
-        const notif = document.createElement('div');
-        notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-out`;
-        notif.textContent = message;
-        
-        container.appendChild(notif);
-        setTimeout(() => {
-            notif.remove();
-        }, 4000);
-    };
-
-    // --- Fungsi Render ---
-    const formatReference = (ref, style) => {
-        const author = ref.author || 'N/A';
-        const year = ref.year || 'N/A';
-        const title = ref.title || 'N/A';
-        const journal = ref.journal ? `<i>${ref.journal}</i>` : 'N/A';
-        switch(style) {
-            case 'mla': return `${author}. "${title}." ${journal}, ${year}.`;
-            case 'chicago': return `${author}. ${year}. "${title}." ${journal}.`;
-            default: return `${author}. (${year}). ${title}. ${journal}.`; // APA
-        }
-    };
-
-    const renderReferences = () => {
-        if (!referencesList) return;
-        const style = citationStyleSelect.value;
-        referencesList.innerHTML = references.length === 0
-            ? `<div class="text-center text-slate-500 italic py-10 h-full flex items-center justify-center">
-                   <p>Belum ada referensi. <br> Tambahkan secara manual atau unggah dokumen untuk dianalisis.</p>
-               </div>`
-            : references.map(ref => `
-                <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-start group gap-4 border border-slate-200">
-                    <p class="text-slate-700 pr-4 text-sm">${formatReference(ref, style)}</p>
+        const renderReferences = () => {
+            const style = citationStyleSelect.value;
+            if (currentReferences.length === 0) {
+                referencesList.innerHTML = `<div class="text-center text-text-secondary italic py-10"><p>Belum ada referensi.</p></div>`;
+                return;
+            }
+            referencesList.innerHTML = currentReferences.map(ref => `
+                <div class="bg-bg-canvas p-3 rounded-lg flex justify-between items-start group gap-4 border border-border-panel">
+                    <p class="text-text-secondary text-sm">${formatReference(ref, style)}</p>
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <button data-ref-id="${ref.id}" class="copy-ref-btn opacity-0 group-hover:opacity-100 transition-opacity bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-1 rounded-md text-xs font-semibold">Salin</button>
-                        <button data-ref-id="${ref.id}" class="delete-ref-btn opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1 rounded-full">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                        <button data-ref-id="${ref.id}" class="copy-ref-btn opacity-0 group-hover:opacity-100 transition-opacity btn-secondary !text-xs !py-1 !px-2">Salin</button>
+                        <button data-ref-id="${ref.id}" class="delete-ref-btn opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-400 p-1 rounded-full">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
                         </button>
                     </div>
                 </div>`).join('');
-    };
+        };
 
-    // --- Fungsi Ekspor ---
-    const handleExport = () => {
-        if (references.length === 0) {
-            showNotification('Tidak ada referensi untuk diekspor.', 'error');
-            return;
-        }
+        // --- Fungsi Unggah & Analisis ---
+        const handleFileUpload = async (file) => {
+            if (!file) return;
+            uploadBtnText.textContent = 'Menganalisis...';
+            uploadSpinner.classList.remove('hidden');
+            uploadDocBtn.disabled = true;
 
-        const style = citationStyleSelect.value;
-        const sortedReferences = [...references].sort((a, b) => a.author.localeCompare(b.author));
-        
-        const plainTextReferences = sortedReferences.map(ref => {
-            return formatReference(ref, style).replace(/<[^>]*>/g, '');
-        }).join('\n\n');
+            const formData = new FormData();
+            formData.append('document', file);
 
-        const blob = new Blob([plainTextReferences], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `referensi_onthesis_${style}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        showNotification('Referensi berhasil diekspor!');
-    };
-
-    // --- Fungsi Unggah Dokumen ---
-    const handleFileUpload = async (file) => {
-        if (!file) return;
-
-        uploadBtnText.textContent = 'Menganalisis...';
-        uploadSpinner.classList.remove('hidden');
-        uploadDocBtn.disabled = true;
-
-        const formData = new FormData();
-        formData.append('document', file);
-        formData.append('style', citationStyleSelect.value);
-
-        try {
-            const response = await fetch('/analyze_document', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Gagal menganalisis dokumen.');
-            }
-
-            if (data.references && data.references.length > 0) {
-                const newReferences = data.references.map((ref, index) => ({
-                    id: Date.now() + index,
-                    ...ref
-                }));
-                references.unshift(...newReferences);
-                saveReferences();
-                renderReferences();
-                showNotification(`${newReferences.length} referensi berhasil ditambahkan dari dokumen!`);
-                fetchAndDisplayUsage(); // Perbarui hitungan
-            } else {
-                showNotification('Tidak ada referensi yang ditemukan di dalam dokumen.', 'error');
-            }
-
-        } catch (error) {
-            console.error('Error uploading document:', error);
-            showNotification(error.message, 'error');
-        } finally {
-            uploadBtnText.textContent = 'Unggah & Analisis';
-            uploadSpinner.classList.add('hidden');
-            uploadDocBtn.disabled = false;
-            docFileInput.value = '';
-        }
-    };
-
-    // --- Event Handlers ---
-    referencesList.addEventListener('click', async (e) => {
-        const copyBtn = e.target.closest('.copy-ref-btn');
-        const deleteBtn = e.target.closest('.delete-ref-btn');
-        
-        if (copyBtn) {
-            const refId = copyBtn.dataset.refId;
-            const ref = references.find(r => r.id == refId);
-            if (ref) {
-                const textToCopy = formatReference(ref, citationStyleSelect.value).replace(/<[^>]*>/g, '');
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    copyBtn.textContent = 'Tersalin!';
-                    showNotification('Sitasi berhasil disalin!');
-                    setTimeout(() => { copyBtn.textContent = 'Salin'; }, 2000);
-                });
-            }
-        }
-        if (deleteBtn) {
-            const refId = deleteBtn.dataset.refId;
-            references = references.filter(r => r.id != refId);
-            saveReferences();
-            renderReferences();
-            
             try {
-                await fetch('/api/delete-citation', { method: 'POST' });
-                fetchAndDisplayUsage(); // Perbarui hitungan
-                showNotification('Referensi berhasil dihapus.', 'error');
+                const response = await fetch('/api/analyze-document', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Gagal menganalisis dokumen.');
+
+                if (data.references && data.references.length > 0) {
+                    const userId = auth.currentUser.uid;
+                    const promises = data.references.map(ref => 
+                        addDoc(collection(db, "citations"), { ...ref, userId, createdAt: serverTimestamp() })
+                    );
+                    await Promise.all(promises);
+                    showNotification(`${data.references.length} referensi berhasil ditambahkan!`);
+                } else {
+                    showNotification('Tidak ada referensi yang ditemukan di dalam dokumen.', 'error');
+                }
             } catch (error) {
-                console.error("Gagal update hitungan setelah hapus:", error);
+                showNotification(error.message, 'error');
+            } finally {
+                uploadBtnText.textContent = 'Unggah & Analisis';
+                uploadSpinner.classList.add('hidden');
+                uploadDocBtn.disabled = false;
+                docFileInput.value = '';
             }
-        }
-    });
+        };
 
-    citationStyleSelect.addEventListener('change', renderReferences);
-    exportBtn.addEventListener('click', handleExport);
-    
-    uploadDocBtn.addEventListener('click', () => docFileInput.click());
-    docFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        handleFileUpload(file);
-    });
-
-    // --- Modal Handlers ---
-    const manualForm = document.getElementById('manual-add-form');
-    manualForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        try {
-            const response = await fetch('/api/add-manual-citation', { method: 'POST' });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || "Gagal menghubungi server.");
+        // --- Event Handlers ---
+        referencesList.addEventListener('click', (e) => {
+            const copyBtn = e.target.closest('.copy-ref-btn');
+            const deleteBtn = e.target.closest('.delete-ref-btn');
+            if (copyBtn) {
+                const ref = currentReferences.find(r => r.id == copyBtn.dataset.refId);
+                if (ref) {
+                    navigator.clipboard.writeText(formatReference(ref, citationStyleSelect.value).replace(/<[^>]*>/g, ''));
+                    showNotification('Sitasi berhasil disalin!');
+                }
             }
+            if (deleteBtn) {
+                if (confirm('Hapus referensi ini?')) {
+                    deleteDoc(doc(db, "citations", deleteBtn.dataset.refId));
+                }
+            }
+        });
 
+        citationStyleSelect.addEventListener('change', renderReferences);
+        uploadDocBtn.addEventListener('click', () => docFileInput.click());
+        docFileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
+
+        // --- Modal Handlers ---
+        const manualForm = document.getElementById('manual-add-form');
+        const closeModal = () => {
+            manualAddModal.querySelector('#manual-add-modal-card').classList.add('opacity-0', '-translate-y-4');
+            setTimeout(() => { manualAddModal.classList.add('hidden'); manualForm.reset(); }, 300);
+        };
+        openManualAddBtn.addEventListener('click', () => {
+            manualAddModal.classList.remove('hidden');
+            setTimeout(() => manualAddModal.querySelector('#manual-add-modal-card').classList.remove('opacity-0', '-translate-y-4'), 10);
+        });
+        manualAddModal.addEventListener('click', (e) => {
+            if (e.target.id === 'manualAddModal' || e.target.closest('#cancel-manual-add-btn')) closeModal();
+        });
+        manualForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             const formData = new FormData(e.target);
-            const newRef = { id: Date.now(), ...Object.fromEntries(formData.entries()) };
-            references.unshift(newRef);
-            saveReferences();
-            renderReferences();
+            const newRef = { ...Object.fromEntries(formData.entries()), userId: auth.currentUser.uid, createdAt: serverTimestamp() };
+            await addDoc(collection(db, "citations"), newRef);
+            showNotification('Referensi berhasil disimpan!');
             closeModal();
-            showNotification('Referensi berhasil disimpan!', 'success');
-            fetchAndDisplayUsage();
+        });
 
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
+        // --- Sinkronisasi dengan Firestore ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                const q = query(collection(db, "citations"), where("userId", "==", user.uid));
+                onSnapshot(q, (snapshot) => {
+                    currentReferences = [];
+                    snapshot.forEach(doc => currentReferences.push({ id: doc.id, ...doc.data() }));
+                    currentReferences.sort((a,b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+                    renderReferences();
+                });
+            } else {
+                currentReferences = [];
+                renderReferences();
+            }
+        });
     });
-
-    const closeModal = () => {
-        manualAddModal.classList.add('hidden');
-        manualForm.reset();
-    };
-    
-    openManualAddBtn.addEventListener('click', () => manualAddModal.classList.remove('hidden'));
-    manualAddModal.addEventListener('click', (e) => {
-        if (e.target.id === 'manualAddModal' || e.target.closest('#cancel-manual-add-btn')) {
-            closeModal();
-        }
-    });
-
-    // --- Initial Render ---
-    renderReferences();
-});
 </script>
 {% endblock %}

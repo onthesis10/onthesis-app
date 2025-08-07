@@ -439,3 +439,61 @@ def payment_notification():
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+# ... (Semua kode dari atas sampai bagian RUTE API tetap sama) ...
+
+# =========================================================================
+# RUTE API
+# =========================================================================
+
+# ... (semua rute API yang sudah ada seperti /api/writing-assistant, /paraphrase, dll.) ...
+
+# ENDPOINT BARU UNTUK ANALISIS DOKUMEN
+@app.route('/api/analyze-document', methods=['POST'])
+@login_required
+def analyze_document():
+    if 'document' not in request.files:
+        return jsonify({'error': 'Tidak ada file yang diunggah.'}), 400
+    
+    file = request.files['document']
+    if file.filename == '':
+        return jsonify({'error': 'Nama file kosong.'}), 400
+
+    try:
+        # Di aplikasi nyata, di sini Anda akan memproses file PDF/DOCX
+        # Untuk demonstrasi, kita akan mengembalikan data dummy
+        
+        mock_references = [
+            {
+                "title": "A Neural Algorithm of Artistic Style",
+                "author": "Gatys, L. A., Ecker, A. S., & Bethge, M.",
+                "year": 2015,
+                "journal": "arXiv preprint arXiv:1508.06576"
+            },
+            {
+                "title": "Attention is All You Need",
+                "author": "Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... & Polosukhin, I.",
+                "year": 2017,
+                "journal": "Advances in neural information processing systems"
+            }
+        ]
+        
+        return jsonify({'references': mock_references})
+
+    except Exception as e:
+        print(f"Error saat menganalisis dokumen: {e}")
+        return jsonify({'error': 'Terjadi kesalahan internal saat memproses file.'}), 500
+
+
+@app.route('/api/get-usage-status')
+@login_required
+def get_usage_status():
+    # ... (kode get_usage_status yang sudah ada) ...
+    pass # Placeholder, pastikan kode aslinya ada di sini
+
+@app.route('/api/submit-feedback', methods=['POST'])
+@login_required
+def submit_feedback():
+    # ... (kode submit_feedback yang sudah ada) ...
+    pass # Placeholder, pastikan kode aslinya ada di sini
+
+# ... (Sisa rute API lainnya seperti verify-google-token, dll.) ...

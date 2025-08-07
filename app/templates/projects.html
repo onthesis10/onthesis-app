@@ -4,12 +4,13 @@
 
 {% block content %}
 <div class="animate-fade-in-up">
-    <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div>
+    <!-- Header dengan teks di tengah -->
+    <header class="flex flex-wrap justify-between items-center gap-4 mb-8 text-center md:text-left">
+        <div class="w-full md:w-auto">
             <h1 class="text-4xl font-extrabold text-text-primary">Manajemen Proyek</h1>
             <p class="text-lg text-text-secondary mt-1">Lacak semua progres penulisan skripsi dan jurnal Anda.</p>
         </div>
-        <button id="add-project-btn" class="btn-primary">
+        <button id="add-project-btn" class="btn-primary w-full md:w-auto">
             + Proyek Baru
         </button>
     </header>
@@ -33,13 +34,26 @@
                     <label for="project-title" class="block text-sm font-medium text-text-secondary mb-2">Judul Proyek</label>
                     <input id="project-title" type="text" class="feedback-form-input" placeholder="Contoh: Skripsi Bab 1" required>
                 </div>
-                <div>
-                    <label for="project-progress" class="block text-sm font-medium text-text-secondary mb-2">Progres Awal (%)</label>
-                    <input id="project-progress" type="number" class="feedback-form-input" value="0" min="0" max="100" required>
+                <!-- Input Tanggal Mulai dan Selesai -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="project-start-date" class="block text-sm font-medium text-text-secondary mb-2">Tanggal Mulai</label>
+                        <input id="project-start-date" type="date" class="feedback-form-input" required>
+                    </div>
+                    <div>
+                        <label for="project-end-date" class="block text-sm font-medium text-text-secondary mb-2">Tanggal Selesai</label>
+                        <input id="project-end-date" type="date" class="feedback-form-input" required>
+                    </div>
                 </div>
-                 <div>
-                    <label for="project-status" class="block text-sm font-medium text-text-secondary mb-2">Status</label>
-                    <input id="project-status" type="text" class="feedback-form-input" placeholder="Contoh: Draft Awal" required>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="project-progress" class="block text-sm font-medium text-text-secondary mb-2">Progres (%)</label>
+                        <input id="project-progress" type="number" class="feedback-form-input" value="0" min="0" max="100" required>
+                    </div>
+                     <div>
+                        <label for="project-status" class="block text-sm font-medium text-text-secondary mb-2">Status</label>
+                        <input id="project-status" type="text" class="feedback-form-input" placeholder="Contoh: Draft Awal" required>
+                    </div>
                 </div>
                 <div class="flex justify-end pt-4">
                     <button type="submit" class="btn-primary">Simpan Proyek</button>
@@ -53,9 +67,10 @@
 {% block page_scripts %}
 <script type="module">
     import { db, auth } from '/static/js/firebase.js';
-    import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
+        // --- Inisialisasi Elemen ---
         const projectsListContainer = document.getElementById('projects-list');
         const addProjectBtn = document.getElementById('add-project-btn');
         const projectModal = document.getElementById('project-modal');
@@ -67,9 +82,36 @@
         const projectTitleInput = document.getElementById('project-title');
         const projectProgressInput = document.getElementById('project-progress');
         const projectStatusInput = document.getElementById('project-status');
+        const projectStartDateInput = document.getElementById('project-start-date');
+        const projectEndDateInput = document.getElementById('project-end-date');
 
         let currentProjects = [];
 
+        // --- Fungsi Helper ---
+        const formatDateForInput = (timestamp) => {
+            if (!timestamp) return '';
+            const date = timestamp.toDate();
+            // Format YYYY-MM-DD
+            return date.toISOString().split('T')[0];
+        };
+
+        const calculateDuration = (start, end) => {
+            if (!start || !end) return { text: 'Jadwal belum diatur', color: 'text-text-secondary' };
+            const startDate = start.toDate();
+            const endDate = end.toDate();
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+
+            if (now > endDate) return { text: 'Selesai', color: 'text-green-500' };
+            
+            const diffTime = endDate - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) return { text: 'Hari ini', color: 'text-accent-cyan' };
+            return { text: `Sisa ${diffDays} hari`, color: 'text-yellow-500' };
+        };
+
+        // --- Fungsi Render ---
         const renderProjects = () => {
             if (!projectsListContainer) return;
             if (currentProjects.length === 0) {
@@ -77,12 +119,20 @@
                 return;
             }
 
-            projectsListContainer.innerHTML = currentProjects.map(p => `
-                <div class="apex-card p-6" data-id="${p.id}" data-title="${p.title}" data-progress="${p.progress}" data-status="${p.status || ''}">
+            projectsListContainer.innerHTML = currentProjects.map(p => {
+                const duration = calculateDuration(p.startDate, p.endDate);
+                return `
+                <div class="apex-card p-6" data-id="${p.id}">
                     <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
                         <div class="flex-grow">
-                            <h4 class="font-bold text-text-primary text-xl">${p.title}</h4>
-                            <div class="flex items-center gap-4 mt-4">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-text-primary text-xl mb-2">${p.title}</h4>
+                                <span class="font-bold text-sm ${duration.color}">${duration.text}</span>
+                            </div>
+                            <div class="text-xs text-text-secondary mb-4">
+                                <span>${p.startDate ? formatDateForInput(p.startDate) : ''}</span> &rarr; <span>${p.endDate ? formatDateForInput(p.endDate) : ''}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
                                 <input type="range" min="0" max="100" value="${p.progress}" class="w-full h-2 bg-border-panel rounded-lg appearance-none cursor-pointer progress-slider">
                                 <span class="font-semibold text-text-primary text-lg">${p.progress}%</span>
                             </div>
@@ -92,12 +142,12 @@
                             <button class="btn-secondary text-xs text-red-400 hover:bg-red-500/10 hover:border-red-500/50 delete-btn">Hapus</button>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                </div>`
+            }).join('');
         };
         
+        // --- Event Listeners ---
         const setupProjectListeners = () => {
-            // Listener untuk update progress slider
             projectsListContainer.addEventListener('input', (e) => {
                 if (e.target.classList.contains('progress-slider')) {
                     const id = e.target.closest('.apex-card').dataset.id;
@@ -107,19 +157,20 @@
                 }
             });
 
-            // Listener untuk tombol edit dan hapus
             projectsListContainer.addEventListener('click', (e) => {
                 const card = e.target.closest('.apex-card');
                 if (!card) return;
-
                 const id = card.dataset.id;
+                const projectData = currentProjects.find(p => p.id === id);
 
                 if (e.target.classList.contains('edit-btn')) {
                     projectModalTitle.textContent = 'Edit Proyek';
                     projectIdInput.value = id;
-                    projectTitleInput.value = card.dataset.title;
-                    projectProgressInput.value = card.dataset.progress;
-                    projectStatusInput.value = card.dataset.status;
+                    projectTitleInput.value = projectData.title;
+                    projectProgressInput.value = projectData.progress;
+                    projectStatusInput.value = projectData.status || '';
+                    projectStartDateInput.value = formatDateForInput(projectData.startDate);
+                    projectEndDateInput.value = formatDateForInput(projectData.endDate);
                     openModal();
                 }
 
@@ -131,22 +182,27 @@
             });
         };
 
+        // --- Logika Modal ---
         const openModal = () => {
             projectModal.classList.remove('hidden');
             setTimeout(() => projectModalCard.classList.remove('opacity-0', '-translate-y-4'), 10);
         };
-
         const closeModal = () => {
             projectModalCard.classList.add('opacity-0', '-translate-y-4');
             setTimeout(() => {
                 projectModal.classList.add('hidden');
                 projectForm.reset();
-                projectIdInput.value = ''; // Pastikan ID dikosongkan
+                projectIdInput.value = '';
                 projectModalTitle.textContent = 'Proyek Baru';
             }, 300);
         };
 
-        addProjectBtn.addEventListener('click', openModal);
+        addProjectBtn.addEventListener('click', () => {
+             projectModalTitle.textContent = 'Proyek Baru';
+             projectIdInput.value = '';
+             projectForm.reset();
+             openModal();
+        });
         closeProjectModalBtn.addEventListener('click', closeModal);
         projectModal.addEventListener('click', (e) => e.target === projectModal && closeModal());
 
@@ -157,22 +213,23 @@
                 title: projectTitleInput.value,
                 progress: parseInt(projectProgressInput.value),
                 status: projectStatusInput.value,
+                startDate: Timestamp.fromDate(new Date(projectStartDateInput.value)),
+                endDate: Timestamp.fromDate(new Date(projectEndDateInput.value)),
                 userId: auth.currentUser.uid,
                 lastUpdated: serverTimestamp()
             };
 
             if (id) {
-                // Mode Edit
                 const projectRef = doc(db, "projects", id);
                 await updateDoc(projectRef, projectData);
             } else {
-                // Mode Tambah Baru
                 projectData.createdAt = serverTimestamp();
                 await addDoc(collection(db, "projects"), projectData);
             }
             closeModal();
         });
 
+        // --- Sinkronisasi dengan Firestore ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 const q = query(collection(db, "projects"), where("userId", "==", user.uid));
@@ -181,13 +238,11 @@
                     snapshot.forEach(doc => {
                         currentProjects.push({ id: doc.id, ...doc.data() });
                     });
-                    // Urutkan berdasarkan tanggal update terbaru
                     currentProjects.sort((a, b) => (b.lastUpdated?.toDate() || 0) - (a.lastUpdated?.toDate() || 0));
                     renderProjects();
                 });
                 setupProjectListeners();
             } else {
-                // Kosongkan daftar jika user logout
                 currentProjects = [];
                 renderProjects();
             }
