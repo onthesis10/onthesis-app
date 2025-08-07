@@ -221,13 +221,11 @@
         closeProjectModalBtn.addEventListener('click', closeModal);
         projectModal.addEventListener('click', (e) => e.target === projectModal && closeModal());
 
-        // --- PERBAIKAN PADA FUNGSI SUBMIT ---
         projectForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btnText = submitProjectBtn.querySelector('.btn-text');
             const spinner = submitProjectBtn.querySelector('.spinner');
 
-            // Validasi tanggal
             if (!projectStartDateInput.value || !projectEndDateInput.value) {
                 showNotification('Tanggal mulai dan selesai harus diisi.', 'error');
                 return;
@@ -237,7 +235,6 @@
                 return;
             }
 
-            // Tampilkan loading
             btnText.textContent = 'Menyimpan...';
             spinner.classList.remove('hidden');
             submitProjectBtn.disabled = true;
@@ -268,7 +265,6 @@
                 console.error("Error saving project:", error);
                 showNotification('Gagal menyimpan proyek. Coba lagi.', 'error');
             } finally {
-                // Kembalikan tombol ke keadaan normal
                 btnText.textContent = 'Simpan Proyek';
                 spinner.classList.add('hidden');
                 submitProjectBtn.disabled = false;
@@ -282,7 +278,7 @@
                 onSnapshot(q, (snapshot) => {
                     currentProjects = [];
                     snapshot.forEach(doc => currentProjects.push({ id: doc.id, ...doc.data() }));
-                    currentProjects.sort((a, b) => (b.lastUpdated?.toDate() || 0) - (a.lastUpdated?.toDate() || 0));
+                    currentProjects.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
                     renderProjects();
                 });
                 setupProjectListeners();

@@ -358,21 +358,23 @@ def analyze_document():
             return jsonify({'error': 'Tidak ada teks yang dapat diekstrak dari file ini.'}), 400
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        Analisis teks berikut dan ekstrak semua item daftar pustaka (bibliografi). 
-        Untuk setiap item, berikan informasi berikut dalam format JSON: title, author, year, dan journal.
-        Pastikan outputnya adalah array JSON yang valid.
+        Dari teks dokumen akademis berikut, identifikasi informasi sitasi untuk dokumen itu sendiri.
+        Ekstrak penulis utama, judul utama, tahun publikasi, dan nama jurnal atau konferensi tempat dokumen itu diterbitkan.
+        Berikan hasilnya sebagai array JSON yang hanya berisi SATU objek dengan kunci: "title", "author", "year", dan "journal".
 
-        Teks Dokumen:
+        Teks Dokumen (ambil dari bagian awal untuk efisiensi):
         ---
-        {content[:10000]}
+        {content[:8000]} 
         ---
         """
         response = model.generate_content(prompt)
         clean_json_string = re.sub(r'```json\s*|\s*```', '', response.text.strip(), flags=re.DOTALL)
+        if not clean_json_string.strip().startswith('['):
+            clean_json_string = f"[{clean_json_string}]"
         references = json.loads(clean_json_string)
         return jsonify({'references': references})
     except json.JSONDecodeError:
-        return jsonify({'error': 'AI tidak dapat memformat daftar pustaka dengan benar. Coba lagi.'}), 500
+        return jsonify({'error': 'AI tidak dapat memformat informasi sitasi dengan benar. Coba lagi.'}), 500
     except Exception as e:
         print(f"Error saat menganalisis dokumen: {e}")
         return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
