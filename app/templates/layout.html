@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Menghapus kelas tema, akan diatur oleh JS -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -18,13 +19,10 @@
 <body>
     <div class="flex h-screen w-full bg-bg-canvas bg-animated-grid">
         
-        <!-- Sidebar dengan gaya baru -->
         <aside class="primary-sidebar p-4 flex-col flex-shrink-0 hidden md:flex">
-            <!-- Logo dan Nama Aplikasi -->
             <div class="flex items-center justify-center py-4 mb-6">
                 <a href="{{ url_for('dashboard') }}">
-                    <!-- PERUBAHAN: Menggunakan logo baru dan menghapus teks span -->
-                    <img src="{{ url_for('static', filename='images/onthesis-logo-blue.png') }}" alt="OnThesis Logo" class="h-15">
+                    <img src="{{ url_for('static', filename='images/onthesis-logo.png') }}" alt="OnThesis Logo" class="h-20">
                 </a>
             </div>
             
@@ -74,7 +72,11 @@
                     <span>Kembali</span>
                 </button>
                 <div class="flex items-center gap-4">
-                    <button id="feedback-btn" title="Kirim Feedback" class="text-text-secondary hover:text-white transition-colors">
+                    <button id="theme-toggle-btn" title="Ganti Tema" class="text-text-secondary hover:text-text-primary transition-colors p-2 rounded-lg hover:bg-white/10">
+                        <svg id="theme-icon-sun" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <svg id="theme-icon-moon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+                    <button id="feedback-btn" title="Kirim Feedback" class="text-text-secondary hover:text-text-primary transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>
                     </button>
                     <a href="{{ url_for('user_profile') }}" title="Profil">
@@ -89,12 +91,11 @@
         </main>
     </div>
     
-    <!-- Modal Feedback -->
     <div id="feedback-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden feedback-modal">
         <div class="w-full max-w-lg feedback-modal-content rounded-lg shadow-lg p-8 transform transition-all opacity-0 -translate-y-4" id="feedback-modal-card">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-white">Kirim Masukan</h3>
-                <button id="close-feedback-modal-btn" class="text-text-secondary hover:text-white text-3xl">&times;</button>
+                <h3 class="text-2xl font-bold text-text-primary">Kirim Masukan</h3>
+                <button id="close-feedback-modal-btn" class="text-text-secondary hover:text-text-primary text-3xl">&times;</button>
             </div>
             <div id="feedback-form-container">
                 <form id="feedback-form">
@@ -122,7 +123,7 @@
             </div>
             <div id="feedback-success-message" class="hidden text-center py-8">
                 <p class="text-2xl mb-4">✅</p>
-                <h4 class="text-xl font-bold text-white">Terima Kasih!</h4>
+                <h4 class="text-xl font-bold text-text-primary">Terima Kasih!</h4>
                 <p class="text-text-secondary mt-2">Masukan Anda telah kami terima dan sangat kami hargai.</p>
             </div>
         </div>
@@ -132,7 +133,6 @@
     {% block page_scripts %}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Logika Modal Feedback
             const feedbackBtn = document.getElementById('feedback-btn');
             const feedbackModal = document.getElementById('feedback-modal');
             const feedbackModalCard = document.getElementById('feedback-modal-card');
@@ -168,14 +168,12 @@
                     e.preventDefault();
                     submitFeedbackBtn.disabled = true;
                     submitFeedbackBtn.querySelector('.btn-text').textContent = 'Mengirim...';
-
                     const formData = new FormData(feedbackForm);
                     const data = {
                         category: formData.get('category'),
                         message: formData.get('message'),
                         pageUrl: window.location.pathname
                     };
-
                     try {
                         const response = await fetch('/api/submit-feedback', {
                             method: 'POST',
@@ -184,11 +182,9 @@
                         });
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.message || 'Gagal mengirim masukan.');
-                        
                         formContainer.classList.add('hidden');
                         successMessage.classList.remove('hidden');
                         setTimeout(closeModal, 2500);
-
                     } catch (error) {
                         alert(`Error: ${error.message}`);
                     } finally {
