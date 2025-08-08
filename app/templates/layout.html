@@ -1,135 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OnThesis{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <!-- Jika Anda menggunakan theme-nature.css, pastikan linknya ada di sini -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme-nature.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Baris di bawah ini penting untuk tema, jangan dihapus -->
+    <link id="theme-stylesheet" rel="stylesheet" href="{{ url_for('static', filename='css/' + (session.get('theme', 'theme-nature') if session else 'theme-nature') + '.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/onthesis-logo-blue.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Style untuk submenu di sidebar */
-        .sidebar .nav-item .submenu {
+        /* CSS tambahan hanya untuk fungsionalitas submenu, tidak akan merusak tema */
+        .sidebar .nav-list .submenu {
             list-style: none;
-            padding-left: 20px; /* Indentasi untuk submenu */
+            padding-left: 20px; /* Indentasi submenu */
+            margin-top: 5px;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-in-out;
+            transition: max-height 0.35s ease-in-out;
         }
 
-        .sidebar .nav-item.open .submenu {
-            max-height: 200px; /* Sesuaikan jika item lebih banyak */
-            margin-top: 10px;
+        .sidebar .nav-list li.open > .submenu {
+            max-height: 200px; /* Tinggi maksimal saat submenu terbuka */
         }
 
-        .sidebar .nav-item .submenu li a {
-            padding: 8px 15px;
-            font-size: 0.9rem;
-            display: block;
-            border-radius: 6px;
-        }
-
-        .sidebar .nav-item .submenu li a.active,
-        .sidebar .nav-item .submenu li a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+        .sidebar .submenu a {
+            padding-left: 30px; /* Indentasi lebih dalam untuk item submenu */
+            font-size: 0.9em;
         }
         
-        .nav-link.submenu-toggle {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .sidebar .nav-link.has-submenu .arrow {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+            font-size: 0.8em;
         }
 
-        .nav-link.submenu-toggle .arrow {
-            transition: transform 0.3s;
-        }
-
-        .nav-item.open .nav-link.submenu-toggle .arrow {
+        .sidebar li.open > .nav-link.has-submenu .arrow {
             transform: rotate(90deg);
+        }
+        
+        /* Memastikan ikon dan teks sejajar */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px; /* Jarak antara ikon dan teks */
+        }
+        .nav-link .nav-icon {
+            width: 20px;
+            height: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="main-container">
+    <div class="container">
         <aside class="sidebar">
-            <div class="logo">
-                <img src="{{ url_for('static', filename='images/onthesis-logo.png') }}" alt="OnThesis Logo">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='images/onthesis-logo.png') }}" alt="OnThesis Logo" class="logo-light">
+                <img src="{{ url_for('static', filename='images/onthesis-logo-blue.png') }}" alt="OnThesis Logo" class="logo-dark">
             </div>
             <nav>
                 <ul class="nav-list">
-                    <li class="nav-item">
-                        <a href="{{ url_for('dashboard') }}" class="nav-link">Dasbor</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('projects') }}" class="nav-link">Manajemen Proyek</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('search_references') }}" class="nav-link">Search References</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('citation_management') }}" class="nav-link">Manajemen Sitasi</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('paraphrase_ai') }}" class="nav-link">Parafrase AI</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('chat_ai') }}" class="nav-link">Curhat AI</a>
-                    </li>
-                    
-                    <!-- UPDATED: Asisten AI dengan Submenu -->
-                    <li class="nav-item" id="assistant-menu">
-                        <a href="#" class="nav-link submenu-toggle">
-                            <span>Asisten AI</span>
-                            <span class="arrow">&#9656;</span> <!-- Arrow icon -->
+                    <!-- STRUKTUR ASLI DENGAN IKON -->
+                    <li><a href="{{ url_for('dashboard') }}" class="nav-link" data-page="dashboard"><span class="nav-icon">{% include 'icons/dashboard.svg' %}</span>Dasbor</a></li>
+                    <li><a href="{{ url_for('projects') }}" class="nav-link" data-page="projects"><span class="nav-icon"></span>Manajemen Proyek</a></li>
+                    <li><a href="{{ url_for('search_references') }}" class="nav-link" data-page="search-references"><span class="nav-icon"></span>Search References</a></li>
+                    <li><a href="{{ url_for('citation_management') }}" class="nav-link" data-page="citation-management"><span class="nav-icon"></span>Manajemen Sitasi</a></li>
+                    <li><a href="{{ url_for('paraphrase_ai') }}" class="nav-link" data-page="paraphrase-ai"><span class="nav-icon"></span>Parafrase AI</a></li>
+                    <li><a href="{{ url_for('chat_ai') }}" class="nav-link" data-page="chat-ai"><span class="nav-icon"></span>Curhat AI</a></li>
+
+                    <!-- PERUBAHAN DI SINI: Asisten AI menjadi submenu -->
+                    <li id="assistant-menu">
+                        <a href="#" class="nav-link has-submenu" data-page="writing-assistant">
+                            <span class="nav-icon"></span> <!-- Placeholder untuk ikon Asisten AI -->
+                            Asisten AI <span class="badge-pro">PRO</span>
+                            <span class="arrow">&#9656;</span>
                         </a>
                         <ul class="submenu">
-                            <li><a href="{{ url_for('outline_generator') }}" class="nav-link">Generator Kerangka</a></li>
-                            <li><a href="{{ url_for('abstract_generator') }}" class="nav-link">Generator Abstrak</a></li>
+                            <li><a href="{{ url_for('outline_generator') }}" class="nav-link" data-page="outline-generator">Generator Kerangka</a></li>
+                            <li><a href="{{ url_for('abstract_generator') }}" class="nav-link" data-page="abstract-generator">Generator Abstrak</a></li>
                         </ul>
                     </li>
                     
-                    <li class="nav-item">
-                        <a href="{{ url_for('data_analysis') }}" class="nav-link">Analisis Data</a>
-                    </li>
+                    <li><a href="{{ url_for('data_analysis') }}" class="nav-link" data-page="data-analysis"><span class="nav-icon"></span>Analisis Data <span class="badge-pro">PRO</span></a></li>
                 </ul>
             </nav>
         </aside>
-        <main class="content">
-            {% block content %}{% endblock %}
+        <main class="main-content">
+            <header class="main-header">
+                <!-- Header Anda yang mungkin berisi tombol tema, notifikasi, atau profil pengguna -->
+                <div class="header-left">
+                    <!-- Search bar or page title can go here -->
+                </div>
+                <div class="header-right">
+                    <!-- Theme toggle, user profile dropdown etc. -->
+                    <a href="{{ url_for('user_profile') }}" class="user-profile-link">
+                         {% if current_user.is_authenticated and current_user.picture %}
+                            <img src="{{ current_user.picture }}" alt="User Profile" class="profile-pic">
+                        {% else %}
+                            <span class="default-profile-icon"></span>
+                        {% endif %}
+                    </a>
+                </div>
+            </header>
+            <div class="page-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                {% block content %}{% endblock %}
+            </div>
         </main>
     </div>
-
+    
+    <!-- Script utama Anda -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    <!-- Script tambahan untuk submenu dan menandai link aktif -->
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Script untuk toggle submenu
-        const assistantMenu = document.getElementById('assistant-menu');
-        const assistantToggle = assistantMenu.querySelector('.submenu-toggle');
-
-        assistantToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            assistantMenu.classList.toggle('open');
-        });
-
-        // Script untuk menandai link sidebar yang aktif
-        const currentPath = window.location.pathname;
-        const navLinks = document.querySelectorAll('.sidebar .nav-link');
-
-        navLinks.forEach(link => {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('active');
-                
-                // Jika link yang aktif ada di dalam submenu, buka submenu-nya
-                const parentSubmenu = link.closest('.submenu');
-                if (parentSubmenu) {
-                    parentSubmenu.closest('.nav-item').classList.add('open');
-                }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Logika untuk membuka dan menutup submenu
+            const assistantMenuToggle = document.querySelector('#assistant-menu > .has-submenu');
+            if (assistantMenuToggle) {
+                assistantMenuToggle.addEventListener('click', function(e) {
+                    e.preventDefault(); // Mencegah link pindah halaman
+                    this.parentElement.classList.toggle('open');
+                });
             }
+
+            // Logika untuk menandai link aktif dan membuka submenu jika perlu
+            const currentPage = window.location.pathname;
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+
+            navLinks.forEach(link => {
+                const linkPath = new URL(link.href).pathname;
+                if (linkPath === currentPage) {
+                    link.classList.add('active');
+                    
+                    const parentLi = link.closest('li');
+                    const parentSubmenu = link.closest('.submenu');
+
+                    if (parentSubmenu) {
+                        const parentMenuLi = parentSubmenu.closest('li');
+                        parentMenuLi.classList.add('open');
+                        parentMenuLi.querySelector('.has-submenu').classList.add('active');
+                    }
+                }
+            });
         });
-    });
     </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>
