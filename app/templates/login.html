@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Memuat file CSS utama untuk tema -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     
     <style>
@@ -28,40 +29,44 @@
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-bg-canvas bg-animated-grid">
+<!-- Menggunakan kelas login-bg untuk latar belakang gambar penuh -->
+<body class="login-bg">
 
-    <div class="flex items-center justify-center min-h-screen p-4 lg:p-8">
+    <div class="flex items-center justify-center min-h-screen p-4 lg:p-8 bg-black/50"> <!-- Menambahkan overlay gelap agar teks lebih terbaca -->
         <div class="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             
             <!-- Kolom Kiri: Promosi Aplikasi -->
             <div class="text-center lg:text-left">
-                <img src="{{ url_for('static', filename='images/onthesis-logo.png') }}" alt="OnThesis Logo" class="h-16 mx-auto lg:mx-0 mb-6 logo-animated">
+                <img src="{{ url_for('static', filename='images/logo-onthesis.png') }}" alt="OnThesis Logo" class="h-18 mx-auto lg:mx-0 mb-6 logo-animated">
+                
+                <!-- PERUBAHAN: Kalimat Sarkasme -->
                 <h1 class="text-4xl lg:text-5xl font-extrabold text-text-primary leading-tight">
-                    Akselerasi <span class="text-accent-cyan">Skripsi</span> Anda ke Level Berikutnya.
+                    Masih Revisi? <span class="text-accent-cyan">Skripsi</span> Gak Kelar-Kelar?
                 </h1>
                 <p class="text-text-secondary mt-4 text-lg">
-                    OnThesis adalah asisten akademik cerdas yang dirancang untuk mempercepat penelitian dan penulisan Anda. Dari mencari referensi hingga menganalisis data, semua alat yang Anda butuhkan ada di sini.
+                    Mungkin karena kamu terlalu banyak mengeluh. OnThesis hadir bukan untuk menggantikan dosen pembimbingmu, tapi setidaknya bisa mengurangi sedikit bebanmu yang katanya "berat" itu.
                 </p>
+                
                 <div class="mt-8 space-y-4">
                     <div class="flex items-center gap-4">
-                        <div class="p-3 bg-bg-panel rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+                        <div class="p-3 bg-bg-panel/50 backdrop-blur-sm rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
                         <div>
                             <h4 class="font-bold text-text-primary">Pencarian Cerdas</h4>
-                            <p class="text-sm text-text-secondary">Temukan jutaan jurnal relevan dalam hitungan detik.</p>
+                            <p class="text-sm text-text-secondary">Biar gak cuma pakai Wikipedia buat referensi.</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
-                        <div class="p-3 bg-bg-panel rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></div>
+                        <div class="p-3 bg-bg-panel/50 backdrop-blur-sm rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></div>
                         <div>
                             <h4 class="font-bold text-text-primary">Manajemen Sitasi Otomatis</h4>
-                            <p class="text-sm text-text-secondary">Buat daftar pustaka dengan berbagai format secara instan.</p>
+                            <p class="text-sm text-text-secondary">Karena daftar pustaka berantakan itu memalukan.</p>
                         </div>
                     </div>
                      <div class="flex items-center gap-4">
-                        <div class="p-3 bg-bg-panel rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
+                        <div class="p-3 bg-bg-panel/50 backdrop-blur-sm rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
                         <div>
                             <h4 class="font-bold text-text-primary">Analisis Data AI</h4>
-                            <p class="text-sm text-text-secondary">Olah data statistik Anda dan dapatkan interpretasi cerdas.</p>
+                            <p class="text-sm text-text-secondary">Biar kamu gak pusing lihat angka dan bisa fokus rebahan.</p>
                         </div>
                     </div>
                 </div>
@@ -69,9 +74,9 @@
             
             <!-- Kolom Kanan: Form Login -->
             <div class="w-full max-w-md mx-auto">
-                <div class="apex-card p-8">
-                    <h2 class="text-2xl font-bold text-center text-text-primary mb-2">Selamat Datang Kembali</h2>
-                    <p class="text-center text-text-secondary mb-8">Silakan masuk untuk melanjutkan</p>
+                <div class="apex-card p-8 !bg-bg-panel/80 backdrop-blur-sm">
+                    <h2 class="text-2xl font-bold text-center text-text-primary mb-2">Selamat Datang (Lagi)</h2>
+                    <p class="text-center text-text-secondary mb-8">Login. Kerjakan skripsimu. Jangan banyak drama.</p>
                     
                     <form id="login-form" method="POST" action="{{ url_for('login') }}">
                         <div class="mb-4">
@@ -109,7 +114,7 @@
 
                     <button id="google-login-btn" class="btn-secondary w-full flex items-center justify-center !py-3 disabled:opacity-75">
                         <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="btn-icon w-5 h-5 mr-3">
-                        <span class="btn-text">Masuk dengan Google</span>
+                        <span class="btn-text">Masuk dengan Google (Cara Cepat)</span>
                         <div class="spinner-dark hidden ml-3"></div>
                     </button>
                     
@@ -119,23 +124,19 @@
         </div>
     </div>
 
-    <!-- PERBAIKAN UTAMA: Memisahkan data dari logika -->
+    <!-- Memisahkan data dari logika untuk menghindari error di editor -->
     <script id="firebase-config-data" type="application/json">
         {{ firebase_config|tojson }}
     </script>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-        // Mengambil konfigurasi dari tag script yang terpisah
+        
         const configDataElement = document.getElementById('firebase-config-data');
         const firebaseConfig = JSON.parse(configDataElement.textContent);
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-
         const loginForm = document.getElementById('login-form');
         const loginBtn = document.getElementById('login-btn');
         const googleLoginBtn = document.getElementById('google-login-btn');
@@ -145,7 +146,6 @@
             const text = button.querySelector('.btn-text');
             const spinner = button.querySelector(isGoogle ? '.spinner-dark' : '.spinner');
             const icon = button.querySelector('.btn-icon');
-
             button.disabled = isLoading;
             if (isLoading) {
                 text.classList.add('hidden');
@@ -163,7 +163,6 @@
         googleLoginBtn.addEventListener('click', () => {
             loginError.textContent = '';
             setLoadingState(googleLoginBtn, true, true);
-            
             signInWithPopup(auth, provider)
                 .then(result => result.user.getIdToken())
                 .then(idToken => {

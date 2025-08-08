@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- Menghapus kelas tema, akan diatur oleh JS -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -22,7 +21,7 @@
         <aside class="primary-sidebar p-4 flex-col flex-shrink-0 hidden md:flex">
             <div class="flex items-center justify-center py-4 mb-6">
                 <a href="{{ url_for('dashboard') }}">
-                    <img src="{{ url_for('static', filename='images/onthesis-logo.png') }}" alt="OnThesis Logo" class="h-20">
+                    <img src="{{ url_for('static', filename='images/logo-onthesis.png') }}" alt="OnThesis Logo" class="h-15">
                 </a>
             </div>
             
@@ -36,7 +35,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                     <span>Manajemen Proyek</span>
                 </a>
-                <a href="{{ url_for('search_references') }}" class="nav-link {{ 'active' if active_page == 'search_references' else '' }}">
+                 <a href="{{ url_for('search_references') }}" class="nav-link {{ 'active' if active_page == 'search_references' else '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <span>Search References</span>
                 </a>
@@ -130,71 +129,13 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/script.js') }}" type="module"></script>
-    {% block page_scripts %}
+    {% block page_scripts %}{% endblock %}
+    
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const feedbackBtn = document.getElementById('feedback-btn');
-            const feedbackModal = document.getElementById('feedback-modal');
-            const feedbackModalCard = document.getElementById('feedback-modal-card');
-            const closeFeedbackBtn = document.getElementById('close-feedback-modal-btn');
-            const feedbackForm = document.getElementById('feedback-form');
-            const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
-            const formContainer = document.getElementById('feedback-form-container');
-            const successMessage = document.getElementById('feedback-success-message');
-
-            const openModal = () => {
-                feedbackModal.classList.remove('hidden');
-                setTimeout(() => {
-                    feedbackModalCard.classList.remove('opacity-0', '-translate-y-4');
-                }, 10);
-            };
-
-            const closeModal = () => {
-                feedbackModalCard.classList.add('opacity-0', '-translate-y-4');
-                setTimeout(() => {
-                    feedbackModal.classList.add('hidden');
-                    formContainer.classList.remove('hidden');
-                    successMessage.classList.add('hidden');
-                    feedbackForm.reset();
-                }, 300);
-            };
-
-            if (feedbackBtn) feedbackBtn.addEventListener('click', openModal);
-            if (closeFeedbackBtn) closeFeedbackBtn.addEventListener('click', closeModal);
-            if (feedbackModal) feedbackModal.addEventListener('click', (e) => e.target === feedbackModal && closeModal());
-
-            if (feedbackForm) {
-                feedbackForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    submitFeedbackBtn.disabled = true;
-                    submitFeedbackBtn.querySelector('.btn-text').textContent = 'Mengirim...';
-                    const formData = new FormData(feedbackForm);
-                    const data = {
-                        category: formData.get('category'),
-                        message: formData.get('message'),
-                        pageUrl: window.location.pathname
-                    };
-                    try {
-                        const response = await fetch('/api/submit-feedback', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(data)
-                        });
-                        const result = await response.json();
-                        if (!response.ok) throw new Error(result.message || 'Gagal mengirim masukan.');
-                        formContainer.classList.add('hidden');
-                        successMessage.classList.remove('hidden');
-                        setTimeout(closeModal, 2500);
-                    } catch (error) {
-                        alert(`Error: ${error.message}`);
-                    } finally {
-                        submitFeedbackBtn.disabled = false;
-                        submitFeedbackBtn.querySelector('.btn-text').textContent = 'Kirim Masukan';
-                    }
-                });
-            }
+        document.addEventListener('mousemove', e => {
+            document.body.style.setProperty('--mouse-x', e.clientX + 'px');
+            document.body.style.setProperty('--mouse-y', e.clientY + 'px');
         });
     </script>
-    {% endblock %}
 </body>
 </html>
