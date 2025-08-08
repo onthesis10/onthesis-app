@@ -6,7 +6,7 @@
 import os
 import json
 from flask import Flask, jsonify, request, redirect, url_for
-from flask_cors import CORS # <-- Impor baru
+from flask_cors import CORS # <-- Pastikan impor ini ada
 from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -20,7 +20,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'kunci-rahasia-default-yang-aman')
 
 # 2. AKTIFKAN CORS (PERBAIKAN UTAMA)
-# Ini akan mengizinkan aplikasi frontend Anda untuk berkomunikasi dengan backend
+# Baris ini SANGAT PENTING untuk mengizinkan frontend berkomunikasi dengan backend.
 CORS(app)
 
 # 3. Inisialisasi Firebase Admin SDK & Firestore
