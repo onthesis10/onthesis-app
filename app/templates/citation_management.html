@@ -202,7 +202,7 @@
                     currentReferences = [];
                     snapshot.forEach(doc => currentReferences.push({ id: doc.id, ...doc.data() }));
                     currentReferences.sort((a,b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-                    renderReferences(); // Memanggil render setiap kali data berubah
+                    renderReferences();
                 });
             } else {
                 currentReferences = [];

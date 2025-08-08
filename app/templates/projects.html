@@ -3,12 +3,15 @@
 {% block title %}Manajemen Proyek - OnThesis{% endblock %}
 
 {% block page_styles %}
+<!-- Pustaka untuk kalender kustom -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<!-- Tema kustom untuk kalender -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/flatpickr-theme.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="animate-fade-in-up">
+    <!-- Header dengan teks di tengah -->
     <header class="flex flex-wrap justify-between items-center gap-4 mb-8 text-center md:text-left">
         <div class="w-full md:w-auto">
             <h1 class="text-4xl font-extrabold text-text-primary">Manajemen Proyek</h1>
