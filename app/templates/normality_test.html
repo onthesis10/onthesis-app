@@ -1,477 +1,478 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 
-{% block title %}Uji Normalitas{% endblock %}
+{% block title %}Uji Normalitas - OnThesis{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka untuk Grafik & Tabel -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<!-- Pustaka untuk membaca file CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<!-- Pustaka untuk Export PDF Profesional -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+
+<style>
+    /* Penyesuaian Gaya DataTable agar sesuai Tema */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_processing,
+    .dataTables_wrapper .dataTables_paginate {
+        color: var(--text-secondary) !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        color: var(--text-secondary) !important;
+        border-color: var(--border-panel) !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: var(--accent-cyan) !important;
+        color: var(--bg-panel) !important;
+        border-color: var(--accent-cyan) !important;
+    }
+     html.light .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        color: white !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: var(--bg-canvas) !important;
+        border-color: var(--border-panel) !important;
+    }
+    table.dataTable.no-footer {
+        border-bottom-color: var(--border-panel) !important;
+    }
+    table.dataTable thead th {
+        border-bottom: 1px solid var(--border-panel) !important;
+    }
+    table.dataTable tbody tr {
+        background-color: transparent !important;
+    }
+    table.dataTable tbody tr:hover {
+        background-color: var(--bg-canvas) !important;
+    }
+    table.dataTable tbody td {
+        color: var(--text-secondary) !important;
+    }
+    /* Styling untuk checkbox agar sesuai tema */
+    .form-checkbox {
+        appearance: none;
+        background-color: var(--bg-canvas);
+        border: 1px solid var(--border-panel);
+        padding: 0;
+        display: inline-block;
+        vertical-align: middle;
+        width: 1.25em;
+        height: 1.25em;
+        border-radius: 0.25rem;
+        cursor: pointer;
+    }
+    .form-checkbox:checked {
+        background-color: var(--accent-cyan);
+        border-color: var(--accent-cyan);
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="p-4 sm:p-6 md:p-8" x-data="normalityTest()">
-    <div class="max-w-7xl mx-auto">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">Uji Normalitas Data</h1>
+<div class="animate-fade-in-up">
+    <header class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold text-text-primary">Uji Normalitas Data</h1>
+        <p class="text-lg text-text-secondary mt-1">Analisis satu atau beberapa variabel data sekaligus.</p>
+    </header>
 
-        <!-- Kontainer Utama: Kontrol di Kiri, Hasil di Kanan -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Kontainer utama dengan tata letak vertikal -->
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <!-- Kartu Input Data -->
+        <div class="apex-card p-6 text-center">
+            <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data Anda</h3>
+            <p class="text-sm text-text-secondary mb-4 max-w-2xl mx-auto">Anda bisa menambahkan beberapa grup/variabel untuk diuji secara bersamaan. Masukkan data secara manual atau unggah file CSV.</p>
+            
+            <!-- Kontainer untuk Grup Data Dinamis -->
+            <div id="data-groups-container" class="space-y-4 text-left">
+                <!-- Grup data akan ditambahkan di sini oleh JavaScript -->
+            </div>
 
-            <!-- Kolom Kiri: Input & Kontrol -->
-            <div class="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-fit">
-                
-                <!-- Pilihan Metode Input -->
-                <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">1. Masukkan Data</h2>
-                    <div class="flex rounded-lg shadow-sm">
-                        <button @click="selectedTab = 'manual'" :class="{'bg-blue-600 text-white': selectedTab === 'manual', 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300': selectedTab !== 'manual'}" class="flex-1 px-4 py-2 rounded-l-lg focus:outline-none transition-colors duration-200">Manual</button>
-                        <button @click="selectedTab = 'csv'" :class="{'bg-blue-600 text-white': selectedTab === 'csv', 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300': selectedTab !== 'csv'}" class="flex-1 px-4 py-2 focus:outline-none transition-colors duration-200">CSV</button>
-                        <button @click="selectedTab = 'excel'" :class="{'bg-blue-600 text-white': selectedTab === 'excel', 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300': selectedTab !== 'excel'}" class="flex-1 px-4 py-2 rounded-r-lg focus:outline-none transition-colors duration-200">Excel</button>
-                    </div>
+            <div class="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border-panel">
+                <button id="add-group-btn" class="btn-secondary flex-1">+ Tambah Variabel</button>
+                <button id="upload-csv-btn" class="btn-secondary flex-1">Unggah CSV</button>
+                <input type="file" id="csv-file-input" class="hidden" accept=".csv">
+            </div>
+             <div class="mt-4 text-xs text-text-secondary p-3 bg-bg-canvas rounded-md text-left">
+                <strong>Syarat CSV:</strong> Pastikan file Anda memiliki baris pertama sebagai header (nama variabel). Setiap kolom setelahnya akan dianggap sebagai satu grup data. Pisahkan data hanya dengan koma (,).
+            </div>
+
+            <!-- === PERUBAHAN 1: Tambah Pilihan Visualisasi === -->
+            <div class="mt-6 pt-6 border-t border-border-panel text-left">
+                <h4 class="text-lg font-bold text-text-primary mb-4 text-center">Pilih Visualisasi</h4>
+                <div class="max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-text-secondary">
+                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
+                        <input type="checkbox" id="check-hist" class="form-checkbox" checked>
+                        <span>Histogram</span>
+                    </label>
+                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
+                        <input type="checkbox" id="check-qq" class="form-checkbox" checked>
+                        <span>Q-Q Plot</span>
+                    </label>
+                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
+                        <input type="checkbox" id="check-box" class="form-checkbox" checked>
+                        <span>Box Plot</span>
+                    </label>
                 </div>
+            </div>
+            <!-- === AKHIR PERUBAHAN 1 === -->
 
-                <!-- Area Input Sesuai Pilihan -->
-                <div class="mb-6">
-                    <div x-show="selectedTab === 'manual'">
-                        <textarea x-model="manualData" rows="8" class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500" placeholder="Masukkan data numerik di sini, satu nilai per baris. Contoh:&#10;85&#10;92&#10;78&#10;..."></textarea>
-                    </div>
-                    <div x-show="selectedTab !== 'manual'">
-                        <input type="file" @change="handleFileUpload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"/>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Pastikan file Anda memiliki header kolom.</p>
-                    </div>
-                </div>
+            <div class="mt-6">
+                <button id="btnBackend" class="btn-primary w-full md:w-1/2 mx-auto">Jalankan Analisis</button>
+            </div>
+        </div>
 
-                <!-- Pilihan Variabel -->
-                <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">2. Pilih Variabel</h2>
-                    <select x-model="selectedVariable" class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500" :disabled="variables.length === 0">
-                        <option value="">-- Pilih Variabel --</option>
-                        <template x-for="variable in variables" :key="variable">
-                            <option :value="variable" x-text="variable"></option>
-                        </template>
-                    </select>
-                </div>
-
-                <!-- Pilihan Visualisasi -->
-                <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">3. Pilih Visualisasi</h2>
-                    <div class="space-y-2">
-                        <label class="flex items-center space-x-3 cursor-pointer">
-                            <input type="checkbox" x-model="visualizations.histogram" class="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
-                            <span class="text-gray-700 dark:text-gray-300">Histogram & Kurva Normal</span>
-                        </label>
-                        <label class="flex items-center space-x-3 cursor-pointer">
-                            <input type="checkbox" x-model="visualizations.qq" class="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
-                            <span class="text-gray-700 dark:text-gray-300">Q-Q Plot</span>
-                        </label>
-                        <label class="flex items-center space-x-3 cursor-pointer">
-                            <input type="checkbox" x-model="visualizations.box" class="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
-                            <span class="text-gray-700 dark:text-gray-300">Box Plot</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Tombol Aksi -->
-                <div class="mt-8">
-                    <button @click="runTest" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all duration-200 ease-in-out disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center" :disabled="!selectedVariable">
-                        <svg x-show="loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span x-text="loading ? 'Memproses...' : 'Jalankan Uji Normalitas'"></span>
+        <!-- Kontainer Output (Awalnya tersembunyi) -->
+        <div id="output" class="space-y-8" style="display:none;">
+            
+            <!-- Kartu Hasil Analisis & Interpretasi AI -->
+            <div class="apex-card p-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h3 class="text-xl font-bold text-text-primary">2. Hasil & Interpretasi</h3>
+                    <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span class="btn-text">Export PDF</span>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                     </button>
+                </div>
+                <div id="summary-container" class="space-y-4">
+                    <!-- Ringkasan hasil akan ditampilkan di sini -->
+                </div>
+                <div class="mt-6 border-t border-border-panel pt-6">
+                    <h4 class="text-lg font-bold text-text-primary mb-2">Interpretasi AI</h4>
+                    <button id="interpret-btn" class="btn-secondary w-full mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                        <span class="btn-text">Jelaskan Semua Hasil Ini</span>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    </button>
+                    <div id="interpretation-output" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
                 </div>
             </div>
 
-            <!-- Kolom Kanan: Hasil -->
-            <div class="lg:col-span-2">
-                <div x-show="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
-                    <strong class="font-bold">Error!</strong>
-                    <span class="block sm:inline" x-text="error"></span>
-                </div>
-
-                <div x-show="results" class="space-y-8" x-cloak>
-                     <!-- Header Hasil dan Tombol Ekspor -->
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Hasil Analisis</h2>
-                        <button @click="exportToDoc" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-all duration-200 ease-in-out flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                            </svg>
-                            Ekspor ke DOC
-                        </button>
-                    </div>
-
-                    <!-- Hasil Statistik -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Tabel Uji Normalitas</h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead class="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Uji Statistik</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Statistik</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">P-value</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Interpretasi (α = 0.05)</th>
-                                    </tr>
-                                </thead>
-                                <tbody x-ref="resultsTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    <!-- Hasil akan dimasukkan di sini oleh JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Interpretasi Profesional -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Interpretasi Hasil</h3>
-                        <div x-ref="interpretation" class="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
-                           <!-- Interpretasi akan dimasukkan di sini -->
-                        </div>
-                    </div>
-                    
-                    <!-- Visualisasi Data -->
-                    <div x-show="visualizations.histogram" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Histogram dan Kurva Normal</h3>
-                        <canvas id="histogramChart"></canvas>
-                    </div>
-
-                    <div x-show="visualizations.qq" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Q-Q Plot (Quantile-Quantile)</h3>
-                        <canvas id="qqPlotChart"></canvas>
-                    </div>
-
-                    <div x-show="visualizations.box" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Box Plot</h3>
-                        <canvas id="boxPlotChart"></canvas>
-                    </div>
+            <!-- Kartu Visualisasi Data -->
+            <div class="apex-card p-6">
+                <h3 class="text-xl font-bold text-text-primary mb-4 text-center">3. Visualisasi Data</h3>
+                <div id="plots-container" class="space-y-8">
+                    <!-- Grafik akan ditampilkan di sini secara vertikal -->
                 </div>
             </div>
         </div>
     </div>
-    <!-- Elemen tersembunyi untuk ekspor -->
-    <div id="exportContent" class="hidden"></div>
 </div>
+{% endblock %}
 
-<!-- Library untuk parsing file dan kalkulasi statistik -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
-
-<!-- Library untuk visualisasi data (Chart.js) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-box-and-violin-plot@4.2.0/build/index.umd.min.js"></script>
-
-<!-- Library untuk ekspor ke DOC -->
-<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
-
+{% block page_scripts %}
 <script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('normalityTest', () => ({
-        selectedTab: 'manual',
-        manualData: '',
-        fileData: null,
-        variables: [],
-        selectedVariable: '',
-        results: null,
-        error: '',
-        loading: false,
-        visualizations: {
-            histogram: true,
-            qq: true,
-            box: true,
-        },
-        chartInstances: {},
+    $(document).ready(function(){
+        const dataGroupsContainer = $('#data-groups-container');
+        let groupCount = 0;
+        let analysisResult = null;
 
-        handleFileUpload(event) {
-            this.loading = true;
-            this.error = '';
-            this.variables = [];
-            this.selectedVariable = '';
+        const addDataGroup = (name = '', data = '') => {
+            groupCount++;
+            const groupHtml = `
+                <div class="data-group p-4 border border-border-panel rounded-lg bg-bg-canvas" data-group-id="${groupCount}">
+                    <div class="flex justify-between items-center mb-2">
+                        <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full" value="${name || `Variabel ${groupCount}`}" placeholder="Nama Variabel">
+                        <button class="text-text-secondary hover:text-red-400 remove-group-btn text-xl font-bold">&times;</button>
+                    </div>
+                    <textarea class="feedback-form-input h-24 data-input" placeholder="Masukkan data...">${data}</textarea>
+                </div>
+            `;
+            dataGroupsContainer.append(groupHtml);
+        };
+
+        addDataGroup();
+
+        $('#add-group-btn').on('click', () => addDataGroup());
+        dataGroupsContainer.on('click', '.remove-group-btn', function() { $(this).closest('.data-group').remove(); });
+        $('#upload-csv-btn').on('click', () => $('#csv-file-input').click());
+        $('#csv-file-input').on('change', function(event) {
             const file = event.target.files[0];
-            if (!file) {
-                this.loading = false;
-                return;
-            }
-
-            if (this.selectedTab === 'csv') {
+            if (file) {
                 Papa.parse(file, {
                     header: true,
                     skipEmptyLines: true,
-                    complete: (results) => {
-                        this.fileData = results.data;
-                        this.variables = results.meta.fields;
-                        this.loading = false;
-                    },
-                    error: (err) => {
-                        this.error = `Gagal memproses file CSV: ${err.message}`;
-                        this.loading = false;
+                    complete: function(results) {
+                        dataGroupsContainer.empty();
+                        groupCount = 0;
+                        results.meta.fields.forEach(header => {
+                            const values = results.data.map(row => row[header]).join('\\n');
+                            addDataGroup(header, values);
+                        });
                     }
                 });
-            } else if (this.selectedTab === 'excel') {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const sheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[sheetName];
-                        this.fileData = XLSX.utils.sheet_to_json(worksheet);
-                        if (this.fileData.length > 0) {
-                            this.variables = Object.keys(this.fileData[0]);
-                        }
-                        this.loading = false;
-                    } catch (err) {
-                        this.error = `Gagal memproses file Excel: ${err.message}`;
-                        this.loading = false;
-                    }
-                };
-                reader.onerror = () => {
-                    this.error = 'Gagal membaca file.';
-                    this.loading = false;
-                };
-                reader.readAsArrayBuffer(file);
             }
-        },
+        });
 
-        getData() {
-            this.error = '';
-            if (this.selectedTab === 'manual') {
-                if (!this.manualData.trim()) return null;
-                const data = this.manualData.trim().split('\n').map(Number).filter(n => !isNaN(n));
-                if (data.length === 0) {
-                    this.error = 'Data manual tidak valid atau kosong.';
-                    return null;
-                }
-                this.variables = ['value'];
-                this.selectedVariable = 'value';
-                return data.map(val => ({ value: val }));
-            }
-            return this.fileData;
-        },
-
-        runTest() {
-            this.loading = true;
-            this.results = null;
-            this.error = '';
-            
-            Object.values(this.chartInstances).forEach(chart => chart.destroy());
-            this.chartInstances = {};
-
-            setTimeout(() => {
-                const allData = this.getData();
-                if (!allData || !this.selectedVariable) {
-                    this.error = this.error || 'Silakan pilih variabel untuk diuji.';
-                    this.loading = false;
-                    return;
-                }
-
-                const data = allData.map(row => parseFloat(row[this.selectedVariable])).filter(n => !isNaN(n));
-
-                if (data.length < 3) {
-                    this.error = 'Data tidak cukup untuk uji normalitas (diperlukan minimal 3 data poin).';
-                    this.loading = false;
-                    return;
-                }
-
-                try {
-                    const shapiro = this.shapiroWilk(data);
-                    const ks = this.kolmogorovSmirnov(data);
-
-                    this.results = { shapiro, ks, data };
-                    this.displayResults(this.results);
-                    
-                    if (this.visualizations.histogram) this.renderHistogram(data);
-                    if (this.visualizations.qq) this.renderQQPlot(data);
-                    if (this.visualizations.box) this.renderBoxPlot(data);
-
-                } catch (e) {
-                    this.error = `Terjadi kesalahan saat analisis: ${e.message}`;
-                } finally {
-                    this.loading = false;
-                }
-            }, 50);
-        },
-
-        displayResults(results) {
-            // Display table
-            const tableBody = this.$refs.resultsTable;
-            tableBody.innerHTML = '';
-            const createRow = (testName, statistic, pValue) => {
-                const isNormal = pValue > 0.05;
-                return `
-                    <tr class="text-gray-700 dark:text-gray-300">
-                        <td class="px-6 py-4 whitespace-nowrap font-medium">${testName}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${statistic.toFixed(4)}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${pValue.toFixed(4)}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isNormal ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}">
-                                ${isNormal ? 'Distribusi Normal' : 'Distribusi Tidak Normal'}
-                            </span>
-                        </td>
-                    </tr>
-                `;
+        const getPlotlyLayout = (title) => {
+            const isLight = document.documentElement.classList.contains('light');
+            return {
+                title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { color: isLight ? '#5E6278' : '#8B949E' },
+                xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
+                yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' }
             };
-            tableBody.innerHTML += createRow('Shapiro-Wilk', results.shapiro.W, results.shapiro.p);
-            tableBody.innerHTML += createRow('Kolmogorov-Smirnov', results.ks.D, results.ks.p);
+        };
 
-            // Display professional interpretation
-            const interpretationDiv = this.$refs.interpretation;
-            const mean = jstat.mean(results.data);
-            const stdev = jstat.stdev(results.data, true);
-            const n = results.data.length;
-            const shapiroNormal = results.shapiro.p > 0.05;
-            const ksNormal = results.ks.p > 0.05;
+        $('#btnBackend').on('click', function(){
+            const groupsData = [];
+            $('.data-group').each(function() {
+                const name = $(this).find('input[type="text"]').val();
+                const rawData = $(this).find('textarea').val();
+                const values = rawData.split(/[ ,\n\t]+/).map(Number).filter(x => !isNaN(x));
+                if (values.length > 0) {
+                    groupsData.push({ name, values });
+                }
+            });
 
-            interpretationDiv.innerHTML = `
-                <h4>1. Ringkasan Statistik Deskriptif</h4>
-                <p>Analisis dilakukan terhadap variabel <strong>${this.selectedVariable}</strong> dengan jumlah sampel (n) sebanyak <strong>${n}</strong>. Data memiliki rata-rata (mean) sebesar <strong>${mean.toFixed(2)}</strong> dan standar deviasi sebesar <strong>${stdev.toFixed(2)}</strong>.</p>
+            if (groupsData.length === 0) {
+                alert('Masukkan data setidaknya pada satu variabel.');
+                return;
+            }
+
+            const promises = groupsData.map(group => $.ajax({
+                url: "{{ url_for('api_normality') }}",
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ values: group.values }),
+            }));
+
+            Promise.all(promises).then(results => {
+                analysisResult = results.map((res, i) => ({ name: groupsData[i].name, ...res }));
                 
-                <h4>2. Hasil Uji Hipotesis</h4>
-                <p>Dua uji statistik digunakan untuk menguji hipotesis nol (H₀) bahwa data berdistribusi normal.</p>
-                <ul>
-                    <li><strong>Uji Shapiro-Wilk:</strong> Menghasilkan nilai p-value sebesar <strong>${results.shapiro.p.toFixed(4)}</strong>. Karena nilai ini ${shapiroNormal ? 'lebih besar dari' : 'lebih kecil dari atau sama dengan'} tingkat signifikansi α = 0.05, maka ${shapiroNormal ? 'gagal menolak H₀, yang mengindikasikan bahwa data berdistribusi normal.' : 'H₀ ditolak, yang menunjukkan bahwa data tidak berdistribusi normal.'}</li>
-                    <li><strong>Uji Kolmogorov-Smirnov:</strong> Menghasilkan nilai p-value sebesar <strong>${results.ks.p.toFixed(4)}</strong>. Karena nilai ini ${ksNormal ? 'lebih besar dari' : 'lebih kecil dari atau sama dengan'} tingkat signifikansi α = 0.05, maka ${ksNormal ? 'gagal menolak H₀, yang mengindikasikan bahwa data berdistribusi normal.' : 'H₀ ditolak, yang menunjukkan bahwa data tidak berdistribusi normal.'}</li>
-                </ul>
+                $('#summary-container').empty();
+                $('#plots-container').empty();
 
-                <h4>3. Analisis Visual</h4>
-                <p>Evaluasi visual dari plot memberikan wawasan tambahan:</p>
-                <ul>
-                    ${this.visualizations.histogram ? '<li><strong>Histogram:</strong> Bentuk distribusi frekuensi data secara visual dibandingkan dengan kurva normal ideal.</li>' : ''}
-                    ${this.visualizations.qq ? '<li><strong>Q-Q Plot:</strong> Titik-titik data diobservasi; jika mendekati garis diagonal lurus, ini mendukung asumsi normalitas.</li>' : ''}
-                    ${this.visualizations.box ? '<li><strong>Box Plot:</strong> Digunakan untuk mengidentifikasi kesimetrisan distribusi dan keberadaan pencilan (outliers).</li>' : ''}
-                </ul>
+                analysisResult.forEach(res => {
+                    const summaryClass = res.summary.includes("tidak") ? "text-red-400" : "text-green-400";
+                    const summaryHtml = `
+                        <div class="pb-4 border-b border-border-panel last:border-b-0">
+                            <h4 class="font-bold text-text-primary">${res.name}</h4>
+                            <p class="${summaryClass}">${res.summary}</p>
+                            <div class="overflow-x-auto mt-2">
+                                <table class="min-w-full text-sm">
+                                    <thead><tr class="text-left text-text-secondary">
+                                        <th class="p-2">Test</th><th class="p-2 text-right">Statistic</th><th class="p-2 text-right">df</th><th class="p-2 text-right">p-value</th>
+                                    </tr></thead>
+                                    <tbody>${res.table.map(row => `
+                                        <tr class="border-t border-border-panel">
+                                            <td class="p-2">${row.test}</td>
+                                            <td class="p-2 text-right">${row.statistic.toFixed(3)}</td>
+                                            <td class="p-2 text-right">${row.df}</td>
+                                            <td class="p-2 text-right ${row.p < 0.05 ? 'text-accent-cyan font-bold' : ''}">${row.p.toFixed(3)}</td>
+                                        </tr>`).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    $('#summary-container').append(summaryHtml);
 
-                <h4>4. Kesimpulan</h4>
-                <p>Berdasarkan kombinasi hasil uji statistik dan analisis visual, dapat disimpulkan bahwa asumsi normalitas untuk variabel <strong>${this.selectedVariable}</strong> ${shapiroNormal && ksNormal ? '<strong>terpenuhi</strong>' : '<strong>tidak terpenuhi</strong>'}.</p>
-            `;
-        },
-        
-        kolmogorovSmirnov(data) {
-            const n = data.length;
-            if (n === 0) return { D: NaN, p: NaN };
-            const sortedData = [...data].sort((a, b) => a - b);
-            const mean = jstat.mean(sortedData);
-            const stdev = jstat.stdev(sortedData, true);
-            
-            let dMax = 0;
-            for (let i = 0; i < n; i++) {
-                const cdf = jstat.normal.cdf(sortedData[i], mean, stdev);
-                const d1 = (i + 1) / n - cdf;
-                const d2 = cdf - i / n;
-                dMax = Math.max(dMax, d1, d2);
-            }
-            
-            // Lilliefors corrected p-value approximation
-            const K = Math.sqrt(n) * dMax;
-            let pValue;
-            if (K <= 0.5) pValue = 1;
-            else if (K > 1.0) pValue = Math.exp(-2.000071 * K * K - 0.331 * Math.pow(K, 4) + 0.06 * Math.pow(K, 6));
-            else pValue = 1 - (1/K) * Math.exp(-Math.PI * Math.PI / (8*K*K));
-            
-            return { D: dMax, p: Math.min(1, Math.max(0, pValue)) };
-        },
+                    const plotId = `plot-${res.name.replace(/\s+/g, '-')}`;
+                    
+                    // === PERUBAHAN 2: Tambah Kontainer Box Plot ===
+                    const plotHtml = `
+                        <div class="space-y-8">
+                            <h4 class="text-lg font-bold text-text-primary text-center">${res.name}</h4>
+                            <div id="hist-container-${plotId}" class="apex-card p-6" style="display: none;"><h4 class="text-md font-bold text-text-primary mb-4">Histogram</h4><div id="hist-${plotId}"></div></div>
+                            <div id="qq-container-${plotId}" class="apex-card p-6" style="display: none;"><h4 class="text-md font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qq-${plotId}"></div></div>
+                            <div id="box-container-${plotId}" class="apex-card p-6" style="display: none;"><h4 class="text-md font-bold text-text-primary mb-4">Box Plot</h4><div id="box-${plotId}"></div></div>
+                        </div>
+                    `;
+                    $('#plots-container').append(plotHtml);
+                    // === AKHIR PERUBAHAN 2 ===
 
-        shapiroWilk(data) {
-            const n = data.length;
-            if (n < 3 || n > 5000) {
-                 console.warn("Shapiro-Wilk test requires sample size between 3 and 5000.");
-                 return { W: NaN, p: NaN };
-            }
-            try {
-                return jstat.shapiroWilk(data);
-            } catch (e) {
-                console.error("Error in Shapiro-Wilk calculation:", e);
-                return { W: NaN, p: NaN };
-            }
-        },
+                    const dataValues = groupsData.find(g => g.name === res.name).values;
+                    
+                    // === PERUBAHAN 3: Logika untuk menampilkan plot berdasarkan pilihan ===
+                    if ($('#check-hist').is(':checked')) {
+                        $(`#hist-container-${plotId}`).show();
+                        Plotly.newPlot(`hist-${plotId}`, [{ x: dataValues, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } }], getPlotlyLayout(''));
+                    }
+                    
+                    if ($('#check-qq').is(':checked')) {
+                        $(`#qq-container-${plotId}`).show();
+                        let sorted = [...dataValues].sort((a,b)=>a-b);
+                        let quantiles = sorted.map((_,i) => (i+0.5)/res.n);
+                        let theoretical = quantiles.map(q => res.mean + res.std_dev*Math.sqrt(2)*erfinv(2*q-1));
+                        Plotly.newPlot(`qq-${plotId}`, [
+                            {x: theoretical, y: sorted, mode:'markers', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }},
+                            {x: theoretical, y: theoretical, mode:'lines', name:'Garis Normal', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }}
+                        ], getPlotlyLayout(''));
+                    }
 
-        renderHistogram(data) {
-            const ctx = document.getElementById('histogramChart').getContext('2d');
-            const n = data.length;
-            const mean = jstat.mean(data);
-            const stdev = jstat.stdev(data, true);
-            const numBins = Math.ceil(1 + Math.log2(n));
-            const min = Math.min(...data);
-            const max = Math.max(...data);
-            const binWidth = (max - min) / numBins;
-            const bins = Array(numBins).fill(0);
-            const labels = [];
-            for (let i = 0; i < numBins; i++) {
-                const binStart = min + i * binWidth;
-                const binEnd = binStart + binWidth;
-                labels.push(`${binStart.toFixed(2)}-${binEnd.toFixed(2)}`);
-            }
-            data.forEach(value => {
-                let binIndex = Math.floor((value - min) / binWidth);
-                if (binIndex === numBins) binIndex--;
-                bins[binIndex]++;
+                    if ($('#check-box').is(':checked')) {
+                        $(`#box-container-${plotId}`).show();
+                        Plotly.newPlot(`box-${plotId}`, [{ 
+                            y: dataValues, 
+                            type: 'box', 
+                            name: res.name, 
+                            marker: { color: 'rgba(56, 189, 248, 0.6)' },
+                            boxpoints: 'all', // Show all points
+                            jitter: 0.3,
+                            pointpos: -1.8
+                        }], getPlotlyLayout(''));
+                    }
+                    // === AKHIR PERUBAHAN 3 ===
+                });
+
+                $('#output').show();
+                $('#interpretation-output').html('').hide();
+            }).catch(err => {
+                alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.error : 'Tidak dapat terhubung ke server.'));
             });
-            const normalCurveData = labels.map((_, i) => {
-                const x = min + (i + 0.5) * binWidth;
-                const pdfValue = jstat.normal.pdf(x, mean, stdev);
-                return pdfValue * n * binWidth; 
-            });
-            this.chartInstances.histogram = new Chart(ctx, {
-                type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Frekuensi', data: bins, backgroundColor: 'rgba(54, 162, 235, 0.6)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }, { label: 'Kurva Normal Ideal', data: normalCurveData, type: 'line', borderColor: 'rgba(255, 99, 132, 1)', backgroundColor: 'rgba(255, 99, 132, 0.2)', fill: false, tension: 0.4, pointRadius: 0 }] },
-                options: { responsive: true, animation: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Frekuensi' } }, x: { title: { display: true, text: 'Nilai' } } } }
-            });
-        },
+        });
 
-        renderQQPlot(data) {
-            const ctx = document.getElementById('qqPlotChart').getContext('2d');
-            const sortedData = [...data].sort((a, b) => a - b);
-            const n = sortedData.length;
-            const quantiles = sortedData.map((_, i) => (i + 0.5) / n);
-            const theoreticalQuantiles = quantiles.map(q => jstat.normal.inv(q, 0, 1));
-            const plotData = sortedData.map((sampleQuantile, i) => ({ x: theoreticalQuantiles[i], y: sampleQuantile }));
-            const mean = jstat.mean(data);
-            const stdev = jstat.stdev(data, true);
-            this.chartInstances.qq = new Chart(ctx, {
-                type: 'scatter',
-                data: { datasets: [{ label: 'Data Quantiles', data: plotData, backgroundColor: 'rgba(75, 192, 192, 0.6)' }, { type: 'line', label: 'Garis Normal Ideal', data: [{x: -3, y: mean - 3*stdev}, {x: 3, y: mean + 3*stdev}], borderColor: 'rgba(255, 99, 132, 1)', fill: false, pointRadius: 0, borderDash: [5, 5] }] },
-                options: { responsive: true, animation: false, scales: { x: { title: { display: true, text: 'Theoretical Quantiles (Z-score)' } }, y: { title: { display: true, text: 'Sample Quantiles' } } } }
-            });
-        },
+        $('#interpret-btn').on('click', function() {
+            if (!analysisResult || analysisResult.length === 0) {
+                alert("Lakukan analisis terlebih dahulu.");
+                return;
+            }
+            const btn = $(this);
+            const btnText = btn.find('.btn-text');
+            const spinner = btn.find('.spinner');
 
-        renderBoxPlot(data) {
-            const ctx = document.getElementById('boxPlotChart').getContext('2d');
-            this.chartInstances.box = new Chart(ctx, {
-                type: 'boxplot',
-                data: { labels: [this.selectedVariable || 'Data'], datasets: [{ label: 'Distribusi Data', data: [data], backgroundColor: 'rgba(255, 159, 64, 0.6)', borderColor: 'rgba(255, 159, 64, 1)', borderWidth: 1, itemRadius: 2 }] },
-                options: { responsive: true, animation: false, plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: 'Nilai' } } } }
-            });
-        },
+            btnText.text('Menganalisis...');
+            spinner.removeClass('hidden');
+            btn.prop('disabled', true);
 
-        exportToDoc() {
-            const exportContainer = document.getElementById('exportContent');
+            const stats_summary = analysisResult.map(res => 
+                `Variabel "${res.name}":\n- Kesimpulan: ${res.summary}\n- N: ${res.n}, Mean: ${res.mean}, Std Dev: ${res.std_dev}\n- Shapiro-Wilk p-value: ${res.table[0].p}\n- Kolmogorov-Smirnov p-value: ${res.table[1].p}`
+            ).join('\n\n');
+
+            $.ajax({
+                url: "{{ url_for('interpret_analysis') }}",
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ stats: stats_summary }),
+                success: function(res) {
+                    $('#interpretation-output').html(res.interpretation.replace(/\n/g, '<br>')).show();
+                },
+                error: function(err) {
+                    $('#interpretation-output').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
+                },
+                complete: function() {
+                    btnText.text('Jelaskan Hasil Ini');
+                    spinner.addClass('hidden');
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+
+        // === PERUBAHAN 4: Update Fungsi Export PDF ===
+        $('#export-pdf-btn').on('click', async function() {
+            if (!analysisResult) {
+                alert("Lakukan analisis terlebih dahulu.");
+                return;
+            }
+            const btn = $(this);
+            const btnText = btn.find('.btn-text');
+            const spinner = btn.find('.spinner');
+
+            btnText.text('Mengekspor...');
+            spinner.removeClass('hidden');
+            btn.prop('disabled', true);
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const isLight = document.documentElement.classList.contains('light');
+            const textColor = isLight ? '#181C32' : '#E6EDF3';
+            let yPos = 15;
+
+            pdf.setTextColor(textColor);
+            pdf.setFontSize(18);
+            pdf.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
+            yPos += 10;
+
+            for (const res of analysisResult) {
+                if (yPos > 260) {
+                    pdf.addPage();
+                    yPos = 15;
+                }
+                
+                pdf.setFontSize(14);
+                pdf.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
+                yPos += 8;
+
+                pdf.autoTable({
+                    startY: yPos,
+                    head: [['Test', 'Statistic', 'df', 'p-value']],
+                    body: res.table.map(row => [row.test, row.statistic.toFixed(3), row.df, row.p.toFixed(3)]),
+                    theme: 'grid',
+                    styles: {
+                        fillColor: isLight ? [240, 242, 245] : [22, 27, 34],
+                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
+                        lineColor: isLight ? [222, 226, 230] : [48, 54, 61],
+                        lineWidth: 0.1
+                    },
+                    headStyles: {
+                        fillColor: isLight ? [222, 226, 230] : [48, 54, 61],
+                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
+                        fontStyle: 'bold'
+                    }
+                });
+                yPos = pdf.autoTable.previous.finalY + 10;
+
+                const plotId = `plot-${res.name.replace(/\s+/g, '-')}`;
+                
+                let activePlots = [];
+                if ($('#check-hist').is(':checked')) activePlots.push(`hist-${plotId}`);
+                if ($('#check-qq').is(':checked')) activePlots.push(`qq-${plotId}`);
+                if ($('#check-box').is(':checked')) activePlots.push(`box-${plotId}`);
+
+                if (activePlots.length > 0) {
+                    const imageDatas = await Promise.all(
+                        activePlots.map(id => Plotly.toImage(id, {format: 'png', width: 600, height: 400}))
+                    );
+
+                    const plotWidth = 180 / activePlots.length - 5 * (activePlots.length - 1);
+                    const plotHeight = (plotWidth / 600) * 400;
+                    const gap = 5;
+                    let startX = 15;
+
+                    if (yPos + plotHeight > 280) {
+                        pdf.addPage();
+                        yPos = 15;
+                    }
+
+                    imageDatas.forEach((imgData, index) => {
+                        let currentX = startX + index * (plotWidth + gap);
+                        pdf.addImage(imgData, 'PNG', currentX, yPos, plotWidth, plotHeight);
+                    });
+                    yPos += plotHeight + 10;
+                }
+            }
             
-            let content = `<h1>Laporan Hasil Uji Normalitas</h1>`;
-            content += `<h2>Variabel: ${this.selectedVariable}</h2>`;
-            
-            // Tabel Hasil
-            content += `<h3>Tabel Uji Normalitas</h3>`;
-            content += document.querySelector('table').outerHTML;
+            pdf.save('hasil-uji-normalitas-onthesis.pdf');
 
-            // Interpretasi
-            content += `<h3>Interpretasi Hasil</h3>`;
-            content += this.$refs.interpretation.innerHTML;
+            btnText.text('Export PDF');
+            spinner.addClass('hidden');
+            btn.prop('disabled', false);
+        });
+        // === AKHIR PERUBAHAN 4 ===
+    });
 
-            // Gambar Grafik
-            content += `<h3>Visualisasi Data</h3>`;
-            if (this.visualizations.histogram && this.chartInstances.histogram) {
-                content += `<h4>Histogram dan Kurva Normal</h4><img src="${this.chartInstances.histogram.toBase64Image()}" style="max-width:500px;" />`;
-            }
-            if (this.visualizations.qq && this.chartInstances.qq) {
-                content += `<h4>Q-Q Plot</h4><img src="${this.chartInstances.qq.toBase64Image()}" style="max-width:500px;" />`;
-            }
-            if (this.visualizations.box && this.chartInstances.box) {
-                content += `<h4>Box Plot</h4><img src="${this.chartInstances.box.toBase64Image()}" style="max-width:500px;" />`;
-            }
-
-            exportContainer.innerHTML = content;
-
-            var converted = htmlDocx.asBlob(exportContainer.innerHTML);
-            saveAs(converted, 'Laporan_Uji_Normalitas.docx');
-            exportContainer.innerHTML = ''; // Kosongkan kembali
-        }
-    }))
-})
+    function erfinv(x){
+        let a = 0.147;
+        let ln = Math.log(1 - x*x);
+        let part1 = 2/(Math.PI*a) + ln/2;
+        let part2 = ln/a;
+        return ( (x<0?-1:1) * Math.sqrt( Math.sqrt(part1*part1 - part2) - part1 ) );
+    }
 </script>
 {% endblock %}
