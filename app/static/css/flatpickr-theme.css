@@ -1,0 +1,130 @@
+/* Custom Flatpickr Theme for OnThesis "Apex Command Center" */
+
+.flatpickr-calendar {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-panel);
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    color: var(--text-secondary);
+    width: 320px;
+}
+
+html.light .flatpickr-calendar {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Header */
+.flatpickr-months .flatpickr-month {
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    fill: var(--text-primary);
+    height: 40px;
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+    fill: var(--text-secondary);
+    color: var(--text-secondary);
+    padding: 8px;
+}
+
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+    fill: var(--accent-cyan);
+}
+
+.numInputWrapper:hover,
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+    background: var(--bg-canvas);
+}
+
+/* Weekdays */
+.flatpickr-weekdays {
+    background: var(--bg-canvas);
+}
+
+span.flatpickr-weekday {
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+}
+
+/* Days */
+.flatpickr-day {
+    color: var(--text-primary);
+    border-color: transparent;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.flatpickr-day:hover {
+    background: var(--bg-canvas);
+    border-color: var(--border-panel);
+}
+
+.flatpickr-day.today {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.flatpickr-day.today:hover {
+    background: var(--accent-cyan);
+    color: var(--bg-panel);
+    border-color: var(--accent-cyan);
+}
+
+html.light .flatpickr-day.today:hover {
+    color: white;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: var(--accent-cyan);
+    color: var(--bg-panel);
+    border-color: var(--accent-cyan);
+    font-weight: 700;
+}
+
+html.light .flatpickr-day.selected {
+    color: white;
+}
+
+.flatpickr-day.inRange {
+    background: rgba(34, 211, 238, 0.1); /* accent-cyan with opacity */
+    border-color: transparent;
+    box-shadow: -5px 0 0 rgba(34, 211, 238, 0.1), 5px 0 0 rgba(34, 211, 238, 0.1);
+}
+
+html.light .flatpickr-day.inRange {
+    background: rgba(0, 149, 232, 0.1);
+    box-shadow: -5px 0 0 rgba(0, 149, 232, 0.1), 5px 0 0 rgba(0, 149, 232, 0.1);
+}
+
+.flatpickr-day.disabled,
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+    color: rgba(139, 148, 158, 0.4); /* text-secondary with opacity */
+}
+
+html.light .flatpickr-day.disabled,
+html.light .flatpickr-day.prevMonthDay,
+html.light .flatpickr-day.nextMonthDay {
+    color: rgba(94, 98, 120, 0.3);
+}
+
+/* Time Picker */
+.flatpickr-time {
+    border-top: 1px solid var(--border-panel);
+}
+
+.flatpickr-time .numInput,
+.flatpickr-time .flatpickr-am-pm {
+    color: var(--text-primary);
+}
+
+.flatpickr-time .numInput:hover,
+.flatpickr-time .flatpickr-am-pm:hover {
+    background: var(--bg-canvas);
+}

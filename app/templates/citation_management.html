@@ -64,7 +64,7 @@
 
 {% block page_scripts %}
 <script type="module">
-    import { db, auth } from '/static/js/firebase.js';
+    import { db, auth } from "{{ url_for('static', filename='js/firebase.js') }}";
     import { collection, onSnapshot, addDoc, doc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -193,6 +193,7 @@
             closeModal();
         });
 
+        // --- PERBAIKAN UTAMA: Sinkronisasi dengan Firestore ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 const q = query(collection(db, "citations"), where("userId", "==", user.uid));
@@ -200,7 +201,7 @@
                     currentReferences = [];
                     snapshot.forEach(doc => currentReferences.push({ id: doc.id, ...doc.data() }));
                     currentReferences.sort((a,b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-                    renderReferences();
+                    renderReferences(); // Memanggil render setiap kali data berubah
                 });
             } else {
                 currentReferences = [];
