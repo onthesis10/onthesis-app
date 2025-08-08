@@ -1,64 +1,9 @@
-<!DOCTYPE html>
-<html lang="id" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Sitasi - OnThesis</title>
-    
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Konfigurasi untuk Dark Mode dan Styling Tambahan -->
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'bg-primary': '#121212',
-                        'bg-secondary': '#1E1E1E',
-                        'bg-canvas': '#242424',
-                        'text-primary': '#E0E0E0',
-                        'text-secondary': '#B0B0B0',
-                        'border-panel': '#333333',
-                        'border-panel-hover': '#444444',
-                        'primary-accent': '#3B82F6', // Biru
-                        'primary-accent-hover': '#2563EB',
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- CSS untuk komponen custom dan animasi -->
-    <style>
-        body {
-            background-color: #121212;
-            color: #E0E0E0;
-            font-family: 'Inter', sans-serif;
-        }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+{% extends "layout.html" %}
 
-        .apex-card { background-color: #1E1E1E; border-radius: 0.75rem; border: 1px solid #333333; }
-        .btn-primary { background-color: #3B82F6; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; }
-        .btn-primary:hover { background-color: #2563EB; }
-        .btn-secondary { background-color: #374151; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; }
-        .btn-secondary:hover { background-color: #4B5563; }
-        .feedback-form-input { width: 100%; background-color: #242424; border: 1px solid #333333; border-radius: 0.5rem; padding: 0.75rem; color: #E0E0E0; }
-        .feedback-form-input:focus { outline: none; border-color: #3B82F6; }
-        .feedback-modal { transition: opacity 0.3s ease; }
-        .feedback-modal-content { background-color: #1E1E1E; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
-        .animate-fade-out-down { animation: fadeOutDown 0.3s ease-in forwards; }
-        @keyframes fadeOutDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(10px); } }
-    </style>
-</head>
-<body class="p-4 md:p-8">
+{% block title %}Manajemen Sitasi - OnThesis{% endblock %}
 
-<div class="animate-fade-in-up max-w-4xl mx-auto">
+{% block content %}
+<div class="animate-fade-in-up">
     <!-- Header Halaman -->
     <header class="flex flex-wrap justify-between items-center gap-4 mb-8 text-center md:text-left">
         <div class="w-full md:w-auto">
@@ -90,9 +35,7 @@
             </div>
         </div>
         
-        <!-- Daftar Referensi (Scrollable) -->
         <div id="references-list" class="space-y-3">
-            <!-- Pesan Loading Awal -->
             <div class="text-center text-text-secondary italic py-10"><p>Memuat sitasi Anda...</p></div>
         </div>
     </div>
@@ -115,35 +58,12 @@
     </div>
 </div>
 
-<!-- Kontainer Notifikasi -->
 <div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
+{% endblock %}
 
-
-<!-- =============================================================== -->
-<!-- SCRIPT JAVASCRIPT & FIREBASE                                    -->
-<!-- =============================================================== -->
+{% block page_scripts %}
 <script type="module">
-    // Import fungsi-fungsi yang dibutuhkan dari Firebase SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, query, where, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // =================================================================================
-    // PENTING: Ganti konfigurasi ini dengan konfigurasi dari project Firebase Anda!
-    // =================================================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        authDomain: "nama-proyek-anda.firebaseapp.com",
-        projectId: "nama-proyek-anda",
-        storageBucket: "nama-proyek-anda.appspot.com",
-        messagingSenderId: "xxxxxxxxxxxx",
-        appId: "1:xxxxxxxxxxxx:web:xxxxxxxxxxxxxxxxxxxxxx"
-    };
-
-    // Inisialisasi Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    import { auth } from "{{ url_for('static', filename='js/firebase.js') }}";
 
     document.addEventListener('DOMContentLoaded', () => {
         const citationStyleSelect = document.getElementById('citation-style-select');
@@ -155,10 +75,18 @@
         const docFileInput = document.getElementById('doc-file-input');
         const uploadBtnText = document.getElementById('upload-btn-text');
         const uploadSpinner = document.getElementById('upload-spinner');
-        const manualForm = document.getElementById('manual-add-form');
 
         let currentReferences = [];
-        let unsubscribe = null;
+        let storageKey = 'onthesis_references_guest'; // Kunci default jika pengguna belum login
+
+        const saveReferences = () => {
+            localStorage.setItem(storageKey, JSON.stringify(currentReferences));
+        };
+
+        const loadReferences = () => {
+            currentReferences = JSON.parse(localStorage.getItem(storageKey)) || [];
+            renderReferences();
+        };
 
         const showNotification = (message, type = 'success') => {
             const container = document.getElementById('notification-container');
@@ -167,11 +95,7 @@
             notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-up`;
             notif.textContent = message;
             container.appendChild(notif);
-            setTimeout(() => {
-                notif.classList.remove('animate-fade-in-up');
-                notif.classList.add('animate-fade-out-down');
-                setTimeout(() => notif.remove(), 500);
-            }, 4000);
+            setTimeout(() => notif.remove(), 4000);
         };
 
         const formatReference = (ref, style) => {
@@ -188,15 +112,13 @@
 
         const renderReferences = () => {
             const style = citationStyleSelect.value;
-            if (!referencesList) return;
-
             if (currentReferences.length === 0) {
                 referencesList.innerHTML = `<div class="text-center text-text-secondary italic py-10"><p>Belum ada referensi.</p></div>`;
                 return;
             }
             referencesList.innerHTML = currentReferences.map(ref => `
-                <div class="bg-bg-canvas p-3 rounded-lg flex justify-between items-start group gap-4 border border-border-panel hover:border-border-panel-hover transition-colors">
-                    <p class="text-text-secondary text-sm flex-grow">${formatReference(ref, style)}</p>
+                <div class="bg-bg-canvas p-3 rounded-lg flex justify-between items-start group gap-4 border border-border-panel">
+                    <p class="text-text-secondary text-sm">${formatReference(ref, style)}</p>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <button data-ref-id="${ref.id}" class="copy-ref-btn opacity-0 group-hover:opacity-100 transition-opacity btn-secondary !text-xs !py-1 !px-2">Salin</button>
                         <button data-ref-id="${ref.id}" class="delete-ref-btn opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-400 p-1 rounded-full">
@@ -207,116 +129,91 @@
         };
 
         const handleFileUpload = async (file) => {
-            if (!file || !auth.currentUser) return;
-            showNotification('Fungsi unggah dokumen belum diimplementasikan di contoh ini.', 'error');
+            if (!file) return;
+            uploadBtnText.textContent = 'Menganalisis...';
+            uploadSpinner.classList.remove('hidden');
+            uploadDocBtn.disabled = true;
+            const formData = new FormData();
+            formData.append('document', file);
+            try {
+                const response = await fetch('/api/analyze-document', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Gagal menganalisis dokumen.');
+                if (data.references && data.references.length > 0) {
+                    data.references.forEach(ref => {
+                        currentReferences.unshift({ id: Date.now() + Math.random(), ...ref });
+                    });
+                    saveReferences();
+                    renderReferences();
+                    showNotification(`${data.references.length} referensi berhasil ditambahkan!`);
+                } else {
+                    showNotification('Tidak ada referensi yang ditemukan di dalam dokumen.', 'error');
+                }
+            } catch (error) {
+                showNotification(error.message, 'error');
+            } finally {
+                uploadBtnText.textContent = 'Unggah & Analisis';
+                uploadSpinner.classList.add('hidden');
+                uploadDocBtn.disabled = false;
+                docFileInput.value = '';
+            }
         };
 
-        referencesList.addEventListener('click', async (e) => {
+        referencesList.addEventListener('click', (e) => {
             const copyBtn = e.target.closest('.copy-ref-btn');
             const deleteBtn = e.target.closest('.delete-ref-btn');
             if (copyBtn) {
-                const refId = copyBtn.dataset.refId;
-                const ref = currentReferences.find(r => r.id === refId);
+                const ref = currentReferences.find(r => r.id == copyBtn.dataset.refId);
                 if (ref) {
-                    try {
-                        await navigator.clipboard.writeText(formatReference(ref, citationStyleSelect.value).replace(/<[^>]*>/g, ''));
-                        showNotification('Sitasi berhasil disalin!');
-                    } catch (err) {
-                        showNotification('Gagal menyalin sitasi.', 'error');
-                    }
+                    navigator.clipboard.writeText(formatReference(ref, citationStyleSelect.value).replace(/<[^>]*>/g, ''));
+                    showNotification('Sitasi berhasil disalin!');
                 }
             }
             if (deleteBtn) {
-                const refId = deleteBtn.dataset.refId;
-                if (window.confirm('Anda yakin ingin menghapus referensi ini?')) {
-                    try {
-                        await deleteDoc(doc(db, "citations", refId));
-                        showNotification('Referensi berhasil dihapus.');
-                    } catch (error) {
-                        showNotification('Gagal menghapus referensi.', 'error');
-                    }
+                if (confirm('Hapus referensi ini?')) {
+                    currentReferences = currentReferences.filter(r => r.id != deleteBtn.dataset.refId);
+                    saveReferences();
+                    renderReferences();
                 }
             }
         });
 
-        const closeModal = () => {
-            const modalCard = document.getElementById('manual-add-modal-card');
-            manualAddModal.classList.remove('animate-fade-in');
-            manualAddModal.classList.add('opacity-0');
-            modalCard.classList.add('opacity-0', '-translate-y-4');
-            setTimeout(() => {
-                manualAddModal.classList.add('hidden');
-                manualForm.reset();
-            }, 300);
-        };
-
-        openManualAddBtn.addEventListener('click', () => {
-            const modalContent = document.getElementById('manual-add-modal-card');
-            manualAddModal.classList.remove('hidden', 'opacity-0');
-            manualAddModal.classList.add('animate-fade-in');
-            setTimeout(() => {
-                modalContent.classList.remove('opacity-0', '-translate-y-4');
-            }, 10);
-        });
-        
-        document.getElementById('cancel-manual-add-btn').addEventListener('click', closeModal);
-        manualAddModal.addEventListener('click', (e) => {
-            if (e.target.id === 'manualAddModal') {
-                closeModal();
-            }
-        });
-
-        manualForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!auth.currentUser) {
-                showNotification('Anda harus login untuk menyimpan referensi.', 'error');
-                return;
-            }
-            const formData = new FormData(e.target);
-            const newRef = {
-                title: formData.get('title'),
-                author: formData.get('author'),
-                year: formData.get('year'),
-                journal: formData.get('journal'),
-                userId: auth.currentUser.uid,
-                createdAt: serverTimestamp()
-            };
-            try {
-                await addDoc(collection(db, "citations"), newRef);
-                showNotification('Referensi berhasil disimpan!');
-                closeModal();
-            } catch (error) {
-                showNotification('Gagal menyimpan referensi.', 'error');
-            }
-        });
-        
         citationStyleSelect.addEventListener('change', renderReferences);
         uploadDocBtn.addEventListener('click', () => docFileInput.click());
         docFileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
 
-        // --- SINKRONISASI REAL-TIME DENGAN FIRESTORE ---
-        onAuthStateChanged(auth, user => {
-            if (unsubscribe) unsubscribe();
+        const manualForm = document.getElementById('manual-add-form');
+        const closeModal = () => {
+            manualAddModal.querySelector('#manual-add-modal-card').classList.add('opacity-0', '-translate-y-4');
+            setTimeout(() => { manualAddModal.classList.add('hidden'); manualForm.reset(); }, 300);
+        };
+        openManualAddBtn.addEventListener('click', () => {
+            manualAddModal.classList.remove('hidden');
+            setTimeout(() => manualAddModal.querySelector('#manual-add-modal-card').classList.remove('opacity-0', '-translate-y-4'), 10);
+        });
+        manualAddModal.addEventListener('click', (e) => {
+            if (e.target.id === 'manualAddModal' || e.target.closest('#cancel-manual-add-btn')) closeModal();
+        });
+        manualForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const newRef = { id: Date.now(), ...Object.fromEntries(formData.entries()) };
+            currentReferences.unshift(newRef);
+            saveReferences();
+            renderReferences();
+            showNotification('Referensi berhasil disimpan!');
+            closeModal();
+        });
 
+        auth.onAuthStateChanged(user => {
             if (user) {
-                const citationsRef = collection(db, "citations");
-                const q = query(citationsRef, where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-                
-                unsubscribe = onSnapshot(q, (snapshot) => {
-                    currentReferences = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderReferences();
-                }, (error) => {
-                    console.error("Firestore snapshot error:", error);
-                    showNotification("Gagal memuat data. Periksa koneksi atau izin database Anda.", "error");
-                });
-
+                // Buat kunci penyimpanan unik untuk setiap pengguna
+                storageKey = `onthesis_references_${user.uid}`;
             } else {
-                currentReferences = [];
-                renderReferences();
+                storageKey = 'onthesis_references_guest';
             }
+            loadReferences(); // Muat data setelah status login diketahui
         });
     });
 </script>
-
-</body>
-</html>
+{% endblock %}
