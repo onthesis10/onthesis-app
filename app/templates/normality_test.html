@@ -13,6 +13,8 @@
 <!-- Pustaka untuk Export PDF Profesional -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+<!-- Pustaka untuk merender Markdown dari AI -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
 
 
 <style>
@@ -56,6 +58,47 @@
     table.dataTable tbody td {
         color: var(--text-secondary) !important;
     }
+    /* Gaya untuk checkbox kustom */
+    .custom-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+    .custom-checkbox input {
+        display: none;
+    }
+    .custom-checkbox .checkmark {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--border-panel);
+        border-radius: 4px;
+        display: inline-block;
+        position: relative;
+        transition: all 0.2s;
+    }
+    .custom-checkbox input:checked + .checkmark {
+        background-color: var(--accent-cyan);
+        border-color: var(--accent-cyan);
+    }
+    .custom-checkbox .checkmark:after {
+        content: "";
+        position: absolute;
+        display: none;
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 10px;
+        border: solid var(--bg-panel);
+        border-width: 0 3px 3px 0;
+        transform: rotate(45deg);
+    }
+    html.light .custom-checkbox .checkmark:after {
+        border-color: white;
+    }
+    .custom-checkbox input:checked + .checkmark:after {
+        display: block;
+    }
 </style>
 {% endblock %}
 
@@ -71,13 +114,10 @@
         
         <!-- Kartu Input Data -->
         <div class="apex-card p-6 text-center">
-            <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data Anda</h3>
+            <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data & Opsi</h3>
             <p class="text-sm text-text-secondary mb-4 max-w-2xl mx-auto">Anda bisa menambahkan beberapa grup/variabel untuk diuji secara bersamaan. Masukkan data secara manual atau unggah file CSV.</p>
             
-            <!-- Kontainer untuk Grup Data Dinamis -->
-            <div id="data-groups-container" class="space-y-4 text-left">
-                <!-- Grup data akan ditambahkan di sini oleh JavaScript -->
-            </div>
+            <div id="data-groups-container" class="space-y-4 text-left"></div>
 
             <div class="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border-panel">
                 <button id="add-group-btn" class="btn-secondary flex-1">+ Tambah Variabel</button>
@@ -87,6 +127,16 @@
              <div class="mt-4 text-xs text-text-secondary p-3 bg-bg-canvas rounded-md text-left">
                 <strong>Syarat CSV:</strong> Pastikan file Anda memiliki baris pertama sebagai header (nama variabel). Setiap kolom setelahnya akan dianggap sebagai satu grup data. Pisahkan data hanya dengan koma (,).
             </div>
+
+            <div class="mt-6 pt-6 border-t border-border-panel">
+                <h4 class="text-lg font-bold text-text-primary mb-4">Opsi Visualisasi</h4>
+                <div class="flex justify-center gap-6 text-text-secondary">
+                    <label class="custom-checkbox"><input type="checkbox" id="check-hist" checked><span class="checkmark"></span> Histogram</label>
+                    <label class="custom-checkbox"><input type="checkbox" id="check-qq" checked><span class="checkmark"></span> Q-Q Plot</label>
+                    <label class="custom-checkbox"><input type="checkbox" id="check-box" checked><span class="checkmark"></span> Boxplot</label>
+                </div>
+            </div>
+
             <div class="mt-6">
                 <button id="btnBackend" class="btn-primary w-full md:w-1/2 mx-auto">Jalankan Analisis</button>
             </div>
@@ -95,19 +145,22 @@
         <!-- Kontainer Output (Awalnya tersembunyi) -->
         <div id="output" class="space-y-8" style="display:none;">
             
-            <!-- Kartu Hasil Analisis & Interpretasi AI -->
             <div class="apex-card p-6">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
                     <h3 class="text-xl font-bold text-text-primary">2. Hasil & Interpretasi</h3>
-                    <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        <span class="btn-text">Export PDF</span>
-                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    </button>
+                    <div class="flex gap-2">
+                        <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <span class="btn-text">Export PDF</span>
+                            <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        </button>
+                        <button id="export-doc-btn" class="btn-secondary text-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            <span class="btn-text">Export DOC</span>
+                        </button>
+                    </div>
                 </div>
-                <div id="summary-container" class="space-y-4">
-                    <!-- Ringkasan hasil akan ditampilkan di sini -->
-                </div>
+                <div id="summary-container" class="space-y-4"></div>
                 <div class="mt-6 border-t border-border-panel pt-6">
                     <h4 class="text-lg font-bold text-text-primary mb-2">Interpretasi AI</h4>
                     <button id="interpret-btn" class="btn-secondary w-full mb-4">
@@ -115,17 +168,13 @@
                         <span class="btn-text">Jelaskan Semua Hasil Ini</span>
                         <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                     </button>
-                    <!-- PERUBAHAN: Kontainer interpretasi yang lebih rapi -->
                     <div id="interpretation-output" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
                 </div>
             </div>
 
-            <!-- Kartu Visualisasi Data -->
-            <div class="apex-card p-6">
+            <div id="visuals-card" class="apex-card p-6" style="display:none;">
                 <h3 class="text-xl font-bold text-text-primary mb-4 text-center">3. Visualisasi Data</h3>
-                <div id="plots-container" class="space-y-8">
-                    <!-- Grafik akan ditampilkan di sini secara vertikal -->
-                </div>
+                <div id="plots-container" class="space-y-8"></div>
             </div>
         </div>
     </div>
@@ -138,6 +187,7 @@
         const dataGroupsContainer = $('#data-groups-container');
         let groupCount = 0;
         let analysisResult = null;
+        const converter = new showdown.Converter({ghCompatibleHeaderId: true, simpleLineBreaks: true, tables: true});
 
         const addDataGroup = (name = '', data = '') => {
             groupCount++;
@@ -217,25 +267,20 @@
                 $('#summary-container').empty();
                 $('#plots-container').empty();
 
+                let visualsToShow = 0;
+
                 analysisResult.forEach(res => {
                     const summaryClass = res.summary.includes("tidak") ? "text-red-400" : "text-green-400";
+                    const pValuePercent = (res.table[0].p * 100).toFixed(1); // Shapiro-Wilk p-value
                     const summaryHtml = `
                         <div class="pb-4 border-b border-border-panel last:border-b-0">
                             <h4 class="font-bold text-text-primary">${res.name}</h4>
-                            <p class="${summaryClass}">${res.summary}</p>
+                            <p class="${summaryClass} font-semibold">${res.summary}</p>
+                            <p class="text-sm text-text-secondary mt-1">Probabilitas normal (berdasarkan Shapiro-Wilk): <span class="font-bold text-text-primary">${pValuePercent}%</span></p>
                             <div class="overflow-x-auto mt-2">
                                 <table class="min-w-full text-sm">
-                                    <thead><tr class="text-left text-text-secondary">
-                                        <th class="p-2">Test</th><th class="p-2 text-right">Statistic</th><th class="p-2 text-right">df</th><th class="p-2 text-right">p-value</th>
-                                    </tr></thead>
-                                    <tbody>${res.table.map(row => `
-                                        <tr class="border-t border-border-panel">
-                                            <td class="p-2">${row.test}</td>
-                                            <td class="p-2 text-right">${row.statistic.toFixed(3)}</td>
-                                            <td class="p-2 text-right">${row.df}</td>
-                                            <td class="p-2 text-right ${row.p < 0.05 ? 'text-accent-cyan font-bold' : ''}">${row.p.toFixed(3)}</td>
-                                        </tr>`).join('')}
-                                    </tbody>
+                                    <thead><tr class="text-left text-text-secondary"><th class="p-2">Test</th><th class="p-2 text-right">Statistic</th><th class="p-2 text-right">df</th><th class="p-2 text-right">p-value</th></tr></thead>
+                                    <tbody>${res.table.map(row => `<tr class="border-t border-border-panel"><td class="p-2">${row.test}</td><td class="p-2 text-right">${row.statistic.toFixed(3)}</td><td class="p-2 text-right">${row.df}</td><td class="p-2 text-right ${row.p < 0.05 ? 'text-accent-cyan font-bold' : ''}">${row.p.toFixed(3)}</td></tr>`).join('')}</tbody>
                                 </table>
                             </div>
                         </div>
@@ -243,26 +288,39 @@
                     $('#summary-container').append(summaryHtml);
 
                     const plotId = `plot-${res.name.replace(/\\s+/g, '-')}`;
-                    const plotHtml = `
-                        <div class="space-y-8">
-                            <h4 class="text-lg font-bold text-text-primary text-center">${res.name}</h4>
-                            <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Histogram</h4><div id="hist-${plotId}"></div></div>
-                            <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qq-${plotId}"></div></div>
-                        </div>
-                    `;
+                    const plotHtml = `<div class="space-y-8"><h4 class="text-lg font-bold text-text-primary text-center">${res.name}</h4><div id="plots-${plotId}" class="space-y-8"></div></div>`;
                     $('#plots-container').append(plotHtml);
-
-                    const dataValues = groupsData.find(g => g.name === res.name).values;
-                    Plotly.newPlot(`hist-${plotId}`, [{ x: dataValues, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } }], getPlotlyLayout(''));
                     
-                    let sorted = [...dataValues].sort((a,b)=>a-b);
-                    let quantiles = sorted.map((_,i) => (i+0.5)/res.n);
-                    let theoretical = quantiles.map(q => res.mean + res.std_dev*Math.sqrt(2)*erfinv(2*q-1));
-                    Plotly.newPlot(`qq-${plotId}`, [
-                        {x: theoretical, y: sorted, mode:'markers', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }},
-                        {x: theoretical, y: theoretical, mode:'lines', name:'Garis Normal', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }}
-                    ], getPlotlyLayout(''));
+                    const dataValues = groupsData.find(g => g.name === res.name).values;
+
+                    if ($('#check-hist').is(':checked')) {
+                        $(`#plots-${plotId}`).append(`<div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Histogram</h4><div id="hist-${plotId}"></div></div>`);
+                        Plotly.newPlot(`hist-${plotId}`, [{ x: dataValues, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } }], getPlotlyLayout(''));
+                        visualsToShow++;
+                    }
+                    if ($('#check-qq').is(':checked')) {
+                        $(`#plots-${plotId}`).append(`<div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qq-${plotId}"></div></div>`);
+                        let sorted = [...dataValues].sort((a,b)=>a-b);
+                        let quantiles = sorted.map((_,i) => (i+0.5)/res.n);
+                        let theoretical = quantiles.map(q => res.mean + res.std_dev*Math.sqrt(2)*erfinv(2*q-1));
+                        Plotly.newPlot(`qq-${plotId}`, [
+                            {x: theoretical, y: sorted, mode:'markers', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }},
+                            {x: theoretical, y: theoretical, mode:'lines', name:'Garis Normal', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }}
+                        ], getPlotlyLayout(''));
+                        visualsToShow++;
+                    }
+                    if ($('#check-box').is(':checked')) {
+                        $(`#plots-${plotId}`).append(`<div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Boxplot</h4><div id="box-${plotId}"></div></div>`);
+                        Plotly.newPlot(`box-${plotId}`, [{y:dataValues, type:'box', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }}], getPlotlyLayout(''));
+                        visualsToShow++;
+                    }
                 });
+
+                if (visualsToShow > 0) {
+                    $('#visuals-card').show();
+                } else {
+                    $('#visuals-card').hide();
+                }
 
                 $('#output').show();
                 $('#interpretation-output').html('').hide();
@@ -294,7 +352,8 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ stats: stats_summary }),
                 success: function(res) {
-                    $('#interpretation-output').html(res.interpretation.replace(/\n/g, '<br>')).show();
+                    const html = converter.makeHtml(res.interpretation);
+                    $('#interpretation-output').html(html).show();
                 },
                 error: function(err) {
                     $('#interpretation-output').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
@@ -307,7 +366,6 @@
             });
         });
 
-        // --- FUNGSI EXPORT PDF BARU & PROFESIONAL ---
         $('#export-pdf-btn').on('click', async function() {
             if (!analysisResult) {
                 alert("Lakukan analisis terlebih dahulu.");
@@ -330,13 +388,21 @@
             pdf.setTextColor(textColor);
             pdf.setFontSize(18);
             pdf.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
-            yPos += 10;
+            yPos += 15;
+
+            const interpretationText = $('#interpretation-output').text();
+            if (interpretationText) {
+                pdf.setFontSize(12);
+                pdf.text("Interpretasi AI:", 15, yPos);
+                yPos += 6;
+                pdf.setFontSize(10);
+                const splitText = pdf.splitTextToSize(interpretationText, 180);
+                pdf.text(splitText, 15, yPos);
+                yPos += (splitText.length * 5) + 10;
+            }
 
             for (const res of analysisResult) {
-                if (yPos > 260) {
-                    pdf.addPage();
-                    yPos = 15;
-                }
+                if (yPos > 260) { pdf.addPage(); yPos = 15; }
                 
                 pdf.setFontSize(14);
                 pdf.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
@@ -348,30 +414,39 @@
                     body: res.table.map(row => [row.test, row.statistic.toFixed(3), row.df, row.p.toFixed(3)]),
                     theme: 'grid',
                     styles: {
-                        fillColor: isLight ? [240, 242, 245] : [22, 27, 34],
-                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
+                        fillColor: isLight ? [248, 249, 250] : [22, 27, 34],
+                        textColor: isLight ? [33, 37, 41] : [230, 237, 243],
                         lineColor: isLight ? [222, 226, 230] : [48, 54, 61],
                         lineWidth: 0.1
                     },
                     headStyles: {
-                        fillColor: isLight ? [222, 226, 230] : [48, 54, 61],
-                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
+                        fillColor: isLight ? [233, 236, 239] : [48, 54, 61],
+                        textColor: isLight ? [33, 37, 41] : [230, 237, 243],
                         fontStyle: 'bold'
                     }
                 });
                 yPos = pdf.autoTable.previous.finalY + 10;
 
                 const plotId = `plot-${res.name.replace(/\\s+/g, '-')}`;
-                const histImg = await Plotly.toImage(`hist-${plotId}`, {format: 'png', width: 700, height: 400});
-                const qqImg = await Plotly.toImage(`qq-${plotId}`, {format: 'png', width: 700, height: 400});
 
-                if (yPos > 180) {
-                    pdf.addPage();
-                    yPos = 15;
+                if ($('#check-hist').is(':checked')) {
+                    if (yPos > 180) { pdf.addPage(); yPos = 15; }
+                    const histImg = await Plotly.toImage(document.getElementById(`hist-${plotId}`), {format: 'png', width: 700, height: 400});
+                    pdf.addImage(histImg, 'PNG', 15, yPos, 180, 100);
+                    yPos += 110;
                 }
-                pdf.addImage(histImg, 'PNG', 15, yPos, 85, 50);
-                pdf.addImage(qqImg, 'PNG', 110, yPos, 85, 50);
-                yPos += 60;
+                if ($('#check-qq').is(':checked')) {
+                    if (yPos > 180) { pdf.addPage(); yPos = 15; }
+                    const qqImg = await Plotly.toImage(document.getElementById(`qq-${plotId}`), {format: 'png', width: 700, height: 400});
+                    pdf.addImage(qqImg, 'PNG', 15, yPos, 180, 100);
+                    yPos += 110;
+                }
+                if ($('#check-box').is(':checked')) {
+                     if (yPos > 180) { pdf.addPage(); yPos = 15; }
+                    const boxImg = await Plotly.toImage(document.getElementById(`box-${plotId}`), {format: 'png', width: 700, height: 400});
+                    pdf.addImage(boxImg, 'PNG', 15, yPos, 180, 100);
+                    yPos += 110;
+                }
             }
             
             pdf.save('hasil-uji-normalitas-onthesis.pdf');
@@ -379,6 +454,44 @@
             btnText.text('Export PDF');
             spinner.addClass('hidden');
             btn.prop('disabled', false);
+        });
+
+        $('#export-doc-btn').on('click', function() {
+            if (!analysisResult) {
+                alert("Lakukan analisis terlebih dahulu.");
+                return;
+            }
+
+            let htmlContent = `
+                <html>
+                    <head><meta charset='utf-8'><title>Hasil Uji Normalitas</title></head>
+                    <body>
+                        <h1>Laporan Uji Normalitas - OnThesis</h1>
+            `;
+
+            const interpretationHtml = $('#interpretation-output').html();
+            if (interpretationHtml) {
+                htmlContent += `<h2>Interpretasi AI</h2>${interpretationHtml}`;
+            }
+
+            analysisResult.forEach(res => {
+                htmlContent += `<h2>Hasil untuk Variabel: ${res.name}</h2>`;
+                htmlContent += `<p>${res.summary}</p>`;
+                htmlContent += `<table border="1" style="width:100%; border-collapse: collapse;">
+                                <thead><tr><th>Test</th><th>Statistic</th><th>df</th><th>p-value</th></tr></thead>
+                                <tbody>${res.table.map(row => `<tr><td>${row.test}</td><td>${row.statistic.toFixed(3)}</td><td>${row.df}</td><td>${row.p.toFixed(3)}</td></tr>`).join('')}</tbody>
+                               </table>`;
+            });
+
+            htmlContent += "</body></html>";
+            
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(htmlContent);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = 'hasil-uji-normalitas-onthesis.doc';
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
         });
     });
 
