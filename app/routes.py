@@ -1,6 +1,6 @@
 # ========================================================================
 # File: app/routes.py
-# Deskripsi: Versi lengkap, final, dan telah diperbaiki untuk mengatasi konflik rute.
+# Deskripsi: Versi lengkap dan final dengan semua fitur dan perbaikan bug.
 # ========================================================================
 
 # --- Impor Library ---
@@ -17,21 +17,24 @@ from werkzeug.utils import secure_filename
 # --- Impor dari __init__.py ---
 from app import app, db, login_manager
 
-# --- Impor dari Flask dan Ekstensi ---
+# Impor untuk framework Flask dan ekstensi
 from flask import render_template, jsonify, request, redirect, url_for, flash
+from flask_cors import CORS
 from flask_login import (
-    UserMixin, login_user, logout_user, login_required, current_user
+    UserMixin,
+    login_user,
+    logout_user,
+    login_required,
+    current_user
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from firebase_admin import auth, firestore
 
-# --- Impor untuk Analisis Dokumen ---
+# Impor untuk analisis dokumen
 import PyPDF2
 import docx
 
-# =========================================================================
-# KONFIGURASI
-# =========================================================================
+# --- Konfigurasi Tambahan ---
 try:
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 except Exception as e:
@@ -41,11 +44,30 @@ try:
     server_key = os.getenv('MIDTRANS_SERVER_KEY')
     client_key = os.getenv('MIDTRANS_CLIENT_KEY')
     midtrans_snap = midtransclient.Snap(
-        is_production=False, server_key=server_key, client_key=client_key
+        is_production=False,
+        server_key=server_key,
+        client_key=client_key
     )
 except Exception as e:
     print(f"Peringatan: Gagal mengkonfigurasi Midtrans. Error: {e}")
     midtrans_snap = None
+
+# =========================================================================
+# FUNGSI HELPER UNTUK MEMBACA FILE
+# =========================================================================
+def read_pdf(file_stream):
+    """Membaca teks dari file PDF."""
+    reader = PyPDF2.PdfReader(file_stream)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() or ""
+    return text
+
+def read_docx(file_stream):
+    """Membaca teks dari file DOCX."""
+    doc = docx.Document(file_stream)
+    text = "\n".join([para.text for para in doc.paragraphs])
+    return text
 
 # =========================================================================
 # MODEL PENGGUNA & LOADER
@@ -78,16 +100,8 @@ def load_user(user_id):
         return None
 
 # =========================================================================
-# FUNGSI HELPER
+# FUNGSI HELPER UNTUK PEMBATASAN FITUR
 # =========================================================================
-def read_pdf(file_stream):
-    reader = PyPDF2.PdfReader(file_stream)
-    return "".join(page.extract_text() or "" for page in reader.pages)
-
-def read_docx(file_stream):
-    doc = docx.Document(file_stream)
-    return "\n".join(para.text for para in doc.paragraphs)
-
 def check_and_update_usage(user_id, feature_name):
     FEATURE_LIMITS = {
         'paraphrase': 5, 'chat': 10, 'search': 5, 'citation': 15
@@ -99,18 +113,20 @@ def check_and_update_usage(user_id, feature_name):
     if not user_doc.exists: return False, "Pengguna tidak ditemukan."
     today_str = date.today().isoformat()
     usage_data = user_doc.to_dict().get('usage_limits', {})
-    if usage_data.get('last_reset_date') != today_str:
+    last_reset = usage_data.get('last_reset_date')
+    if last_reset != today_str:
+        citation_total = usage_data.get('citation_count', 0)
         usage_data = {
             'paraphrase_count': 0, 'chat_count': 0, 'search_count': 0,
             'writing_assistant_count': 0, 'data_analysis_count': 0,
-            'last_reset_date': today_str, 'citation_count': usage_data.get('citation_count', 0)
+            'last_reset_date': today_str, 'citation_count': citation_total
         }
         user_ref.set({'usage_limits': usage_data}, merge=True)
     count_key = f"{feature_name}_count"
     current_count = usage_data.get(count_key, 0)
     if current_count >= limit:
         if feature_name == 'citation':
-            return False, f"Anda telah mencapai batas total {limit} referensi untuk akun gratis."
+             return False, f"Anda telah mencapai batas total {limit} referensi untuk akun gratis."
         return False, f"Anda telah mencapai batas penggunaan harian ({limit}x) untuk fitur ini. Silakan upgrade ke PRO."
     user_ref.update({f'usage_limits.{count_key}': firestore.Increment(1)})
     return True, "OK"
@@ -131,14 +147,8 @@ def check_and_update_pro_trial(user_id, feature_name):
     return True, "OK"
 
 # =========================================================================
-# --- RUTE HALAMAN UTAMA (USER-FACING PAGES) ---
+# RUTE-RUTE HALAMAN
 # =========================================================================
-
-@app.route('/')
-@login_required
-def index():
-    return redirect(url_for('dashboard'))
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -165,50 +175,38 @@ def logout():
     flash('Anda telah berhasil logout.', 'success')
     return redirect(url_for('login'))
 
+@app.route('/')
 @app.route('/dashboard')
 @login_required
-def dashboard():
-    return render_template('dashboard.html')
+def dashboard(): return render_template('dashboard.html')
 
 @app.route('/projects')
 @login_required
-def projects():
-    return render_template('projects.html')
+def projects(): return render_template('projects.html')
 
 @app.route('/search-references')
 @login_required
-def search_references():
-    return render_template('search_references.html')
+def search_references(): return render_template('search_references.html')
 
 @app.route('/citation-management')
 @login_required
-def citation_management():
-    return render_template('citation_management.html')
+def citation_management(): return render_template('citation_management.html')
 
 @app.route('/paraphrase-ai')
 @login_required
-def paraphrase_ai():
-    return render_template('paraphrase_ai.html')
+def paraphrase_ai(): return render_template('paraphrase_ai.html')
 
 @app.route('/chat-ai')
 @login_required
-def chat_ai():
-    return render_template('chat_ai.html')
+def chat_ai(): return render_template('chat_ai.html')
 
-@app.route('/writing-assistant/outline')
+@app.route('/writing-assistant')
 @login_required
-def outline_generator():
-    return render_template('outline_generator.html')
-
-@app.route('/writing-assistant/abstract')
-@login_required
-def abstract_generator():
-    return render_template('abstract_generator.html')
+def writing_assistant(): return render_template('writing_assistant.html')
 
 @app.route('/data-analysis')
 @login_required
-def data_analysis():
-    return render_template('data_analysis.html')
+def data_analysis(): return render_template('data_analysis.html')
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -218,11 +216,11 @@ def user_profile():
             new_name = request.form.get('name')
             if not new_name or len(new_name) < 3:
                 flash('Nama tampilan harus memiliki setidaknya 3 karakter.', 'danger')
-            else:
-                user_id = current_user.id
-                db.collection('users').document(user_id).update({'displayName': new_name})
-                auth.update_user(user_id, display_name=new_name)
-                flash('Profil berhasil diperbarui!', 'success')
+                return redirect(url_for('user_profile'))
+            user_id = current_user.id
+            db.collection('users').document(user_id).update({'displayName': new_name})
+            auth.update_user(user_id, display_name=new_name)
+            flash('Profil berhasil diperbarui!', 'success')
         except Exception as e:
             flash(f'Terjadi kesalahan saat memperbarui profil: {e}', 'danger')
         return redirect(url_for('user_profile'))
@@ -230,7 +228,7 @@ def user_profile():
     return render_template('user-profile.html', midtrans_client_key=client_key)
 
 # =========================================================================
-# --- RUTE API (UNTUK JAVASCRIPT/FRONTEND) ---
+# RUTE API
 # =========================================================================
 
 @app.route('/api/writing-assistant', methods=['POST'])
@@ -247,7 +245,7 @@ def api_writing_assistant():
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = ""
         if task == 'generate_outline':
-            prompt = f"Buatkan kerangka skripsi yang terstruktur dan logis dalam format HTML ordered list (<ol> dan <li>) berdasarkan judul berikut: \"{context}\""
+            prompt = f"Buatkan kerangka skripsi yang terstruktur dan logis berdasarkan judul berikut: \"{context}\""
         elif task == 'generate_abstract':
             prompt = f"Buatkan draf abstrak yang ringkas dan padat (sekitar 200-250 kata) berdasarkan isi skripsi berikut:\n\n{context}"
         else:
@@ -451,10 +449,6 @@ def verify_google_token():
         return jsonify({'status': 'success', 'redirect_url': url_for('dashboard')})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Verifikasi token gagal: {e}'}), 401
-
-# =========================================================================
-# --- RUTE PEMBAYARAN (MIDTRANS) ---
-# =========================================================================
 
 @app.route('/api/create-transaction', methods=['POST'])
 @login_required
