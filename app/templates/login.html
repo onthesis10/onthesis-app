@@ -3,25 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - OnThesis</title>
+    <title>Selamat Datang di OnThesis</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=2070&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-        }
-        .overlay { background-color: rgba(0, 0, 0, 0.5); }
         .spinner {
             border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
             border-radius: 50%;
             width: 20px;
             height: 20px;
             animation: spin 1s ease-in-out infinite;
         }
-        .spinner-light { border-top-color: #fff; }
         .spinner-dark {
             border: 3px solid rgba(0, 0, 0, 0.1);
             border-top-color: #4a5568;
@@ -29,77 +28,110 @@
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="overlay flex items-center justify-center min-h-screen p-4">
-        <div class="w-full max-w-md">
-            <div class="bg-white shadow-2xl rounded-2xl p-8">
-                <h1 class="text-3xl font-bold text-center text-teal-600 mb-2">OnThesis</h1>
-                <p class="text-center text-gray-500 mb-8">Silakan masuk untuk melanjutkan</p>
-                
-                <form id="login-form" method="POST" action="{{ url_for('login') }}">
-                    <div class="mb-4">
-                        <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Username</label>
-                        <input type="text" id="username" name="username" required class="shadow-inner appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-teal-500">
-                    </div>
-                    <div class="mb-6">
-                        <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                        <input type="password" id="password" name="password" required class="shadow-inner appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-teal-500">
-                    </div>
+<body class="bg-bg-canvas bg-animated-grid">
 
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                      {% if messages %}
-                        {% for category, message in messages %}
-                          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
-                            <strong class="font-bold">Error!</strong>
-                            <span class="block sm:inline">{{ message }}</span>
-                          </div>
-                        {% endfor %}
-                      {% endif %}
-                    {% endwith %}
-
-                    <div class="flex items-center justify-between mb-4">
-                        <button id="login-btn" type="submit" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center justify-center disabled:opacity-75">
-                            <span class="btn-text">Masuk</span>
-                            <div class="spinner spinner-light hidden ml-3"></div>
-                        </button>
+    <div class="flex items-center justify-center min-h-screen p-4 lg:p-8">
+        <div class="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+            
+            <!-- Kolom Kiri: Promosi Aplikasi -->
+            <div class="text-center lg:text-left">
+                <img src="{{ url_for('static', filename='images/onthesis-logo.png') }}" alt="OnThesis Logo" class="h-16 mx-auto lg:mx-0 mb-6 logo-animated">
+                <h1 class="text-4xl lg:text-5xl font-extrabold text-text-primary leading-tight">
+                    Akselerasi <span class="text-accent-cyan">Skripsi</span> Anda ke Level Berikutnya.
+                </h1>
+                <p class="text-text-secondary mt-4 text-lg">
+                    OnThesis adalah asisten akademik cerdas yang dirancang untuk mempercepat penelitian dan penulisan Anda. Dari mencari referensi hingga menganalisis data, semua alat yang Anda butuhkan ada di sini.
+                </p>
+                <div class="mt-8 space-y-4">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-bg-panel rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold text-text-primary">Pencarian Cerdas</h4>
+                            <p class="text-sm text-text-secondary">Temukan jutaan jurnal relevan dalam hitungan detik.</p>
+                        </div>
                     </div>
-                </form>
-
-                <div class="flex items-center my-4">
-                    <div class="flex-grow border-t border-gray-300"></div>
-                    <span class="flex-shrink mx-4 text-gray-500 text-sm">ATAU</span>
-                    <div class="flex-grow border-t border-gray-300"></div>
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-bg-panel rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold text-text-primary">Manajemen Sitasi Otomatis</h4>
+                            <p class="text-sm text-text-secondary">Buat daftar pustaka dengan berbagai format secara instan.</p>
+                        </div>
+                    </div>
+                     <div class="flex items-center gap-4">
+                        <div class="p-3 bg-bg-panel rounded-lg border border-border-panel"><svg class="w-6 h-6 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold text-text-primary">Analisis Data AI</h4>
+                            <p class="text-sm text-text-secondary">Olah data statistik Anda dan dapatkan interpretasi cerdas.</p>
+                        </div>
+                    </div>
                 </div>
+            </div>
+            
+            <!-- Kolom Kanan: Form Login -->
+            <div class="w-full max-w-md mx-auto">
+                <div class="apex-card p-8">
+                    <h2 class="text-2xl font-bold text-center text-text-primary mb-2">Selamat Datang Kembali</h2>
+                    <p class="text-center text-text-secondary mb-8">Silakan masuk untuk melanjutkan</p>
+                    
+                    <form id="login-form" method="POST" action="{{ url_for('login') }}">
+                        <div class="mb-4">
+                            <label for="username" class="block text-text-secondary text-sm font-bold mb-2">Username</label>
+                            <input type="text" id="username" name="username" required class="feedback-form-input w-full py-3 px-4">
+                        </div>
+                        <div class="mb-6">
+                            <label for="password" class="block text-text-secondary text-sm font-bold mb-2">Password</label>
+                            <input type="password" id="password" name="password" required class="feedback-form-input w-full py-3 px-4">
+                        </div>
 
-                <!-- Tombol Login dengan Google -->
-                <button id="google-login-btn" class="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-50 focus:outline-none focus:shadow-outline transition-colors duration-300 disabled:opacity-75">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="btn-icon w-5 h-5 mr-3">
-                    <span class="btn-text">Masuk dengan Google</span>
-                    <div class="spinner spinner-dark hidden ml-3"></div>
-                </button>
-                
-                <div id="login-error" class="text-red-500 text-sm text-center mt-4"></div>
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                          {% if messages %}
+                            {% for category, message in messages %}
+                              <div class="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg relative mb-4" role="alert">
+                                <span class="block sm:inline">{{ message }}</span>
+                              </div>
+                            {% endfor %}
+                          {% endif %}
+                        {% endwith %}
+
+                        <div class="flex items-center justify-between mb-4">
+                            <button id="login-btn" type="submit" class="btn-primary w-full flex items-center justify-center disabled:opacity-75">
+                                <span class="btn-text">Masuk</span>
+                                <div class="spinner hidden ml-3"></div>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="flex items-center my-6">
+                        <div class="flex-grow border-t border-border-panel"></div>
+                        <span class="flex-shrink mx-4 text-text-secondary text-sm">ATAU</span>
+                        <div class="flex-grow border-t border-border-panel"></div>
+                    </div>
+
+                    <button id="google-login-btn" class="btn-secondary w-full flex items-center justify-center !py-3 disabled:opacity-75">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="btn-icon w-5 h-5 mr-3">
+                        <span class="btn-text">Masuk dengan Google</span>
+                        <div class="spinner-dark hidden ml-3"></div>
+                    </button>
+                    
+                    <div id="login-error" class="text-red-400 text-sm text-center mt-4"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase JS SDK -->
+    <!-- PERBAIKAN UTAMA: Memisahkan data dari logika -->
+    <script id="firebase-config-data" type="application/json">
+        {{ firebase_config|tojson }}
+    </script>
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // Konfigurasi Firebase Anda
-        const firebaseConfig = {
-            apiKey: "AIzaSyAEkuE7wK6knIXwejAfjSb8oxArj4gsH5w",
-            authDomain: "onthesis.firebaseapp.com",
-            projectId: "onthesis",
-            storageBucket: "onthesis.firebasestorage.app",
-            messagingSenderId: "258634496518",
-            appId: "1:258634496518:web:5053a01aeb4d8367366187",
-            measurementId: "G-FMM4FZ6GN2"
-        };
+        // Mengambil konfigurasi dari tag script yang terpisah
+        const configDataElement = document.getElementById('firebase-config-data');
+        const firebaseConfig = JSON.parse(configDataElement.textContent);
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
@@ -109,9 +141,9 @@
         const googleLoginBtn = document.getElementById('google-login-btn');
         const loginError = document.getElementById('login-error');
         
-        const setLoadingState = (button, isLoading) => {
+        const setLoadingState = (button, isLoading, isGoogle = false) => {
             const text = button.querySelector('.btn-text');
-            const spinner = button.querySelector('.spinner');
+            const spinner = button.querySelector(isGoogle ? '.spinner-dark' : '.spinner');
             const icon = button.querySelector('.btn-icon');
 
             button.disabled = isLoading;
@@ -130,12 +162,12 @@
 
         googleLoginBtn.addEventListener('click', () => {
             loginError.textContent = '';
-            setLoadingState(googleLoginBtn, true);
+            setLoadingState(googleLoginBtn, true, true);
             
             signInWithPopup(auth, provider)
                 .then(result => result.user.getIdToken())
                 .then(idToken => {
-                    return fetch('/api/verify-google-token', {
+                    return fetch("{{ url_for('verify_google_token') }}", {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ token: idToken }),
@@ -159,7 +191,7 @@
                     loginError.textContent = `Gagal login: ${error.message}`;
                 })
                 .finally(() => {
-                    setLoadingState(googleLoginBtn, false);
+                    setLoadingState(googleLoginBtn, false, true);
                 });
         });
     </script>

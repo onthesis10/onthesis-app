@@ -18,14 +18,14 @@
 
 /* --- TEMA TERANG --- */
 html.light {
-    --bg-canvas: #F0F2F5; /* Latar belakang abu-abu lembut */
+    --bg-canvas: #F0F2F5;
     --bg-panel: #FFFFFF;
     --border-panel: #DEE2E6;
-    --text-primary: #181C32; /* Hitam pekat untuk teks utama */
+    --text-primary: #181C32;
     --text-secondary: #5E6278;
-    --accent-cyan: #0095E8; /* Biru yang lebih solid untuk kontras */
+    --accent-cyan: #0095E8;
     --accent-cyan-glow: rgba(0, 149, 232, 0.2);
-    --glass-bg: rgba(255, 255, 255, 0.6); /* Kaca putih */
+    --glass-bg: rgba(255, 255, 255, 0.6);
     --glass-border: rgba(222, 226, 230, 0.5);
 }
 
@@ -49,7 +49,7 @@ html.light ::-webkit-scrollbar-thumb:hover { background-color: #adb5bd; }
 
 
 /* ======================================================================== */
-/* 2. LATAR BELAKANG ANIMASI
+/* 2. LATAR BELAKANG ANIMASI (GARIS LEBIH TEBAL)
 /* ======================================================================== */
 @keyframes move-grid {
     from { background-position: 0 0; }
@@ -59,21 +59,22 @@ html.light ::-webkit-scrollbar-thumb:hover { background-color: #adb5bd; }
 .bg-animated-grid::before {
     content: ''; position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
+    /* PERUBAHAN: Garis lebih tebal (2px) dan jarak lebih besar (100px) */
     background-image: 
-        linear-gradient(to right, var(--border-panel) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--border-panel) 1px, transparent 1px);
-    background-size: 50px 50px;
-    opacity: 0.2;
-    animation: move-grid 4s linear infinite;
+        linear-gradient(to right, var(--border-panel) 2px, transparent 2px),
+        linear-gradient(to bottom, var(--border-panel) 2px, transparent 2px);
+    background-size: 100px 100px;
+    opacity: 0.15; /* Sedikit lebih terlihat */
+    animation: move-grid 6s linear infinite; /* Animasi lebih lambat */
     z-index: -1;
     transition: background-image 0.3s;
 }
 html.light .bg-animated-grid::before {
-    opacity: 0.5;
+    opacity: 0.3;
 }
 
 /* ======================================================================== */
-/* 3. LAYOUT & SIDEBAR (DENGAN EFEK KACA)
+/* 3. LAYOUT & SIDEBAR
 /* ======================================================================== */
 .primary-sidebar {
     width: 19rem;
@@ -91,8 +92,22 @@ html.light .bg-animated-grid::before {
 @media (min-width: 768px) { .main-canvas { width: calc(100% - 19rem - 2rem); } }
 
 /* ======================================================================== */
-/* 4. KOMPONEN UI
+/* 4. KOMPONEN UI & ANIMASI LOGO
 /* ======================================================================== */
+
+/* PERUBAHAN: Animasi untuk logo */
+@keyframes subtle-float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+.logo-animated {
+    animation: subtle-float 5s ease-in-out infinite;
+}
+
 .nav-link {
     display: flex; align-items: center; gap: 0.75rem;
     padding: 0.75rem 1.5rem; border-radius: 0.75rem;
