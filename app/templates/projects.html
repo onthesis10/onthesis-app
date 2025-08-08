@@ -1,84 +1,25 @@
-<!DOCTYPE html>
-<html lang="id" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Proyek - OnThesis</title>
-    
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Pustaka untuk kalender kustom (flatpickr) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    
-    <!-- Konfigurasi untuk Dark Mode dan Styling Tambahan -->
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'bg-primary': '#121212',
-                        'bg-secondary': '#1E1E1E',
-                        'bg-canvas': '#242424',
-                        'text-primary': '#E0E0E0',
-                        'text-secondary': '#B0B0B0',
-                        'border-panel': '#333333',
-                        'border-panel-hover': '#444444',
-                        'primary-accent': '#3B82F6', // Biru
-                        'primary-accent-hover': '#2563EB',
-                        'accent-cyan': '#22d3ee',
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- CSS untuk komponen custom dan animasi -->
-    <style>
-        body {
-            background-color: #121212;
-            color: #E0E0E0;
-            font-family: 'Inter', sans-serif;
-        }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+{% extends "layout.html" %}
 
-        /* Styling dari file sebelumnya */
-        .apex-card { background-color: #1E1E1E; border-radius: 0.75rem; border: 1px solid #333333; }
-        .btn-primary { background-color: #3B82F6; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; }
-        .btn-primary:hover { background-color: #2563EB; }
-        .btn-secondary { background-color: #374151; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; }
-        .btn-secondary:hover { background-color: #4B5563; }
-        .feedback-form-input { width: 100%; background-color: #242424; border: 1px solid #333333; border-radius: 0.5rem; padding: 0.75rem; color: #E0E0E0; }
-        .feedback-form-input:focus { outline: none; border-color: #3B82F6; }
-        .feedback-modal-content { background-color: #1E1E1E; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
-        .animate-fade-out-down { animation: fadeOutDown 0.5s ease-in forwards; }
-        @keyframes fadeOutDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(10px); } }
+{% block title %}Manajemen Proyek - OnThesis{% endblock %}
 
-        /* Tema untuk Flatpickr (Kalender) */
-        .flatpickr-calendar { background-color: #242424; border-color: #333333; }
-        .flatpickr-day { color: #E0E0E0; }
-        .flatpickr-day:hover { background-color: #333333; }
-        .flatpickr-day.selected { background-color: #3B82F6; border-color: #3B82F6; }
-        .flatpickr-time input { color: #E0E0E0; }
-        .numInput, .numInputWrapper, .flatpickr-weekday, .flatpickr-month, .flatpickr-current-month { color: #E0E0E0; }
-        span.flatpickr-weekday { color: #B0B0B0; }
-    </style>
-</head>
-<body class="p-4 md:p-8">
+{% block page_styles %}
+<!-- Pustaka untuk kalender kustom -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<!-- Tema kustom untuk kalender -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/flatpickr-theme.css') }}">
+{% endblock %}
 
-<div class="animate-fade-in-up max-w-5xl mx-auto">
-    <!-- Header Halaman -->
+{% block content %}
+<div class="animate-fade-in-up">
+    <!-- Header dengan teks di tengah -->
     <header class="flex flex-wrap justify-between items-center gap-4 mb-8 text-center md:text-left">
         <div class="w-full md:w-auto">
             <h1 class="text-4xl font-extrabold text-text-primary">Manajemen Proyek</h1>
             <p class="text-lg text-text-secondary mt-1">Lacak semua progres penulisan skripsi dan jurnal Anda.</p>
         </div>
-        <button id="add-project-btn" class="btn-primary w-full md:w-auto">+ Proyek Baru</button>
+        <button id="add-project-btn" class="btn-primary w-full md:w-auto">
+            + Proyek Baru
+        </button>
     </header>
 
     <div id="projects-list" class="space-y-6">
@@ -88,7 +29,7 @@
 </div>
 
 <!-- Modal Tambah/Edit Proyek -->
-<div id="project-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden animate-fade-in">
+<div id="project-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden feedback-modal">
     <div class="w-full max-w-lg feedback-modal-content rounded-lg shadow-lg p-8 transform transition-all opacity-0 -translate-y-4" id="project-modal-card">
         <div class="flex justify-between items-center mb-6">
             <h3 id="project-modal-title" class="text-2xl font-bold text-text-primary">Proyek Baru</h3>
@@ -116,13 +57,13 @@
                         <label for="project-progress" class="block text-sm font-medium text-text-secondary mb-2">Progres (%)</label>
                         <input id="project-progress" type="number" class="feedback-form-input" value="0" min="0" max="100" required>
                     </div>
-                   <div>
+                     <div>
                         <label for="project-status" class="block text-sm font-medium text-text-secondary mb-2">Status</label>
                         <input id="project-status" type="text" class="feedback-form-input" placeholder="Contoh: Draft Awal" required>
                     </div>
                 </div>
                 <div class="flex justify-end pt-4">
-                    <button type="submit" id="submit-project-btn" class="btn-primary flex items-center justify-center">
+                    <button type="submit" id="submit-project-btn" class="btn-primary">
                         <span class="btn-text">Simpan Proyek</span>
                         <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                     </button>
@@ -131,34 +72,13 @@
         </form>
     </div>
 </div>
+{% endblock %}
 
-<!-- Kontainer Notifikasi -->
-<div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
-
-<!-- =============================================================== -->
-<!-- SCRIPT JAVASCRIPT & FIREBASE                                    -->
-<!-- =============================================================== -->
+{% block page_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // =================================================================================
-    // PENTING: Ganti konfigurasi ini dengan konfigurasi dari project Firebase Anda!
-    // =================================================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        authDomain: "nama-proyek-anda.firebaseapp.com",
-        projectId: "nama-proyek-anda",
-        storageBucket: "nama-proyek-anda.appspot.com",
-        messagingSenderId: "xxxxxxxxxxxx",
-        appId: "1:xxxxxxxxxxxx:web:xxxxxxxxxxxxxxxxxxxxxx"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    import { db, auth } from "{{ url_for('static', filename='js/firebase.js') }}";
+    import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
         flatpickr(".datepicker", { dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y" });
@@ -179,7 +99,6 @@
         const submitProjectBtn = document.getElementById('submit-project-btn');
 
         let currentProjects = [];
-        let unsubscribe = null;
 
         const showNotification = (message, type = 'success') => {
             const container = document.getElementById('notification-container');
@@ -189,16 +108,12 @@
             notif.className = `px-4 py-3 text-white ${bgColor} rounded-lg shadow-lg mb-2 animate-fade-in-up`;
             notif.textContent = message;
             container.appendChild(notif);
-            setTimeout(() => {
-                notif.classList.remove('animate-fade-in-up');
-                notif.classList.add('animate-fade-out-down');
-                setTimeout(() => notif.remove(), 500);
-            }, 4000);
+            setTimeout(() => notif.remove(), 4000);
         };
 
         const formatDateForInput = (timestamp) => {
             if (!timestamp) return '';
-            return timestamp.toDate(); // flatpickr bisa handle Date object
+            return timestamp.toDate().toISOString().split('T')[0];
         };
 
         const calculateDuration = (start, end) => {
@@ -207,9 +122,8 @@
             const now = new Date();
             now.setHours(0, 0, 0, 0);
             if (now > endDate) return { text: 'Selesai', color: 'text-green-500' };
-            const diffTime = endDate - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            if (diffTime <= 0) return { text: 'Tenggat hari ini', color: 'text-accent-cyan' };
+            const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 0) return { text: 'Tenggat hari ini', color: 'text-accent-cyan' };
             return { text: `Sisa ${diffDays} hari`, color: 'text-yellow-500' };
         };
 
@@ -226,62 +140,51 @@
                     <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
                         <div class="flex-grow">
                             <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-text-primary text-xl mb-2">${p.title || 'Tanpa Judul'}</h4>
+                                <h4 class="font-bold text-text-primary text-xl mb-2">${p.title}</h4>
                                 <span class="font-bold text-sm ${duration.color}">${duration.text}</span>
                             </div>
                             <div class="text-xs text-text-secondary mb-4">
-                                <span>${p.startDate ? flatpickr.formatDate(p.startDate.toDate(), "j F Y") : 'N/A'}</span> &rarr; <span>${p.endDate ? flatpickr.formatDate(p.endDate.toDate(), "j F Y") : 'N/A'}</span>
+                                <span>${p.startDate ? flatpickr.formatDate(p.startDate.toDate(), "j F Y") : ''}</span> &rarr; <span>${p.endDate ? flatpickr.formatDate(p.endDate.toDate(), "j F Y") : ''}</span>
                             </div>
                             <div class="flex items-center gap-4">
-                                <input type="range" min="0" max="100" value="${p.progress}" data-id="${p.id}" class="w-full h-2 bg-border-panel rounded-lg appearance-none cursor-pointer progress-slider">
+                                <input type="range" min="0" max="100" value="${p.progress}" class="w-full h-2 bg-border-panel rounded-lg appearance-none cursor-pointer progress-slider">
                                 <span class="font-semibold text-text-primary text-lg">${p.progress}%</span>
                             </div>
                         </div>
                         <div class="flex-shrink-0 flex items-center gap-2 mt-4 md:mt-0">
-                            <button class="btn-secondary text-xs edit-btn" data-id="${p.id}">Edit</button>
-                            <button class="btn-secondary text-xs text-red-400 hover:bg-red-500/10 delete-btn" data-id="${p.id}">Hapus</button>
+                            <button class="btn-secondary text-xs edit-btn">Edit</button>
+                            <button class="btn-secondary text-xs text-red-400 hover:bg-red-500/10 hover:border-red-500/50 delete-btn">Hapus</button>
                         </div>
                     </div>
-                </div>`;
+                </div>`
             }).join('');
         };
         
         const setupProjectListeners = () => {
             projectsListContainer.addEventListener('input', (e) => {
                 if (e.target.classList.contains('progress-slider')) {
-                    const id = e.target.dataset.id;
-                    const value = parseInt(e.target.value);
-                    // Update label di UI secara langsung
-                    e.target.nextElementSibling.textContent = `${value}%`;
-                    // Update ke Firestore
-                    updateDoc(doc(db, "projects", id), { progress: value });
+                    const id = e.target.closest('.apex-card').dataset.id;
+                    updateDoc(doc(db, "projects", id), { progress: parseInt(e.target.value) });
                 }
             });
             projectsListContainer.addEventListener('click', (e) => {
-                const target = e.target;
-                const id = target.dataset.id;
-                if (!id) return;
-                
+                const card = e.target.closest('.apex-card');
+                if (!card) return;
+                const id = card.dataset.id;
                 const projectData = currentProjects.find(p => p.id === id);
-                if (!projectData) return;
-
-                if (target.classList.contains('edit-btn')) {
+                if (e.target.classList.contains('edit-btn')) {
                     projectModalTitle.textContent = 'Edit Proyek';
                     projectIdInput.value = id;
                     projectTitleInput.value = projectData.title;
                     projectProgressInput.value = projectData.progress;
                     projectStatusInput.value = projectData.status || '';
-                    flatpickr("#project-start-date").setDate(formatDateForInput(projectData.startDate), true);
-                    flatpickr("#project-end-date").setDate(formatDateForInput(projectData.endDate), true);
+                    flatpickr("#project-start-date").setDate(formatDateForInput(projectData.startDate));
+                    flatpickr("#project-end-date").setDate(formatDateForInput(projectData.endDate));
                     openModal();
                 }
-                if (target.classList.contains('delete-btn')) {
+                if (e.target.classList.contains('delete-btn')) {
                     if (confirm('Apakah Anda yakin ingin menghapus proyek ini?')) {
-                        deleteDoc(doc(db, "projects", id)).then(() => {
-                            showNotification('Proyek berhasil dihapus.');
-                        }).catch(() => {
-                            showNotification('Gagal menghapus proyek.', 'error');
-                        });
+                        deleteDoc(doc(db, "projects", id));
                     }
                 }
             });
@@ -305,7 +208,6 @@
              projectModalTitle.textContent = 'Proyek Baru';
              projectIdInput.value = '';
              projectForm.reset();
-             projectProgressInput.value = 0;
              openModal();
         });
         closeProjectModalBtn.addEventListener('click', closeModal);
@@ -313,10 +215,6 @@
 
         projectForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!auth.currentUser) {
-                showNotification('Anda harus login untuk menyimpan proyek.', 'error');
-                return;
-            }
             const btnText = submitProjectBtn.querySelector('.btn-text');
             const spinner = submitProjectBtn.querySelector('.spinner');
             if (!projectStartDateInput.value || !projectEndDateInput.value) {
@@ -339,9 +237,9 @@
                     startDate: Timestamp.fromDate(new Date(projectStartDateInput.value)),
                     endDate: Timestamp.fromDate(new Date(projectEndDateInput.value)),
                     userId: auth.currentUser.uid,
+                    lastUpdated: serverTimestamp()
                 };
                 if (id) {
-                    projectData.lastUpdated = serverTimestamp();
                     await updateDoc(doc(db, "projects", id), projectData);
                     showNotification('Proyek berhasil diperbarui!');
                 } else {
@@ -351,7 +249,6 @@
                 }
                 closeModal();
             } catch (error) {
-                console.error("Save project error:", error);
                 showNotification('Gagal menyimpan proyek. Coba lagi.', 'error');
             } finally {
                 btnText.textContent = 'Simpan Proyek';
@@ -360,35 +257,22 @@
             }
         });
 
-        // --- SINKRONISASI REAL-TIME DENGAN FIRESTORE ---
-        onAuthStateChanged(auth, user => {
-            if (unsubscribe) unsubscribe();
-
+        // --- PERBAIKAN UTAMA: Sinkronisasi dengan Firestore ---
+        auth.onAuthStateChanged(user => {
             if (user) {
                 const q = query(collection(db, "projects"), where("userId", "==", user.uid));
-                
-                unsubscribe = onSnapshot(q, (snapshot) => {
-                    currentProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    // Urutkan berdasarkan tanggal dibuat, yang terbaru di atas
+                onSnapshot(q, (snapshot) => {
+                    currentProjects = [];
+                    snapshot.forEach(doc => currentProjects.push({ id: doc.id, ...doc.data() }));
                     currentProjects.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
                     renderProjects();
-                }, (error) => {
-                    console.error("Firestore snapshot error: ", error);
-                    showNotification("Gagal memuat data proyek.", "error");
                 });
-                
+                setupProjectListeners();
             } else {
-                signInAnonymously(auth).catch((error) => {
-                    console.error("Anonymous sign-in failed:", error);
-                });
                 currentProjects = [];
                 renderProjects();
             }
         });
-
-        // Panggil listener untuk tombol edit/hapus/slider
-        setupProjectListeners();
     });
 </script>
-</body>
-</html>
+{% endblock %}
