@@ -14,6 +14,10 @@ import midtransclient
 from datetime import date
 from werkzeug.utils import secure_filename
 
+# --- Impor untuk Analisis Statistik ---
+from scipy import stats
+import numpy as np
+
 # --- Impor dari __init__.py ---
 from app import app, db, login_manager
 
@@ -208,6 +212,10 @@ def writing_assistant(): return render_template('writing_assistant.html')
 @login_required
 def data_analysis(): return render_template('data_analysis.html')
 
+@app.route('/normality-test')
+@login_required
+def normality_test(): return render_template('normality_test.html')
+
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
@@ -378,6 +386,38 @@ def analyze_document():
     except Exception as e:
         print(f"Error saat menganalisis dokumen: {e}")
         return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
+
+@app.route('/api/normality', methods=['POST'])
+@login_required
+def api_normality():
+    try:
+        data = request.get_json()
+        values = data.get('values')
+        if not values or not isinstance(values, list):
+            return jsonify({'error': 'Data angka diperlukan dalam array'}), 400
+        
+        arr = np.array(values, dtype=float)
+        arr = arr[~np.isnan(arr)]
+        n = len(arr)
+        if n < 3:
+            return jsonify({'error': 'Minimal 3 data untuk uji normalitas'}), 400
+        
+        mean = float(np.mean(arr))
+        sd = float(np.std(arr, ddof=1))
+
+        shapiro_stat, shapiro_p = stats.shapiro(arr)
+        ks_stat, ks_p = stats.kstest((arr - mean)/sd, 'norm')
+
+        summary = "Data berdistribusi normal" if shapiro_p > 0.05 and ks_p > 0.05 else "Data tidak berdistribusi normal"
+
+        table = [
+            {"test": "Shapiro–Wilk", "statistic": round(shapiro_stat, 3), "df": n, "p": round(shapiro_p, 3)},
+            {"test": "Kolmogorov–Smirnov", "statistic": round(ks_stat, 3), "df": n, "p": round(ks_p, 3)}
+        ]
+
+        return jsonify({"summary": summary, "mean": round(mean, 3), "std_dev": round(sd, 3), "n": n, "table": table})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/get-usage-status')
 @login_required

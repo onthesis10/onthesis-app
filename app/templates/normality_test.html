@@ -1,0 +1,206 @@
+{% extends "layout.html" %}
+
+{% block title %}Uji Normalitas - OnThesis{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka untuk Grafik & Tabel -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<style>
+    /* Penyesuaian Gaya DataTable agar sesuai Tema */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_processing,
+    .dataTables_wrapper .dataTables_paginate {
+        color: var(--text-secondary) !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        color: var(--text-secondary) !important;
+        border-color: var(--border-panel) !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: var(--accent-cyan) !important;
+        color: var(--bg-panel) !important;
+        border-color: var(--accent-cyan) !important;
+    }
+     html.light .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        color: white !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: var(--bg-canvas) !important;
+        border-color: var(--border-panel) !important;
+    }
+    table.dataTable.no-footer {
+        border-bottom-color: var(--border-panel) !important;
+    }
+    table.dataTable thead th {
+        border-bottom: 1px solid var(--border-panel) !important;
+    }
+    table.dataTable tbody tr {
+        background-color: transparent !important;
+    }
+    table.dataTable tbody tr:hover {
+        background-color: var(--bg-canvas) !important;
+    }
+    table.dataTable tbody td {
+        color: var(--text-secondary) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in-up">
+    <header class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold text-text-primary">Uji Normalitas Data</h1>
+        <p class="text-lg text-text-secondary mt-1">Pastikan data Anda berdistribusi normal sebelum melangkah lebih jauh.</p>
+    </header>
+
+    <!-- Konten Uji Normalitas -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <!-- Kolom Input -->
+        <div class="lg:col-span-2">
+            <div class="apex-card p-6">
+                <h3 class="text-xl font-bold text-text-primary mb-4">Input Data Anda</h3>
+                <textarea id="dataInput" class="feedback-form-input h-40" placeholder="Masukkan angka, pisahkan dengan koma, spasi, atau baris baru..."></textarea>
+                <div class="flex gap-4 mt-4">
+                    <button id="btnBackend" class="btn-primary w-full">Analisis</button>
+                    <button id="btnSample" class="btn-secondary w-full">Contoh Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Output -->
+        <div id="output" class="lg:col-span-3 space-y-8" style="display:none;">
+            <div class="apex-card p-6">
+                <h3 class="text-xl font-bold text-text-primary mb-4">Hasil Analisis</h3>
+                <div id="summary" class="text-text-primary font-semibold text-lg"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 text-center">
+                    <div class="bg-bg-canvas p-3 rounded-lg"><p class="text-sm text-text-secondary">Jumlah Data (n)</p><p id="n-val" class="text-lg font-bold text-text-primary"></p></div>
+                    <div class="bg-bg-canvas p-3 rounded-lg"><p class="text-sm text-text-secondary">Mean</p><p id="mean-val" class="text-lg font-bold text-text-primary"></p></div>
+                    <div class="bg-bg-canvas p-3 rounded-lg"><p class="text-sm text-text-secondary">Std. Deviation</p><p id="sd-val" class="text-lg font-bold text-text-primary"></p></div>
+                </div>
+            </div>
+
+            <div class="apex-card p-6">
+                <h4 class="text-lg font-bold text-text-primary mb-4">Tabel Uji Normalitas</h4>
+                <div class="overflow-x-auto">
+                    <table id="resultTable" class="display" style="width:100%">
+                        <thead><tr><th>Test</th><th>Statistic</th><th>df</th><th>Sig. (p-value)</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div class="apex-card p-6"><h4 class="text-lg font-bold text-text-primary mb-4">Histogram & Kurva Normal</h4><div id="histogram"></div></div>
+                <div class="apex-card p-6"><h4 class="text-lg font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qqplot"></div></div>
+            </div>
+            <div class="apex-card p-6"><h4 class="text-lg font-bold text-text-primary mb-4">Boxplot</h4><div id="boxplot"></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    $(document).ready(function(){
+        let table = $('#resultTable').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": false
+        });
+
+        $('#btnSample').on('click', function(){
+            $('#dataInput').val('85, 88, 90, 78, 92, 95, 85, 86, 88, 91, 79, 83, 85, 87, 89');
+        });
+
+        const getPlotlyLayout = (title) => {
+            const isLight = document.documentElement.classList.contains('light');
+            return {
+                title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { color: isLight ? '#5E6278' : '#8B949E' },
+                xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
+                yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' }
+            };
+        };
+
+        $('#btnBackend').on('click', function(){
+            let raw = $('#dataInput').val();
+            if(!raw.trim()) {
+                alert('Masukkan data terlebih dahulu');
+                return;
+            }
+            let data = raw.split(/[ ,\n\t]+/).map(Number).filter(x => !isNaN(x));
+
+            $.ajax({
+                url: "{{ url_for('api_normality') }}",
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ values: data }),
+                success: function(res){
+                    const summaryClass = res.summary.includes("tidak") ? "text-red-400" : "text-green-400";
+                    $('#summary').html(`<p class="${summaryClass}">${res.summary}</p>`);
+
+                    table.clear();
+                    res.table.forEach(row => {
+                        table.row.add([
+                            row.test,
+                            row.statistic.toFixed(3),
+                            row.df,
+                            row.p < 0.05 ? `<span class='text-accent-cyan font-bold'>${row.p.toFixed(3)}</span>` : row.p.toFixed(3)
+                        ]);
+                    });
+                    table.draw();
+
+                    $('#n-val').text(res.n);
+                    $('#mean-val').text(res.mean);
+                    $('#sd-val').text(res.std_dev);
+
+                    let traceHist = { x: data, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } };
+                    let traceCurve = {
+                        x: Array.from({length:100}, (_,i)=>Math.min(...data) + i*(Math.max(...data)-Math.min(...data))/99),
+                        y: Array.from({length:100}, (_,i)=>{
+                            let mean = res.mean;
+                            let sd = res.std_dev;
+                            let xval = Math.min(...data) + i*(Math.max(...data)-Math.min(...data))/99;
+                            return (1/(sd*Math.sqrt(2*Math.PI))) * Math.exp(-0.5*Math.pow((xval-mean)/sd, 2));
+                        }),
+                        mode: 'lines', name: 'Normal Curve', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }
+                    };
+                    Plotly.newPlot('histogram', [traceHist, traceCurve], getPlotlyLayout(''));
+
+                    let sorted = [...data].sort((a,b)=>a-b);
+                    let quantiles = sorted.map((_,i) => (i+0.5)/res.n);
+                    let theoretical = quantiles.map(q => res.mean + res.std_dev*Math.sqrt(2)*erfinv(2*q-1));
+                    Plotly.newPlot('qqplot', [
+                        {x: theoretical, y: sorted, mode:'markers', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }},
+                        {x: theoretical, y: theoretical, mode:'lines', name:'Garis Normal', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }}
+                    ], getPlotlyLayout(''));
+
+                    Plotly.newPlot('boxplot', [{y:data, type:'box', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }}], getPlotlyLayout(''));
+
+                    $('#output').show();
+                },
+                error: function(err){
+                    alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.error : 'Tidak dapat terhubung ke server.'));
+                }
+            });
+        });
+    });
+
+    function erfinv(x){
+        let a = 0.147;
+        let ln = Math.log(1 - x*x);
+        let part1 = 2/(Math.PI*a) + ln/2;
+        let part2 = ln/a;
+        return ( (x<0?-1:1) * Math.sqrt( Math.sqrt(part1*part1 - part2) - part1 ) );
+    }
+</script>
+{% endblock %}
