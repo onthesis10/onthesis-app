@@ -5,51 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OnThesis{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <!-- Baris di bawah ini penting untuk tema, jangan dihapus -->
     <link id="theme-stylesheet" rel="stylesheet" href="{{ url_for('static', filename='css/' + (session.get('theme', 'theme-nature') if session else 'theme-nature') + '.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='images/onthesis-logo-blue.png') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* CSS tambahan hanya untuk fungsionalitas submenu, tidak akan merusak tema */
-        .sidebar .nav-list .submenu {
-            list-style: none;
-            padding-left: 20px; /* Indentasi submenu */
-            margin-top: 5px;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.35s ease-in-out;
-        }
-
-        .sidebar .nav-list li.open > .submenu {
-            max-height: 200px; /* Tinggi maksimal saat submenu terbuka */
-        }
-
-        .sidebar .submenu a {
-            padding-left: 30px; /* Indentasi lebih dalam untuk item submenu */
-            font-size: 0.9em;
-        }
-        
-        .sidebar .nav-link.has-submenu .arrow {
-            margin-left: auto;
-            transition: transform 0.3s ease;
-            font-size: 0.8em;
-        }
-
-        .sidebar li.open > .nav-link.has-submenu .arrow {
-            transform: rotate(90deg);
-        }
-        
-        /* Memastikan ikon dan teks sejajar */
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px; /* Jarak antara ikon dan teks */
-        }
-        .nav-link .nav-icon {
-            width: 20px;
-            height: 20px;
-        }
-    </style>
 </head>
 <body>
     <div class="container">
@@ -60,46 +17,39 @@
             </div>
             <nav>
                 <ul class="nav-list">
-                    <!-- STRUKTUR ASLI DENGAN IKON -->
                     <li><a href="{{ url_for('dashboard') }}" class="nav-link" data-page="dashboard"><span class="nav-icon">{% include 'icons/dashboard.svg' %}</span>Dasbor</a></li>
                     <li><a href="{{ url_for('projects') }}" class="nav-link" data-page="projects"><span class="nav-icon"></span>Manajemen Proyek</a></li>
                     <li><a href="{{ url_for('search_references') }}" class="nav-link" data-page="search-references"><span class="nav-icon"></span>Search References</a></li>
                     <li><a href="{{ url_for('citation_management') }}" class="nav-link" data-page="citation-management"><span class="nav-icon"></span>Manajemen Sitasi</a></li>
                     <li><a href="{{ url_for('paraphrase_ai') }}" class="nav-link" data-page="paraphrase-ai"><span class="nav-icon"></span>Parafrase AI</a></li>
                     <li><a href="{{ url_for('chat_ai') }}" class="nav-link" data-page="chat-ai"><span class="nav-icon"></span>Curhat AI</a></li>
-
-                    <!-- PERUBAHAN DI SINI: Asisten AI menjadi submenu -->
-                    <li id="assistant-menu">
-                        <a href="#" class="nav-link has-submenu" data-page="writing-assistant">
-                            <span class="nav-icon"></span> <!-- Placeholder untuk ikon Asisten AI -->
-                            Asisten AI <span class="badge-pro">PRO</span>
-                            <span class="arrow">&#9656;</span>
-                        </a>
-                        <ul class="submenu">
-                            <li><a href="{{ url_for('outline_generator') }}" class="nav-link" data-page="outline-generator">Generator Kerangka</a></li>
-                            <li><a href="{{ url_for('abstract_generator') }}" class="nav-link" data-page="abstract-generator">Generator Abstrak</a></li>
-                        </ul>
-                    </li>
-                    
+                    <li><a href="{{ url_for('writing_assistant') }}" class="nav-link" data-page="writing-assistant"><span class="nav-icon"></span>Asisten AI <span class="badge-pro">PRO</span></a></li>
                     <li><a href="{{ url_for('data_analysis') }}" class="nav-link" data-page="data-analysis"><span class="nav-icon"></span>Analisis Data <span class="badge-pro">PRO</span></a></li>
                 </ul>
             </nav>
         </aside>
         <main class="main-content">
             <header class="main-header">
-                <!-- Header Anda yang mungkin berisi tombol tema, notifikasi, atau profil pengguna -->
                 <div class="header-left">
-                    <!-- Search bar or page title can go here -->
+                    
                 </div>
                 <div class="header-right">
-                    <!-- Theme toggle, user profile dropdown etc. -->
-                    <a href="{{ url_for('user_profile') }}" class="user-profile-link">
-                         {% if current_user.is_authenticated and current_user.picture %}
+                    <div class="theme-switcher">
+                        <input type="checkbox" id="theme-toggle" class="theme-toggle-checkbox">
+                        <label for="theme-toggle" class="theme-toggle-label"></label>
+                    </div>
+                    <div class="notification-icon">
+                        <span class="icon"></span>
+                    </div>
+                    <div class="user-profile">
+                        <a href="{{ url_for('user_profile') }}">
+                        {% if current_user.is_authenticated and current_user.picture %}
                             <img src="{{ current_user.picture }}" alt="User Profile" class="profile-pic">
                         {% else %}
                             <span class="default-profile-icon"></span>
                         {% endif %}
-                    </a>
+                        </a>
+                    </div>
                 </div>
             </header>
             <div class="page-content">
@@ -115,43 +65,8 @@
         </main>
     </div>
     
-    <!-- Script utama Anda -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-    
-    <!-- Script tambahan untuk submenu dan menandai link aktif -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Logika untuk membuka dan menutup submenu
-            const assistantMenuToggle = document.querySelector('#assistant-menu > .has-submenu');
-            if (assistantMenuToggle) {
-                assistantMenuToggle.addEventListener('click', function(e) {
-                    e.preventDefault(); // Mencegah link pindah halaman
-                    this.parentElement.classList.toggle('open');
-                });
-            }
-
-            // Logika untuk menandai link aktif dan membuka submenu jika perlu
-            const currentPage = window.location.pathname;
-            const navLinks = document.querySelectorAll('.sidebar .nav-link');
-
-            navLinks.forEach(link => {
-                const linkPath = new URL(link.href).pathname;
-                if (linkPath === currentPage) {
-                    link.classList.add('active');
-                    
-                    const parentLi = link.closest('li');
-                    const parentSubmenu = link.closest('.submenu');
-
-                    if (parentSubmenu) {
-                        const parentMenuLi = parentSubmenu.closest('li');
-                        parentMenuLi.classList.add('open');
-                        parentMenuLi.querySelector('.has-submenu').classList.add('active');
-                    }
-                }
-            });
-        });
-    </script>
-    
+    <script src="{{ url_for('static', filename='js/firebase.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
