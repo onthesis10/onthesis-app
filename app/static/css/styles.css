@@ -11,9 +11,10 @@
     --text-primary: #E6EDF3;
     --text-secondary: #8B949E;
     --accent-cyan: #22d3ee;
-    --accent-cyan-glow: rgba(34, 211, 238, 0.3);
+    --accent-cyan-glow: rgba(34, 211, 238, 0.15); /* Opacity dikurangi agar tidak terlalu terang */
     --glass-bg: rgba(22, 27, 34, 0.7);
     --glass-border: rgba(48, 54, 61, 0.5);
+    /* Variabel baru untuk posisi mouse */
     --mouse-x: 50%;
     --mouse-y: 50%;
 }
@@ -26,7 +27,7 @@ html.light {
     --text-primary: #181C32;
     --text-secondary: #5E6278;
     --accent-cyan: #0095E8;
-    --accent-cyan-glow: rgba(0, 149, 232, 0.2);
+    --accent-cyan-glow: rgba(0, 149, 232, 0.1);
     --glass-bg: rgba(255, 255, 255, 0.6);
     --glass-border: rgba(222, 226, 230, 0.5);
 }
@@ -59,27 +60,46 @@ html.light ::-webkit-scrollbar-thumb:hover { background-color: #adb5bd; }
     background-image: url('../images/onthesis-blue.png');
     background-size: cover;
     background-position: center;
+    background-color: var(--bg-canvas); /* Fallback */
 }
 
-/* Latar Belakang untuk Aplikasi Utama (Gambar + Grid Interaktif) */
+/* Latar Belakang untuk Aplikasi Utama (Grid Bergerak + Cahaya Interaktif) */
 .bg-animated-grid {
     position: relative;
     z-index: 0;
+    /* Lapisan 1: Cahaya Interaktif */
     background-image: 
-        /* Lapisan 1: Cahaya Interaktif */
         radial-gradient(
             circle at var(--mouse-x) var(--mouse-y),
             var(--accent-cyan-glow),
-            transparent 20vw
-        ),
-        /* Lapisan 2: Grid Statis */
-        linear-gradient(to right, var(--border-panel) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--border-panel) 1px, transparent 1px),
-        /* Lapisan 3: Gambar Latar */
-        url('../images/onthesis-blue.png');
-    background-size: 100% 100%, 50px 50px, 50px 50px, cover;
-    background-position: 0 0, 0 0, 0 0, center;
+            transparent 25vw
+        );
+    background-size: 100% 100%;
     transition: background-color 0.3s;
+}
+
+/* Lapisan 2: Grid yang bergerak */
+@keyframes move-grid {
+    from { background-position: 0 0; }
+    to { background-position: 0 -100px; }
+}
+
+.bg-animated-grid::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image:
+        linear-gradient(to right, var(--border-panel) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--border-panel) 1px, transparent 1px);
+    background-size: 50px 50px;
+    opacity: 0.2;
+    animation: move-grid 4s linear infinite;
+    z-index: -1;
+    transition: background-image 0.3s, opacity 0.3s;
+}
+
+html.light .bg-animated-grid::before {
+    opacity: 0.5;
 }
 
 /* ======================================================================== */
