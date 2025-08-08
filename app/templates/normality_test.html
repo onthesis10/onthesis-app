@@ -10,9 +10,9 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <!-- Pustaka untuk membaca file CSV -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-<!-- Pustaka untuk Export PDF -->
+<!-- Pustaka untuk Export PDF Profesional -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
 
 <style>
@@ -100,7 +100,7 @@
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
                     <h3 class="text-xl font-bold text-text-primary">2. Hasil & Interpretasi</h3>
                     <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
-                        <svg xmlns="http://www.w.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         <span class="btn-text">Export PDF</span>
                         <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                     </button>
@@ -115,15 +115,16 @@
                         <span class="btn-text">Jelaskan Semua Hasil Ini</span>
                         <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                     </button>
-                    <div id="interpretation-output" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert"></div>
+                    <!-- PERUBAHAN: Kontainer interpretasi yang lebih rapi -->
+                    <div id="interpretation-output" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
                 </div>
             </div>
 
             <!-- Kartu Visualisasi Data -->
             <div class="apex-card p-6">
-                <h3 class="text-xl font-bold text-text-primary mb-4">3. Visualisasi Data</h3>
+                <h3 class="text-xl font-bold text-text-primary mb-4 text-center">3. Visualisasi Data</h3>
                 <div id="plots-container" class="space-y-8">
-                    <!-- Grafik akan ditampilkan di sini -->
+                    <!-- Grafik akan ditampilkan di sini secara vertikal -->
                 </div>
             </div>
         </div>
@@ -243,12 +244,10 @@
 
                     const plotId = `plot-${res.name.replace(/\\s+/g, '-')}`;
                     const plotHtml = `
-                        <div>
-                            <h4 class="text-lg font-bold text-text-primary mb-4">${res.name}</h4>
-                            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Histogram</h4><div id="hist-${plotId}"></div></div>
-                                <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qq-${plotId}"></div></div>
-                            </div>
+                        <div class="space-y-8">
+                            <h4 class="text-lg font-bold text-text-primary text-center">${res.name}</h4>
+                            <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Histogram</h4><div id="hist-${plotId}"></div></div>
+                            <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qq-${plotId}"></div></div>
                         </div>
                     `;
                     $('#plots-container').append(plotHtml);
@@ -266,7 +265,7 @@
                 });
 
                 $('#output').show();
-                $('#interpretation-output').html('');
+                $('#interpretation-output').html('').hide();
             }).catch(err => {
                 alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.error : 'Tidak dapat terhubung ke server.'));
             });
@@ -295,10 +294,10 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ stats: stats_summary }),
                 success: function(res) {
-                    $('#interpretation-output').html(res.interpretation.replace(/\n/g, '<br>'));
+                    $('#interpretation-output').html(res.interpretation.replace(/\n/g, '<br>')).show();
                 },
                 error: function(err) {
-                    $('#interpretation-output').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`);
+                    $('#interpretation-output').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
                 },
                 complete: function() {
                     btnText.text('Jelaskan Hasil Ini');
@@ -308,8 +307,12 @@
             });
         });
 
-        // --- FUNGSI EXPORT PDF ---
-        $('#export-pdf-btn').on('click', function() {
+        // --- FUNGSI EXPORT PDF BARU & PROFESIONAL ---
+        $('#export-pdf-btn').on('click', async function() {
+            if (!analysisResult) {
+                alert("Lakukan analisis terlebih dahulu.");
+                return;
+            }
             const btn = $(this);
             const btnText = btn.find('.btn-text');
             const spinner = btn.find('.spinner');
@@ -319,41 +322,63 @@
             btn.prop('disabled', true);
 
             const { jsPDF } = window.jspdf;
-            const report = document.getElementById('output');
-            
-            html2canvas(report, {
-                scale: 2,
-                backgroundColor: document.documentElement.classList.contains('light') ? '#F0F2F5' : '#0D1117',
-                useCORS: true
-            }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
-                const ratio = canvasWidth / canvasHeight;
-                const imgWidth = pdfWidth - 20;
-                const imgHeight = imgWidth / ratio;
-                let heightLeft = imgHeight;
-                let position = 10;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const isLight = document.documentElement.classList.contains('light');
+            const textColor = isLight ? '#181C32' : '#E6EDF3';
+            let yPos = 15;
 
-                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                heightLeft -= (pdfHeight - 20);
+            pdf.setTextColor(textColor);
+            pdf.setFontSize(18);
+            pdf.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
+            yPos += 10;
 
-                while (heightLeft > 0) {
-                    position = -imgHeight + heightLeft + 10;
+            for (const res of analysisResult) {
+                if (yPos > 260) {
                     pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= (pdfHeight - 10);
+                    yPos = 15;
                 }
                 
-                pdf.save('hasil-uji-normalitas-onthesis.pdf');
-            }).finally(() => {
-                btnText.text('Export PDF');
-                spinner.addClass('hidden');
-                btn.prop('disabled', false);
-            });
+                pdf.setFontSize(14);
+                pdf.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
+                yPos += 8;
+
+                pdf.autoTable({
+                    startY: yPos,
+                    head: [['Test', 'Statistic', 'df', 'p-value']],
+                    body: res.table.map(row => [row.test, row.statistic.toFixed(3), row.df, row.p.toFixed(3)]),
+                    theme: 'grid',
+                    styles: {
+                        fillColor: isLight ? [240, 242, 245] : [22, 27, 34],
+                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
+                        lineColor: isLight ? [222, 226, 230] : [48, 54, 61],
+                        lineWidth: 0.1
+                    },
+                    headStyles: {
+                        fillColor: isLight ? [222, 226, 230] : [48, 54, 61],
+                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
+                        fontStyle: 'bold'
+                    }
+                });
+                yPos = pdf.autoTable.previous.finalY + 10;
+
+                const plotId = `plot-${res.name.replace(/\\s+/g, '-')}`;
+                const histImg = await Plotly.toImage(`hist-${plotId}`, {format: 'png', width: 700, height: 400});
+                const qqImg = await Plotly.toImage(`qq-${plotId}`, {format: 'png', width: 700, height: 400});
+
+                if (yPos > 180) {
+                    pdf.addPage();
+                    yPos = 15;
+                }
+                pdf.addImage(histImg, 'PNG', 15, yPos, 85, 50);
+                pdf.addImage(qqImg, 'PNG', 110, yPos, 85, 50);
+                yPos += 60;
+            }
+            
+            pdf.save('hasil-uji-normalitas-onthesis.pdf');
+
+            btnText.text('Export PDF');
+            spinner.addClass('hidden');
+            btn.prop('disabled', false);
         });
     });
 
