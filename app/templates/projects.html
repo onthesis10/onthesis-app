@@ -3,15 +3,12 @@
 {% block title %}Manajemen Proyek - OnThesis{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka untuk kalender kustom -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<!-- Tema kustom untuk kalender -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/flatpickr-theme.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="animate-fade-in-up">
-    <!-- Header dengan teks di tengah -->
     <header class="flex flex-wrap justify-between items-center gap-4 mb-8 text-center md:text-left">
         <div class="w-full md:w-auto">
             <h1 class="text-4xl font-extrabold text-text-primary">Manajemen Proyek</h1>
@@ -23,7 +20,8 @@
     </header>
 
     <div id="projects-list" class="space-y-6">
-        <!-- Kartu Proyek akan dimuat di sini oleh JavaScript -->
+        <!-- Pesan Loading Awal -->
+        <div class="text-center py-16 apex-card"><p class="text-text-secondary">Memuat proyek Anda...</p></div>
     </div>
 </div>
 
@@ -44,7 +42,6 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="project-start-date" class="block text-sm font-medium text-text-secondary mb-2">Tanggal Mulai</label>
-                        <!-- Input tanggal sekarang menggunakan class 'datepicker' -->
                         <input id="project-start-date" type="text" class="feedback-form-input datepicker" placeholder="Pilih tanggal..." required>
                     </div>
                     <div>
@@ -75,19 +72,13 @@
 {% endblock %}
 
 {% block page_scripts %}
-<!-- Pustaka untuk kalender kustom -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script type="module">
     import { db, auth } from "{{ url_for('static', filename='js/firebase.js') }}";
     import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Inisialisasi Kalender Kustom ---
-        flatpickr(".datepicker", {
-            dateFormat: "Y-m-d",
-            altInput: true,
-            altFormat: "j F Y",
-        });
+        flatpickr(".datepicker", { dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y" });
 
         const projectsListContainer = document.getElementById('projects-list');
         const addProjectBtn = document.getElementById('add-project-btn');
@@ -184,7 +175,6 @@
                     projectTitleInput.value = projectData.title;
                     projectProgressInput.value = projectData.progress;
                     projectStatusInput.value = projectData.status || '';
-                    // Mengatur tanggal pada flatpickr
                     flatpickr("#project-start-date").setDate(formatDateForInput(projectData.startDate));
                     flatpickr("#project-end-date").setDate(formatDateForInput(projectData.endDate));
                     openModal();
@@ -264,6 +254,7 @@
             }
         });
 
+        // --- PERBAIKAN UTAMA: Sinkronisasi dengan Firestore ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 const q = query(collection(db, "projects"), where("userId", "==", user.uid));
