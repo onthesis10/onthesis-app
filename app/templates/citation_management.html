@@ -35,7 +35,9 @@
             </div>
         </div>
         
+        <!-- Daftar Referensi (Scrollable) -->
         <div id="references-list" class="space-y-3">
+            <!-- Pesan Loading Awal -->
             <div class="text-center text-text-secondary italic py-10"><p>Memuat sitasi Anda...</p></div>
         </div>
     </div>
@@ -63,7 +65,8 @@
 
 {% block page_scripts %}
 <script type="module">
-    import { auth } from "{{ url_for('static', filename='js/firebase.js') }}";
+    import { db, auth } from "{{ url_for('static', filename='js/firebase.js') }}";
+    import { collection, onSnapshot, addDoc, doc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     document.addEventListener('DOMContentLoaded', () => {
         const citationStyleSelect = document.getElementById('citation-style-select');
@@ -77,16 +80,6 @@
         const uploadSpinner = document.getElementById('upload-spinner');
 
         let currentReferences = [];
-        let storageKey = 'onthesis_references_guest'; // Kunci default jika pengguna belum login
-
-        const saveReferences = () => {
-            localStorage.setItem(storageKey, JSON.stringify(currentReferences));
-        };
-
-        const loadReferences = () => {
-            currentReferences = JSON.parse(localStorage.getItem(storageKey)) || [];
-            renderReferences();
-        };
 
         const showNotification = (message, type = 'success') => {
             const container = document.getElementById('notification-container');
@@ -140,11 +133,11 @@
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Gagal menganalisis dokumen.');
                 if (data.references && data.references.length > 0) {
-                    data.references.forEach(ref => {
-                        currentReferences.unshift({ id: Date.now() + Math.random(), ...ref });
-                    });
-                    saveReferences();
-                    renderReferences();
+                    const userId = auth.currentUser.uid;
+                    const promises = data.references.map(ref => 
+                        addDoc(collection(db, "citations"), { ...ref, userId, createdAt: serverTimestamp() })
+                    );
+                    await Promise.all(promises);
                     showNotification(`${data.references.length} referensi berhasil ditambahkan!`);
                 } else {
                     showNotification('Tidak ada referensi yang ditemukan di dalam dokumen.', 'error');
@@ -171,9 +164,7 @@
             }
             if (deleteBtn) {
                 if (confirm('Hapus referensi ini?')) {
-                    currentReferences = currentReferences.filter(r => r.id != deleteBtn.dataset.refId);
-                    saveReferences();
-                    renderReferences();
+                    deleteDoc(doc(db, "citations", deleteBtn.dataset.refId));
                 }
             }
         });
@@ -194,25 +185,29 @@
         manualAddModal.addEventListener('click', (e) => {
             if (e.target.id === 'manualAddModal' || e.target.closest('#cancel-manual-add-btn')) closeModal();
         });
-        manualForm.addEventListener('submit', (e) => {
+        manualForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
-            const newRef = { id: Date.now(), ...Object.fromEntries(formData.entries()) };
-            currentReferences.unshift(newRef);
-            saveReferences();
-            renderReferences();
+            const newRef = { ...Object.fromEntries(formData.entries()), userId: auth.currentUser.uid, createdAt: serverTimestamp() };
+            await addDoc(collection(db, "citations"), newRef);
             showNotification('Referensi berhasil disimpan!');
             closeModal();
         });
 
+        // --- PERBAIKAN UTAMA: Sinkronisasi dengan Firestore ---
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Buat kunci penyimpanan unik untuk setiap pengguna
-                storageKey = `onthesis_references_${user.uid}`;
+                const q = query(collection(db, "citations"), where("userId", "==", user.uid));
+                onSnapshot(q, (snapshot) => {
+                    currentReferences = [];
+                    snapshot.forEach(doc => currentReferences.push({ id: doc.id, ...doc.data() }));
+                    currentReferences.sort((a,b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+                    renderReferences();
+                });
             } else {
-                storageKey = 'onthesis_references_guest';
+                currentReferences = [];
+                renderReferences();
             }
-            loadReferences(); // Muat data setelah status login diketahui
         });
     });
 </script>
