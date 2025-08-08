@@ -109,7 +109,7 @@
                 <strong>Syarat CSV:</strong> Pastikan file Anda memiliki baris pertama sebagai header (nama variabel). Setiap kolom setelahnya akan dianggap sebagai satu grup data. Pisahkan data hanya dengan koma (,).
             </div>
 
-            <!-- === PERUBAHAN 1: Tambah Pilihan Visualisasi === -->
+            <!-- Pilihan Visualisasi -->
             <div class="mt-6 pt-6 border-t border-border-panel text-left">
                 <h4 class="text-lg font-bold text-text-primary mb-4 text-center">Pilih Visualisasi</h4>
                 <div class="max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-text-secondary">
@@ -127,7 +127,6 @@
                     </label>
                 </div>
             </div>
-            <!-- === AKHIR PERUBAHAN 1 === -->
 
             <div class="mt-6">
                 <button id="btnBackend" class="btn-primary w-full md:w-1/2 mx-auto">Jalankan Analisis</button>
@@ -285,21 +284,30 @@
 
                     const plotId = `plot-${res.name.replace(/\s+/g, '-')}`;
                     
-                    // === PERUBAHAN 2: Tambah Kontainer Box Plot ===
                     const plotHtml = `
                         <div class="space-y-8">
                             <h4 class="text-lg font-bold text-text-primary text-center">${res.name}</h4>
-                            <div id="hist-container-${plotId}" class="apex-card p-6" style="display: none;"><h4 class="text-md font-bold text-text-primary mb-4">Histogram</h4><div id="hist-${plotId}"></div></div>
-                            <div id="qq-container-${plotId}" class="apex-card p-6" style="display: none;"><h4 class="text-md font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qq-${plotId}"></div></div>
-                            <div id="box-container-${plotId}" class="apex-card p-6" style="display: none;"><h4 class="text-md font-bold text-text-primary mb-4">Box Plot</h4><div id="box-${plotId}"></div></div>
+                            <div id="hist-container-${plotId}" class="apex-card p-6" style="display: none;">
+                                <h4 class="text-md font-bold text-text-primary mb-2">Histogram</h4>
+                                <div id="hist-${plotId}"></div>
+                                <p class="text-xs text-text-secondary mt-2 pt-2 border-t border-border-panel">Histogram memvisualisasikan distribusi frekuensi data. Untuk data normal, distribusinya akan menyerupai bentuk lonceng yang simetris.</p>
+                            </div>
+                            <div id="qq-container-${plotId}" class="apex-card p-6" style="display: none;">
+                                <h4 class="text-md font-bold text-text-primary mb-2">Q-Q Plot</h4>
+                                <div id="qq-${plotId}"></div>
+                                <p class="text-xs text-text-secondary mt-2 pt-2 border-t border-border-panel">Q-Q (Quantile-Quantile) Plot membandingkan distribusi data Anda dengan distribusi normal. Jika titik-titik data mengikuti garis lurus, ini menandakan normalitas.</p>
+                            </div>
+                            <div id="box-container-${plotId}" class="apex-card p-6" style="display: none;">
+                                <h4 class="text-md font-bold text-text-primary mb-2">Box Plot</h4>
+                                <div id="box-${plotId}"></div>
+                                <p class="text-xs text-text-secondary mt-2 pt-2 border-t border-border-panel">Box Plot menunjukkan ringkasan statistik (median, kuartil) dan mendeteksi pencilan (outliers). Data normal cenderung memiliki box plot yang simetris.</p>
+                            </div>
                         </div>
                     `;
                     $('#plots-container').append(plotHtml);
-                    // === AKHIR PERUBAHAN 2 ===
 
                     const dataValues = groupsData.find(g => g.name === res.name).values;
                     
-                    // === PERUBAHAN 3: Logika untuk menampilkan plot berdasarkan pilihan ===
                     if ($('#check-hist').is(':checked')) {
                         $(`#hist-container-${plotId}`).show();
                         Plotly.newPlot(`hist-${plotId}`, [{ x: dataValues, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } }], getPlotlyLayout(''));
@@ -323,12 +331,11 @@
                             type: 'box', 
                             name: res.name, 
                             marker: { color: 'rgba(56, 189, 248, 0.6)' },
-                            boxpoints: 'all', // Show all points
+                            boxpoints: 'all',
                             jitter: 0.3,
                             pointpos: -1.8
                         }], getPlotlyLayout(''));
                     }
-                    // === AKHIR PERUBAHAN 3 ===
                 });
 
                 $('#output').show();
@@ -352,16 +359,28 @@
             btn.prop('disabled', true);
 
             const stats_summary = analysisResult.map(res => 
-                `Variabel "${res.name}":\n- Kesimpulan: ${res.summary}\n- N: ${res.n}, Mean: ${res.mean}, Std Dev: ${res.std_dev}\n- Shapiro-Wilk p-value: ${res.table[0].p}\n- Kolmogorov-Smirnov p-value: ${res.table[1].p}`
+                `Variabel "${res.name}":\n- Kesimpulan: ${res.summary}\n- N: ${res.n}, Mean: ${res.mean.toFixed(3)}, Std Dev: ${res.std_dev.toFixed(3)}\n- Shapiro-Wilk p-value: ${res.table[0].p.toFixed(3)}\n- Kolmogorov-Smirnov p-value: ${res.table[1].p.toFixed(3)}`
             ).join('\n\n');
+
+            const full_prompt = `
+                Berikut adalah hasil uji normalitas untuk beberapa variabel:\n
+                ${stats_summary}\n\n
+                Tugas Anda adalah memberikan interpretasi yang komprehensif dalam format HTML. Lakukan hal berikut:\n
+                1. Untuk setiap variabel, jelaskan hasilnya secara individual. Sebutkan nilai p-value dari kedua uji (Shapiro-Wilk dan Kolmogorov-Smirnov) dan jelaskan artinya berdasarkan ambang batas signifikansi (alpha = 0.05). Berikan kesimpulan akhir apakah variabel tersebut berdistribusi normal atau tidak.\n
+                2. Setelah menganalisis semua variabel, berikan penjelasan umum tentang cara membaca setiap jenis visualisasi yang digunakan dalam konteks uji normalitas:\n
+                    - **Histogram**: Jelaskan apa itu histogram dan bagaimana bentuk lonceng yang simetris menunjukkan normalitas.\n
+                    - **Q-Q Plot**: Jelaskan apa itu Q-Q plot dan mengapa titik-titik yang mengikuti garis lurus menandakan normalitas.\n
+                    - **Box Plot**: Jelaskan apa itu box plot, bagian-bagiannya (median, kuartil), dan bagaimana box plot yang simetris tanpa banyak pencilan (outliers) dapat mengindikasikan normalitas.\n
+                Gunakan heading (h4, h5), paragraf (p), serta list (ul, li) dan tebal (strong) untuk menyusun jawaban yang rapi dan mudah dibaca.
+            `;
 
             $.ajax({
                 url: "{{ url_for('interpret_analysis') }}",
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ stats: stats_summary }),
+                data: JSON.stringify({ stats: full_prompt }),
                 success: function(res) {
-                    $('#interpretation-output').html(res.interpretation.replace(/\n/g, '<br>')).show();
+                    $('#interpretation-output').html(res.interpretation).show();
                 },
                 error: function(err) {
                     $('#interpretation-output').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
@@ -374,7 +393,6 @@
             });
         });
 
-        // === PERUBAHAN 4: Update Fungsi Export PDF ===
         $('#export-pdf-btn').on('click', async function() {
             if (!analysisResult) {
                 alert("Lakukan analisis terlebih dahulu.");
@@ -390,20 +408,14 @@
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const isLight = document.documentElement.classList.contains('light');
-            const textColor = isLight ? '#181C32' : '#E6EDF3';
             let yPos = 15;
 
-            pdf.setTextColor(textColor);
             pdf.setFontSize(18);
             pdf.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
-            yPos += 10;
+            yPos += 15;
 
             for (const res of analysisResult) {
-                if (yPos > 260) {
-                    pdf.addPage();
-                    yPos = 15;
-                }
+                if (yPos > 250) { pdf.addPage(); yPos = 15; }
                 
                 pdf.setFontSize(14);
                 pdf.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
@@ -414,57 +426,62 @@
                     head: [['Test', 'Statistic', 'df', 'p-value']],
                     body: res.table.map(row => [row.test, row.statistic.toFixed(3), row.df, row.p.toFixed(3)]),
                     theme: 'grid',
-                    styles: {
-                        fillColor: isLight ? [240, 242, 245] : [22, 27, 34],
-                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
-                        lineColor: isLight ? [222, 226, 230] : [48, 54, 61],
-                        lineWidth: 0.1
-                    },
-                    headStyles: {
-                        fillColor: isLight ? [222, 226, 230] : [48, 54, 61],
-                        textColor: isLight ? [24, 28, 50] : [230, 237, 243],
-                        fontStyle: 'bold'
-                    }
                 });
                 yPos = pdf.autoTable.previous.finalY + 10;
 
                 const plotId = `plot-${res.name.replace(/\s+/g, '-')}`;
                 
                 let activePlots = [];
-                if ($('#check-hist').is(':checked')) activePlots.push(`hist-${plotId}`);
-                if ($('#check-qq').is(':checked')) activePlots.push(`qq-${plotId}`);
-                if ($('#check-box').is(':checked')) activePlots.push(`box-${plotId}`);
+                if ($('#check-hist').is(':checked')) activePlots.push({id: `hist-${plotId}`, title: "Histogram"});
+                if ($('#check-qq').is(':checked')) activePlots.push({id: `qq-${plotId}`, title: "Q-Q Plot"});
+                if ($('#check-box').is(':checked')) activePlots.push({id: `box-${plotId}`, title: "Box Plot"});
 
                 if (activePlots.length > 0) {
+                    if (yPos > 220) { pdf.addPage(); yPos = 15; }
+                    
+                    pdf.setFontSize(12);
+                    pdf.text("Visualisasi Data", 15, yPos);
+                    yPos += 6;
+
                     const imageDatas = await Promise.all(
-                        activePlots.map(id => Plotly.toImage(id, {format: 'png', width: 600, height: 400}))
+                        activePlots.map(p => Plotly.toImage(p.id, {format: 'png', width: 500, height: 400}))
                     );
-
-                    const plotWidth = 180 / activePlots.length - 5 * (activePlots.length - 1);
-                    const plotHeight = (plotWidth / 600) * 400;
-                    const gap = 5;
-                    let startX = 15;
-
-                    if (yPos + plotHeight > 280) {
-                        pdf.addPage();
-                        yPos = 15;
+                    
+                    for(let i = 0; i < imageDatas.length; i++) {
+                        const plot = activePlots[i];
+                        const imgData = imageDatas[i];
+                        if (yPos > 220) { pdf.addPage(); yPos = 15; }
+                        pdf.setFontSize(10);
+                        pdf.text(plot.title, 15, yPos);
+                        yPos += 5;
+                        pdf.addImage(imgData, 'PNG', 15, yPos, 180, 100);
+                        yPos += 110;
                     }
-
-                    imageDatas.forEach((imgData, index) => {
-                        let currentX = startX + index * (plotWidth + gap);
-                        pdf.addImage(imgData, 'PNG', currentX, yPos, plotWidth, plotHeight);
-                    });
-                    yPos += plotHeight + 10;
                 }
             }
             
+            const interpretationDiv = document.getElementById('interpretation-output');
+            if (interpretationDiv && interpretationDiv.style.display !== 'none' && interpretationDiv.innerHTML.trim() !== '') {
+                if (yPos > 200) { pdf.addPage(); yPos = 15; }
+
+                pdf.setFontSize(14);
+                pdf.text("Interpretasi AI", 15, yPos);
+                yPos += 2;
+
+                await pdf.html(interpretationDiv, {
+                    x: 15,
+                    y: yPos,
+                    width: 180,
+                    windowWidth: 650,
+                });
+            }
+
             pdf.save('hasil-uji-normalitas-onthesis.pdf');
 
             btnText.text('Export PDF');
             spinner.addClass('hidden');
             btn.prop('disabled', false);
         });
-        // === AKHIR PERUBAHAN 4 ===
     });
 
     function erfinv(x){
