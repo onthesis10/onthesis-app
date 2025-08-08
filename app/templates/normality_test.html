@@ -8,6 +8,12 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<!-- Pustaka untuk membaca file CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<!-- Pustaka untuk Export PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 
 <style>
     /* Penyesuaian Gaya DataTable agar sesuai Tema */
@@ -57,50 +63,69 @@
 <div class="animate-fade-in-up">
     <header class="mb-8 text-center">
         <h1 class="text-4xl font-extrabold text-text-primary">Uji Normalitas Data</h1>
-        <p class="text-lg text-text-secondary mt-1">Pastikan data Anda berdistribusi normal sebelum melangkah lebih jauh.</p>
+        <p class="text-lg text-text-secondary mt-1">Analisis satu atau beberapa variabel data sekaligus.</p>
     </header>
 
-    <!-- Konten Uji Normalitas -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <!-- Kolom Input -->
-        <div class="lg:col-span-2">
-            <div class="apex-card p-6">
-                <h3 class="text-xl font-bold text-text-primary mb-4">Input Data Anda</h3>
-                <textarea id="dataInput" class="feedback-form-input h-40" placeholder="Masukkan angka, pisahkan dengan koma, spasi, atau baris baru..."></textarea>
-                <div class="flex gap-4 mt-4">
-                    <button id="btnBackend" class="btn-primary w-full">Analisis</button>
-                    <button id="btnSample" class="btn-secondary w-full">Contoh Data</button>
-                </div>
+    <!-- Kontainer utama dengan tata letak vertikal -->
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <!-- Kartu Input Data -->
+        <div class="apex-card p-6 text-center">
+            <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data Anda</h3>
+            <p class="text-sm text-text-secondary mb-4 max-w-2xl mx-auto">Anda bisa menambahkan beberapa grup/variabel untuk diuji secara bersamaan. Masukkan data secara manual atau unggah file CSV.</p>
+            
+            <!-- Kontainer untuk Grup Data Dinamis -->
+            <div id="data-groups-container" class="space-y-4 text-left">
+                <!-- Grup data akan ditambahkan di sini oleh JavaScript -->
+            </div>
+
+            <div class="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border-panel">
+                <button id="add-group-btn" class="btn-secondary flex-1">+ Tambah Variabel</button>
+                <button id="upload-csv-btn" class="btn-secondary flex-1">Unggah CSV</button>
+                <input type="file" id="csv-file-input" class="hidden" accept=".csv">
+            </div>
+             <div class="mt-4 text-xs text-text-secondary p-3 bg-bg-canvas rounded-md text-left">
+                <strong>Syarat CSV:</strong> Pastikan file Anda memiliki baris pertama sebagai header (nama variabel). Setiap kolom setelahnya akan dianggap sebagai satu grup data. Pisahkan data hanya dengan koma (,).
+            </div>
+            <div class="mt-6">
+                <button id="btnBackend" class="btn-primary w-full md:w-1/2 mx-auto">Jalankan Analisis</button>
             </div>
         </div>
 
-        <!-- Kolom Output -->
-        <div id="output" class="lg:col-span-3 space-y-8" style="display:none;">
+        <!-- Kontainer Output (Awalnya tersembunyi) -->
+        <div id="output" class="space-y-8" style="display:none;">
+            
+            <!-- Kartu Hasil Analisis & Interpretasi AI -->
             <div class="apex-card p-6">
-                <h3 class="text-xl font-bold text-text-primary mb-4">Hasil Analisis</h3>
-                <div id="summary" class="text-text-primary font-semibold text-lg"></div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 text-center">
-                    <div class="bg-bg-canvas p-3 rounded-lg"><p class="text-sm text-text-secondary">Jumlah Data (n)</p><p id="n-val" class="text-lg font-bold text-text-primary"></p></div>
-                    <div class="bg-bg-canvas p-3 rounded-lg"><p class="text-sm text-text-secondary">Mean</p><p id="mean-val" class="text-lg font-bold text-text-primary"></p></div>
-                    <div class="bg-bg-canvas p-3 rounded-lg"><p class="text-sm text-text-secondary">Std. Deviation</p><p id="sd-val" class="text-lg font-bold text-text-primary"></p></div>
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h3 class="text-xl font-bold text-text-primary">2. Hasil & Interpretasi</h3>
+                    <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
+                        <svg xmlns="http://www.w.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span class="btn-text">Export PDF</span>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    </button>
+                </div>
+                <div id="summary-container" class="space-y-4">
+                    <!-- Ringkasan hasil akan ditampilkan di sini -->
+                </div>
+                <div class="mt-6 border-t border-border-panel pt-6">
+                    <h4 class="text-lg font-bold text-text-primary mb-2">Interpretasi AI</h4>
+                    <button id="interpret-btn" class="btn-secondary w-full mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                        <span class="btn-text">Jelaskan Semua Hasil Ini</span>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    </button>
+                    <div id="interpretation-output" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert"></div>
                 </div>
             </div>
 
+            <!-- Kartu Visualisasi Data -->
             <div class="apex-card p-6">
-                <h4 class="text-lg font-bold text-text-primary mb-4">Tabel Uji Normalitas</h4>
-                <div class="overflow-x-auto">
-                    <table id="resultTable" class="display" style="width:100%">
-                        <thead><tr><th>Test</th><th>Statistic</th><th>df</th><th>Sig. (p-value)</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+                <h3 class="text-xl font-bold text-text-primary mb-4">3. Visualisasi Data</h3>
+                <div id="plots-container" class="space-y-8">
+                    <!-- Grafik akan ditampilkan di sini -->
                 </div>
             </div>
-
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <div class="apex-card p-6"><h4 class="text-lg font-bold text-text-primary mb-4">Histogram & Kurva Normal</h4><div id="histogram"></div></div>
-                <div class="apex-card p-6"><h4 class="text-lg font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qqplot"></div></div>
-            </div>
-            <div class="apex-card p-6"><h4 class="text-lg font-bold text-text-primary mb-4">Boxplot</h4><div id="boxplot"></div></div>
         </div>
     </div>
 </div>
@@ -109,14 +134,45 @@
 {% block page_scripts %}
 <script>
     $(document).ready(function(){
-        let table = $('#resultTable').DataTable({
-            "paging": false,
-            "info": false,
-            "searching": false
-        });
+        const dataGroupsContainer = $('#data-groups-container');
+        let groupCount = 0;
+        let analysisResult = null;
 
-        $('#btnSample').on('click', function(){
-            $('#dataInput').val('85, 88, 90, 78, 92, 95, 85, 86, 88, 91, 79, 83, 85, 87, 89');
+        const addDataGroup = (name = '', data = '') => {
+            groupCount++;
+            const groupHtml = `
+                <div class="data-group p-4 border border-border-panel rounded-lg bg-bg-canvas" data-group-id="${groupCount}">
+                    <div class="flex justify-between items-center mb-2">
+                        <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full" value="${name || `Variabel ${groupCount}`}" placeholder="Nama Variabel">
+                        <button class="text-text-secondary hover:text-red-400 remove-group-btn text-xl font-bold">&times;</button>
+                    </div>
+                    <textarea class="feedback-form-input h-24 data-input" placeholder="Masukkan data...">${data}</textarea>
+                </div>
+            `;
+            dataGroupsContainer.append(groupHtml);
+        };
+
+        addDataGroup();
+
+        $('#add-group-btn').on('click', () => addDataGroup());
+        dataGroupsContainer.on('click', '.remove-group-btn', function() { $(this).closest('.data-group').remove(); });
+        $('#upload-csv-btn').on('click', () => $('#csv-file-input').click());
+        $('#csv-file-input').on('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        dataGroupsContainer.empty();
+                        groupCount = 0;
+                        results.meta.fields.forEach(header => {
+                            const values = results.data.map(row => row[header]).join('\\n');
+                            addDataGroup(header, values);
+                        });
+                    }
+                });
+            }
         });
 
         const getPlotlyLayout = (title) => {
@@ -132,65 +188,171 @@
         };
 
         $('#btnBackend').on('click', function(){
-            let raw = $('#dataInput').val();
-            if(!raw.trim()) {
-                alert('Masukkan data terlebih dahulu');
+            const groupsData = [];
+            $('.data-group').each(function() {
+                const name = $(this).find('input[type="text"]').val();
+                const rawData = $(this).find('textarea').val();
+                const values = rawData.split(/[ ,\n\t]+/).map(Number).filter(x => !isNaN(x));
+                if (values.length > 0) {
+                    groupsData.push({ name, values });
+                }
+            });
+
+            if (groupsData.length === 0) {
+                alert('Masukkan data setidaknya pada satu variabel.');
                 return;
             }
-            let data = raw.split(/[ ,\n\t]+/).map(Number).filter(x => !isNaN(x));
 
-            $.ajax({
+            const promises = groupsData.map(group => $.ajax({
                 url: "{{ url_for('api_normality') }}",
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ values: data }),
-                success: function(res){
+                data: JSON.stringify({ values: group.values }),
+            }));
+
+            Promise.all(promises).then(results => {
+                analysisResult = results.map((res, i) => ({ name: groupsData[i].name, ...res }));
+                
+                $('#summary-container').empty();
+                $('#plots-container').empty();
+
+                analysisResult.forEach(res => {
                     const summaryClass = res.summary.includes("tidak") ? "text-red-400" : "text-green-400";
-                    $('#summary').html(`<p class="${summaryClass}">${res.summary}</p>`);
+                    const summaryHtml = `
+                        <div class="pb-4 border-b border-border-panel last:border-b-0">
+                            <h4 class="font-bold text-text-primary">${res.name}</h4>
+                            <p class="${summaryClass}">${res.summary}</p>
+                            <div class="overflow-x-auto mt-2">
+                                <table class="min-w-full text-sm">
+                                    <thead><tr class="text-left text-text-secondary">
+                                        <th class="p-2">Test</th><th class="p-2 text-right">Statistic</th><th class="p-2 text-right">df</th><th class="p-2 text-right">p-value</th>
+                                    </tr></thead>
+                                    <tbody>${res.table.map(row => `
+                                        <tr class="border-t border-border-panel">
+                                            <td class="p-2">${row.test}</td>
+                                            <td class="p-2 text-right">${row.statistic.toFixed(3)}</td>
+                                            <td class="p-2 text-right">${row.df}</td>
+                                            <td class="p-2 text-right ${row.p < 0.05 ? 'text-accent-cyan font-bold' : ''}">${row.p.toFixed(3)}</td>
+                                        </tr>`).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    $('#summary-container').append(summaryHtml);
 
-                    table.clear();
-                    res.table.forEach(row => {
-                        table.row.add([
-                            row.test,
-                            row.statistic.toFixed(3),
-                            row.df,
-                            row.p < 0.05 ? `<span class='text-accent-cyan font-bold'>${row.p.toFixed(3)}</span>` : row.p.toFixed(3)
-                        ]);
-                    });
-                    table.draw();
+                    const plotId = `plot-${res.name.replace(/\\s+/g, '-')}`;
+                    const plotHtml = `
+                        <div>
+                            <h4 class="text-lg font-bold text-text-primary mb-4">${res.name}</h4>
+                            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Histogram</h4><div id="hist-${plotId}"></div></div>
+                                <div class="apex-card p-6"><h4 class="text-md font-bold text-text-primary mb-4">Q-Q Plot</h4><div id="qq-${plotId}"></div></div>
+                            </div>
+                        </div>
+                    `;
+                    $('#plots-container').append(plotHtml);
 
-                    $('#n-val').text(res.n);
-                    $('#mean-val').text(res.mean);
-                    $('#sd-val').text(res.std_dev);
-
-                    let traceHist = { x: data, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } };
-                    let traceCurve = {
-                        x: Array.from({length:100}, (_,i)=>Math.min(...data) + i*(Math.max(...data)-Math.min(...data))/99),
-                        y: Array.from({length:100}, (_,i)=>{
-                            let mean = res.mean;
-                            let sd = res.std_dev;
-                            let xval = Math.min(...data) + i*(Math.max(...data)-Math.min(...data))/99;
-                            return (1/(sd*Math.sqrt(2*Math.PI))) * Math.exp(-0.5*Math.pow((xval-mean)/sd, 2));
-                        }),
-                        mode: 'lines', name: 'Normal Curve', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }
-                    };
-                    Plotly.newPlot('histogram', [traceHist, traceCurve], getPlotlyLayout(''));
-
-                    let sorted = [...data].sort((a,b)=>a-b);
+                    const dataValues = groupsData.find(g => g.name === res.name).values;
+                    Plotly.newPlot(`hist-${plotId}`, [{ x: dataValues, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } }], getPlotlyLayout(''));
+                    
+                    let sorted = [...dataValues].sort((a,b)=>a-b);
                     let quantiles = sorted.map((_,i) => (i+0.5)/res.n);
                     let theoretical = quantiles.map(q => res.mean + res.std_dev*Math.sqrt(2)*erfinv(2*q-1));
-                    Plotly.newPlot('qqplot', [
+                    Plotly.newPlot(`qq-${plotId}`, [
                         {x: theoretical, y: sorted, mode:'markers', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }},
                         {x: theoretical, y: theoretical, mode:'lines', name:'Garis Normal', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }}
                     ], getPlotlyLayout(''));
+                });
 
-                    Plotly.newPlot('boxplot', [{y:data, type:'box', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }}], getPlotlyLayout(''));
+                $('#output').show();
+                $('#interpretation-output').html('');
+            }).catch(err => {
+                alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.error : 'Tidak dapat terhubung ke server.'));
+            });
+        });
 
-                    $('#output').show();
+        $('#interpret-btn').on('click', function() {
+            if (!analysisResult || analysisResult.length === 0) {
+                alert("Lakukan analisis terlebih dahulu.");
+                return;
+            }
+            const btn = $(this);
+            const btnText = btn.find('.btn-text');
+            const spinner = btn.find('.spinner');
+
+            btnText.text('Menganalisis...');
+            spinner.removeClass('hidden');
+            btn.prop('disabled', true);
+
+            const stats_summary = analysisResult.map(res => 
+                `Variabel "${res.name}":\n- Kesimpulan: ${res.summary}\n- N: ${res.n}, Mean: ${res.mean}, Std Dev: ${res.std_dev}\n- Shapiro-Wilk p-value: ${res.table[0].p}\n- Kolmogorov-Smirnov p-value: ${res.table[1].p}`
+            ).join('\n\n');
+
+            $.ajax({
+                url: "{{ url_for('interpret_analysis') }}",
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ stats: stats_summary }),
+                success: function(res) {
+                    $('#interpretation-output').html(res.interpretation.replace(/\n/g, '<br>'));
                 },
-                error: function(err){
-                    alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.error : 'Tidak dapat terhubung ke server.'));
+                error: function(err) {
+                    $('#interpretation-output').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`);
+                },
+                complete: function() {
+                    btnText.text('Jelaskan Hasil Ini');
+                    spinner.addClass('hidden');
+                    btn.prop('disabled', false);
                 }
+            });
+        });
+
+        // --- FUNGSI EXPORT PDF ---
+        $('#export-pdf-btn').on('click', function() {
+            const btn = $(this);
+            const btnText = btn.find('.btn-text');
+            const spinner = btn.find('.spinner');
+
+            btnText.text('Mengekspor...');
+            spinner.removeClass('hidden');
+            btn.prop('disabled', true);
+
+            const { jsPDF } = window.jspdf;
+            const report = document.getElementById('output');
+            
+            html2canvas(report, {
+                scale: 2,
+                backgroundColor: document.documentElement.classList.contains('light') ? '#F0F2F5' : '#0D1117',
+                useCORS: true
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const ratio = canvasWidth / canvasHeight;
+                const imgWidth = pdfWidth - 20;
+                const imgHeight = imgWidth / ratio;
+                let heightLeft = imgHeight;
+                let position = 10;
+
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                heightLeft -= (pdfHeight - 20);
+
+                while (heightLeft > 0) {
+                    position = -imgHeight + heightLeft + 10;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                    heightLeft -= (pdfHeight - 10);
+                }
+                
+                pdf.save('hasil-uji-normalitas-onthesis.pdf');
+            }).finally(() => {
+                btnText.text('Export PDF');
+                spinner.addClass('hidden');
+                btn.prop('disabled', false);
             });
         });
     });
