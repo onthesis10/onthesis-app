@@ -126,7 +126,7 @@ def check_and_update_usage(user_id, feature_name):
     current_count = usage_data.get(count_key, 0)
     if current_count >= limit:
         if feature_name == 'citation':
-             return False, f"Anda telah mencapai batas total {limit} referensi untuk akun gratis."
+            return False, f"Anda telah mencapai batas total {limit} referensi untuk akun gratis."
         return False, f"Anda telah mencapai batas penggunaan harian ({limit}x) untuk fitur ini. Silakan upgrade ke PRO."
     user_ref.update({f'usage_limits.{count_key}': firestore.Increment(1)})
     return True, "OK"
@@ -200,9 +200,20 @@ def paraphrase_ai(): return render_template('paraphrase_ai.html')
 @login_required
 def chat_ai(): return render_template('chat_ai.html')
 
-@app.route('/writing-assistant')
+# --- PERUBAHAN DI SINI ---
+# Rute /writing-assistant yang lama telah diganti dengan dua rute baru di bawah ini
+# untuk mendukung submenu.
+
+@app.route('/writing-assistant/outline')
 @login_required
-def writing_assistant(): return render_template('writing_assistant.html')
+def outline_generator():
+    return render_template('outline_generator.html')
+
+@app.route('/writing-assistant/abstract')
+@login_required
+def abstract_generator():
+    return render_template('abstract_generator.html')
+# --- AKHIR PERUBAHAN ---
 
 @app.route('/data-analysis')
 @login_required
@@ -228,7 +239,7 @@ def user_profile():
     return render_template('user-profile.html', midtrans_client_key=client_key)
 
 # =========================================================================
-# RUTE API
+# RUTE API (Tidak ada perubahan di sini, semua sudah benar)
 # =========================================================================
 
 @app.route('/api/writing-assistant', methods=['POST'])
@@ -245,7 +256,7 @@ def api_writing_assistant():
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = ""
         if task == 'generate_outline':
-            prompt = f"Buatkan kerangka skripsi yang terstruktur dan logis berdasarkan judul berikut: \"{context}\""
+            prompt = f"Buatkan kerangka skripsi yang terstruktur dan logis dalam format HTML ordered list (<ol> dan <li>) berdasarkan judul berikut: \"{context}\""
         elif task == 'generate_abstract':
             prompt = f"Buatkan draf abstrak yang ringkas dan padat (sekitar 200-250 kata) berdasarkan isi skripsi berikut:\n\n{context}"
         else:
@@ -270,6 +281,8 @@ def interpret_analysis():
         return jsonify({'interpretation': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ... Sisa rute API Anda (search, paraphrase, chat, dll) tetap sama ...
 
 @app.route('/api/search-references', methods=['POST'])
 @login_required
@@ -484,75 +497,3 @@ def payment_notification():
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
-
-from flask import render_template, request, jsonify
-from app import app
-# Pastikan Anda mengimpor semua yang dibutuhkan
-
-# ... (rute-rute Anda yang lain seperti dashboard, projects, dll)
-
-@app.route('/')
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html')
-
-@app.route('/projects')
-def projects():
-    return render_template('projects.html')
-
-@app.route('/search_references')
-def search_references():
-    return render_template('search_references.html')
-
-@app.route('/citation_management')
-def citation_management():
-    return render_template('citation_management.html')
-
-@app.route('/paraphrase_ai')
-def paraphrase_ai():
-    return render_template('paraphrase_ai.html')
-
-@app.route('/chat_ai')
-def chat_ai():
-    return render_template('chat_ai.html')
-
-@app.route('/data_analysis')
-def data_analysis():
-    return render_template('data_analysis.html')
-
-# HAPUS ATAU KOMENTARI RUTE LAMA INI
-# @app.route('/writing-assistant')
-# def writing_assistant():
-#     return render_template('writing_assistant.html')
-
-# TAMBAHKAN DUA RUTE BARU DI BAWAH INI
-@app.route('/writing-assistant/outline')
-def outline_generator():
-    return render_template('outline_generator.html')
-
-@app.route('/writing-assistant/abstract')
-def abstract_generator():
-    return render_template('abstract_generator.html')
-
-
-# Endpoint API untuk AI (TIDAK PERLU DIUBAH)
-@app.route('/generate-outline', methods=['POST'])
-def generate_outline():
-    # Logika AI Anda untuk membuat kerangka di sini
-    # ...
-    # Contoh response:
-    prompt = request.json.get('prompt')
-    # Ganti dengan hasil AI asli
-    result_text = f"<ol><li>Pendahuluan untuk: {prompt}</li><li>Tinjauan Pustaka</li><li>Metodologi Penelitian</li><li>Hasil dan Pembahasan</li><li>Kesimpulan</li></ol>"
-    return jsonify({'text': result_text})
-
-@app.route('/generate-abstract', methods=['POST'])
-def generate_abstract():
-    # Logika AI Anda untuk membuat abstrak di sini
-    # ...
-    # Contoh response:
-    prompt = request.json.get('prompt')
-    # Ganti dengan hasil AI asli
-    result_text = f"Ini adalah abstrak yang dihasilkan secara otomatis berdasarkan poin-poin berikut: {prompt}. Penelitian ini bertujuan untuk... dengan metode... dan menghasilkan..."
-    return jsonify({'text': result_text})
-
