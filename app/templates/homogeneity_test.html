@@ -355,7 +355,6 @@ $(document).ready(function() {
         });
     });
 
-    // --- FUNGSI EKSPOR PDF BARU YANG LEBIH STABIL ---
     $('#exportPDF').click(function() {
         if (!analysisResult) {
             alert("Lakukan analisis terlebih dahulu.");
@@ -374,15 +373,6 @@ $(document).ready(function() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 let yPos = 15;
-                const pageHeight = doc.internal.pageSize.height;
-                const margin = 15;
-
-                const checkPageBreak = (neededHeight) => {
-                    if (yPos + neededHeight > pageHeight - margin) {
-                        doc.addPage();
-                        yPos = margin;
-                    }
-                };
 
                 doc.setFontSize(18);
                 doc.text("Laporan Uji Homogenitas - OnThesis", 105, yPos, { align: 'center' });
@@ -391,8 +381,7 @@ $(document).ready(function() {
                 doc.setFontSize(12);
                 const summary = $('#summaryText').text();
                 const splitSummary = doc.splitTextToSize(summary, 180);
-                checkPageBreak(splitSummary.length * 5 + 5);
-                doc.text(splitSummary, margin, yPos);
+                doc.text(splitSummary, 15, yPos);
                 yPos += (splitSummary.length * 5) + 5;
                 
                 doc.autoTable({ 
@@ -403,31 +392,15 @@ $(document).ready(function() {
                 });
                 yPos = doc.autoTable.previous.finalY + 10;
                 
-                const interpretationDiv = document.getElementById('interpretationOutput');
-                if (interpretationDiv && interpretationDiv.style.display !== 'none' && interpretationDiv.innerHTML.trim() !== '') {
-                    checkPageBreak(20);
-                    doc.setFontSize(14);
-                    doc.text("Interpretasi AI", margin, yPos);
-                    yPos += 8;
-
-                    // Render HTML ke PDF dengan cara yang lebih aman
-                    await doc.html(interpretationDiv, {
-                        x: margin, y: yPos, width: 180, windowWidth: 650,
-                    });
-                    yPos = doc.internal.y; // Dapatkan posisi Y terbaru setelah rendering
-                    yPos += 10; // Tambahkan margin
-                }
-
-                checkPageBreak(70); // Cek ruang untuk grafik
-                doc.setFontSize(14);
-                doc.text("Visualisasi Data", margin, yPos);
-                yPos += 8;
-
                 const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
                 const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
-                
-                doc.addImage(boxplotImg, 'PNG', margin, yPos, 85, 60);
-                doc.addImage(violinplotImg, 'PNG', margin + 95, yPos, 85, 60);
+
+                if (yPos > 160) { doc.addPage(); yPos = 15; }
+                doc.setFontSize(14);
+                doc.text("Visualisasi Data", 15, yPos);
+                yPos += 8;
+                doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 60);
+                doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 60);
 
                 doc.save('hasil-uji-homogenitas-onthesis.pdf');
 
