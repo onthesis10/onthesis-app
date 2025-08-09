@@ -73,6 +73,27 @@
         color: var(--accent-cyan);
         font-weight: 600;
     }
+    /* Styling untuk checkbox agar sesuai tema */
+    .form-checkbox {
+        appearance: none;
+        background-color: var(--bg-canvas);
+        border: 1px solid var(--border-panel);
+        padding: 0;
+        display: inline-block;
+        vertical-align: middle;
+        width: 1.25em;
+        height: 1.25em;
+        border-radius: 0.25rem;
+        cursor: pointer;
+    }
+    .form-checkbox:checked {
+        background-color: var(--accent-cyan);
+        border-color: var(--accent-cyan);
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
 </style>
 {% endblock %}
 
@@ -98,6 +119,26 @@
                 <button id="upload-csv-btn" class="btn-secondary flex-1">Unggah CSV</button>
                 <input type="file" id="csv-file-input" class="hidden" accept=".csv">
             </div>
+
+            <!-- Pilihan Visualisasi -->
+            <div class="mt-6 pt-6 border-t border-border-panel text-left">
+                <h4 class="text-lg font-bold text-text-primary mb-4 text-center">Pilih Visualisasi</h4>
+                <div class="max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-text-secondary">
+                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
+                        <input type="checkbox" id="check-hist" class="form-checkbox" checked>
+                        <span>Histogram</span>
+                    </label>
+                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
+                        <input type="checkbox" id="check-qq" class="form-checkbox" checked>
+                        <span>Q-Q Plot</span>
+                    </label>
+                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
+                        <input type="checkbox" id="check-box" class="form-checkbox" checked>
+                        <span>Box Plot</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="mt-6">
                 <button id="btnBackend" class="btn-primary w-full md:w-1/2 mx-auto">Jalankan Analisis</button>
             </div>
@@ -165,6 +206,18 @@ $(document).ready(function(){
         }
     });
 
+    const getPlotlyLayout = (title) => {
+        const isLight = document.documentElement.classList.contains('light');
+        return {
+            title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            font: { color: isLight ? '#5E6278' : '#8B949E' },
+            xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
+            yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' }
+        };
+    };
+
     $('#btnBackend').on('click', async function() {
         const groupsData = [];
         $('.data-group').each(function() {
@@ -196,7 +249,7 @@ $(document).ready(function(){
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error);
                 
-                analysisResults.push({ name: group.name, ...result });
+                analysisResults.push({ name: group.name, values: group.values, ...result });
             } catch (error) {
                 analysisResults.push({ name: group.name, error: error.message });
             }
@@ -238,10 +291,49 @@ $(document).ready(function(){
                             `).join('')}
                         </tbody>
                     </table>
+                    <div class="mt-6 border-t border-border-panel pt-6">
+                        <h4 class="text-lg font-bold text-text-primary mb-4">Visualisasi Data</h4>
+                        <div class="grid grid-cols-1 gap-8">
+                            <div id="hist-container-${resultId}" style="display: none;">
+                                <div id="hist-${resultId}" class="w-full h-96"></div>
+                                <p class="text-xs text-text-secondary mt-2 text-center">Histogram menunjukkan distribusi frekuensi data.</p>
+                            </div>
+                            <div id="qq-container-${resultId}" style="display: none;">
+                                <div id="qq-${resultId}" class="w-full h-96"></div>
+                                <p class="text-xs text-text-secondary mt-2 text-center">Q-Q Plot membandingkan data dengan distribusi normal ideal.</p>
+                            </div>
+                            <div id="box-container-${resultId}" style="display: none;">
+                                <div id="box-${resultId}" class="w-full h-96"></div>
+                                <p class="text-xs text-text-secondary mt-2 text-center">Box Plot menunjukkan ringkasan statistik dan pencilan.</p>
+                            </div>
+                        </div>
+                    </div>
                 `;
             }
             resultHtml += '</div>';
             $('#results-container').append(resultHtml);
+
+            // Render plots if not error
+            if (!res.error) {
+                if ($('#check-hist').is(':checked')) {
+                    $(`#hist-container-${resultId}`).show();
+                    Plotly.newPlot(`hist-${resultId}`, [{ x: res.values, type: 'histogram', marker: { color: 'rgba(34, 211, 238, 0.6)' } }], getPlotlyLayout('Histogram'));
+                }
+                if ($('#check-qq').is(':checked')) {
+                    $(`#qq-container-${resultId}`).show();
+                    let sorted = [...res.values].sort((a,b)=>a-b);
+                    let quantiles = sorted.map((_,i) => (i+0.5)/res.n);
+                    let theoretical = quantiles.map(q => res.mean + res.std_dev * Math.sqrt(2) * erfinv(2*q-1));
+                    Plotly.newPlot(`qq-${resultId}`, [
+                        {x: theoretical, y: sorted, mode:'markers', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }},
+                        {x: theoretical, y: theoretical, mode:'lines', name:'Garis Normal', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }}
+                    ], getPlotlyLayout('Q-Q Plot'));
+                }
+                if ($('#check-box').is(':checked')) {
+                    $(`#box-container-${resultId}`).show();
+                    Plotly.newPlot(`box-${resultId}`, [{ y: res.values, type: 'box', name: res.name, marker: { color: 'rgba(56, 189, 248, 0.6)' }}], getPlotlyLayout('Box Plot'));
+                }
+            }
         });
     }
 
@@ -258,10 +350,10 @@ $(document).ready(function(){
             doc.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
             yPos += 15;
 
-            for (const res of analysisResults) {
+            for (const [index, res] of analysisResults.entries()) {
                 if (res.error) continue;
 
-                if (yPos > 250) { doc.addPage(); yPos = 15; }
+                if (yPos > 220) { doc.addPage(); yPos = 15; }
 
                 doc.setFontSize(14);
                 doc.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
@@ -287,7 +379,29 @@ $(document).ready(function(){
                     theme: 'grid',
                     headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] }
                 });
-                yPos = doc.autoTable.previous.finalY + 15;
+                yPos = doc.autoTable.previous.finalY + 10;
+
+                // Add Visualizations to PDF
+                const resultId = `result-${index}`;
+                let plotPromises = [];
+                if ($('#check-hist').is(':checked')) plotPromises.push(Plotly.toImage(`hist-${resultId}`, {format: 'png', width: 600, height: 400}));
+                if ($('#check-qq').is(':checked')) plotPromises.push(Plotly.toImage(`qq-${resultId}`, {format: 'png', width: 600, height: 400}));
+                if ($('#check-box').is(':checked')) plotPromises.push(Plotly.toImage(`box-${resultId}`, {format: 'png', width: 600, height: 400}));
+                
+                if(plotPromises.length > 0) {
+                    if (yPos > 220) { doc.addPage(); yPos = 15; }
+                    doc.setFontSize(12);
+                    doc.text("Visualisasi Data", 15, yPos);
+                    yPos += 8;
+                    
+                    const images = await Promise.all(plotPromises);
+                    images.forEach(imgData => {
+                        if (yPos > 220) { doc.addPage(); yPos = 15; }
+                        doc.addImage(imgData, 'PNG', 15, yPos, 180, 60);
+                        yPos += 70;
+                    });
+                }
+                yPos += 10; // Margin antar variabel
             }
 
             doc.save('hasil-uji-normalitas-onthesis.pdf');
@@ -298,6 +412,15 @@ $(document).ready(function(){
             btn.prop('disabled', false).find('.spinner').addClass('hidden');
         }
     });
+
+    // Helper function for QQ Plot
+    function erfinv(x){
+        let a = 0.147;
+        let ln = Math.log(1 - x*x);
+        let part1 = 2/(Math.PI*a) + ln/2;
+        let part2 = ln/a;
+        return ( (x<0?-1:1) * Math.sqrt( Math.sqrt(part1*part1 - part2) - part1 ) );
+    }
 });
 </script>
 {% endblock %}
