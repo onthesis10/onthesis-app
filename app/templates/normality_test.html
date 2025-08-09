@@ -366,7 +366,9 @@ $(document).ready(function(){
 
     const exportHandler = async (format) => {
         const btn = $(`#export-${format}-btn`);
-        btn.prop('disabled', true).find('.spinner').removeClass('hidden');
+        const spinner = btn.siblings('.spinner').first();
+        btn.prop('disabled', true);
+        spinner.removeClass('hidden');
 
         try {
             if (format === 'pdf') {
@@ -415,14 +417,14 @@ $(document).ready(function(){
                         doc.text("Visualisasi Data", 15, yPos);
                         yPos += 8;
                         
-                        const images = await Promise.all(plotPromises.map(p => Plotly.toImage(p.id, {format: 'png', width: 800, height: 600})));
+                        const images = await Promise.all(plotPromises.map(p => Plotly.toImage(p.id, {format: 'png', width: 800, height: 500})));
                         images.forEach((imgData, i) => {
                             if (yPos > 210) { doc.addPage(); yPos = 15; }
                             doc.setFontSize(10);
                             doc.text(plotPromises[i].title, 15, yPos);
                             yPos += 5;
-                            doc.addImage(imgData, 'PNG', 15, yPos, 180, 135); // Proporsional
-                            yPos += 145;
+                            doc.addImage(imgData, 'PNG', 15, yPos, 180, 112.5); // Proporsional
+                            yPos += 120;
                         });
                     }
                     yPos += 5;
@@ -430,20 +432,31 @@ $(document).ready(function(){
                 doc.save('hasil-uji-normalitas-onthesis.pdf');
 
             } else if (format === 'doc') {
-                let content = `<h1>Laporan Uji Normalitas - OnThesis</h1>`;
+                let content = `
+                    <style>
+                        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+                        h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; }
+                        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+                        th, td { border: 1px solid #000; padding: 5px; text-align: left; }
+                        th { font-weight: bold; }
+                        .spss-title { text-align: left; font-weight: bold; border-top: 1px solid #000; border-left: 1px solid #000; border-right: 1px solid #000;}
+                        .spss-header { font-weight: bold; }
+                    </style>
+                    <h1>Laporan Uji Normalitas - OnThesis</h1>
+                `;
                 for (const [index, res] of analysisResults.entries()) {
                     if(res.error) continue;
                     content += `<h2>Hasil untuk Variabel: ${res.name}</h2>`;
                     content += `<p>${res.summary}</p>`;
                     
-                    let tableHtml = `<table border="1" style="border-collapse: collapse; width: 100%;">
+                    let tableHtml = `<table>
                         <thead>
-                            <tr><th colspan="4" style="text-align: left; font-weight: bold;">Tests of Normality</th></tr>
+                            <tr><th class="spss-title" colspan="4">Tests of Normality</th></tr>
                             <tr>
-                                <th style="font-weight: bold;"></th>
-                                <th style="font-weight: bold;">Statistic</th>
-                                <th style="font-weight: bold;">df</th>
-                                <th style="font-weight: bold;">Sig.</th>
+                                <th class="spss-header"></th>
+                                <th class="spss-header">Statistic</th>
+                                <th class="spss-header">df</th>
+                                <th class="spss-header">Sig.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -466,7 +479,7 @@ $(document).ready(function(){
                     if ($('#check-qq').is(':checked')) plotPromises.push({id: `qq-${resultId}`, title: "Q-Q Plot"});
                     if ($('#check-box').is(':checked')) plotPromises.push({id: `box-${resultId}`, title: "Box Plot"});
                     
-                    const images = await Promise.all(plotPromises.map(p => Plotly.toImage(p.id, {format: 'png', width: 800, height: 600})));
+                    const images = await Promise.all(plotPromises.map(p => Plotly.toImage(p.id, {format: 'png', width: 800, height: 500})));
                     images.forEach((imgData, i) => {
                         content += `<h4>${plotPromises[i].title}</h4>`;
                         content += `<p><img src="${imgData}" style="width:500px; height:auto;" /></p>`;
@@ -479,7 +492,8 @@ $(document).ready(function(){
             console.error("Gagal mengekspor:", e);
             alert("Terjadi kesalahan saat mengekspor file.");
         } finally {
-            btn.prop('disabled', false).find('.spinner').addClass('hidden');
+            btn.prop('disabled', false);
+            spinner.addClass('hidden');
         }
     };
 
