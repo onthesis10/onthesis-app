@@ -355,6 +355,7 @@ $(document).ready(function() {
         });
     });
 
+    // --- FUNGSI EKSPOR PDF BARU YANG LEBIH STABIL ---
     $('#exportPDF').click(function() {
         if (!analysisResult) {
             alert("Lakukan analisis terlebih dahulu.");
@@ -373,6 +374,15 @@ $(document).ready(function() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 let yPos = 15;
+                const pageHeight = doc.internal.pageSize.height;
+                const margin = 15;
+
+                const checkPageBreak = (neededHeight) => {
+                    if (yPos + neededHeight > pageHeight - margin) {
+                        doc.addPage();
+                        yPos = margin;
+                    }
+                };
 
                 doc.setFontSize(18);
                 doc.text("Laporan Uji Homogenitas - OnThesis", 105, yPos, { align: 'center' });
@@ -381,44 +391,43 @@ $(document).ready(function() {
                 doc.setFontSize(12);
                 const summary = $('#summaryText').text();
                 const splitSummary = doc.splitTextToSize(summary, 180);
-                doc.text(splitSummary, 15, yPos);
+                checkPageBreak(splitSummary.length * 5 + 5);
+                doc.text(splitSummary, margin, yPos);
                 yPos += (splitSummary.length * 5) + 5;
                 
                 doc.autoTable({ 
                     html: '#resultTable', 
                     startY: yPos,
-                    didParseCell: function(data) {
-                        if (data.section === 'head') {
-                            data.cell.styles.fillColor = '#F3F4F6';
-                            data.cell.styles.textColor = '#181C32';
-                        }
-                    }
+                    theme: 'grid',
+                    headStyles: { fillColor: [230, 230, 230], textColor: [20, 20, 20] }
                 });
                 yPos = doc.autoTable.previous.finalY + 10;
                 
                 const interpretationDiv = document.getElementById('interpretationOutput');
                 if (interpretationDiv && interpretationDiv.style.display !== 'none' && interpretationDiv.innerHTML.trim() !== '') {
-                    if (yPos > 200) { doc.addPage(); yPos = 15; }
+                    checkPageBreak(20);
                     doc.setFontSize(14);
-                    doc.text("Interpretasi AI", 15, yPos);
-                    yPos += 5;
-                    
+                    doc.text("Interpretasi AI", margin, yPos);
+                    yPos += 8;
+
+                    // Render HTML ke PDF dengan cara yang lebih aman
                     await doc.html(interpretationDiv, {
-                        x: 15, y: yPos, width: 180, windowWidth: 650,
+                        x: margin, y: yPos, width: 180, windowWidth: 650,
                     });
-                    yPos = doc.internal.y;
-                    yPos += 10;
+                    yPos = doc.internal.y; // Dapatkan posisi Y terbaru setelah rendering
+                    yPos += 10; // Tambahkan margin
                 }
+
+                checkPageBreak(70); // Cek ruang untuk grafik
+                doc.setFontSize(14);
+                doc.text("Visualisasi Data", margin, yPos);
+                yPos += 8;
 
                 const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
                 const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
-
-                if (yPos > 160) { doc.addPage(); yPos = 15; }
-                doc.setFontSize(14);
-                doc.text("Visualisasi Data", 15, yPos);
-                yPos += 8;
-                doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 60);
-                doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 60);
+                
+                doc.addImage(boxplotImg, 'PNG', margin, yPos, 85, 60);
+                doc.addImage(violinplotImg, 'PNG', margin + 95, yPos, 85, 60);
 
                 doc.save('hasil-uji-homogenitas-onthesis.pdf');
 
