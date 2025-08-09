@@ -188,15 +188,19 @@ $(document).ready(function() {
         }
     }
     
-    function getPlotlyLayout(title) {
+    function getPlotlyLayout(title, forExport = false) {
         const isLight = document.documentElement.classList.contains('light');
+        const titleColor = forExport ? '#000000' : (isLight ? '#181C32' : '#E6EDF3');
+        const textColor = forExport ? '#000000' : (isLight ? '#5E6278' : '#8B949E');
+        const gridColor = forExport ? '#cccccc' : (isLight ? '#DEE2E6' : '#30363D');
+
         return {
-            title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
+            title: { text: title, font: { color: titleColor } },
             paper_bgcolor: 'transparent',
             plot_bgcolor: 'transparent',
-            font: { color: isLight ? '#5E6278' : '#8B949E' },
-            xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
-            yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' }
+            font: { color: textColor },
+            xaxis: { gridcolor: gridColor, zerolinecolor: gridColor },
+            yaxis: { gridcolor: gridColor, zerolinecolor: gridColor }
         };
     }
 
@@ -399,15 +403,24 @@ $(document).ready(function() {
                 });
                 yPos = doc.autoTable.previous.finalY + 10;
                 
-                const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
-                const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
+                const boxplotLayout = getPlotlyLayout('Box Plot Sebaran Data per Grup', true);
+                const violinplotLayout = getPlotlyLayout('Violin Plot Sebaran Data per Grup', true);
+                
+                await Plotly.relayout('boxplot', boxplotLayout);
+                await Plotly.relayout('violinplot', violinplotLayout);
+
+                const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 800, height: 500});
+                const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 800, height: 500});
+                
+                await Plotly.relayout('boxplot', getPlotlyLayout('Box Plot Sebaran Data per Grup'));
+                await Plotly.relayout('violinplot', getPlotlyLayout('Violin Plot Sebaran Data per Grup'));
 
                 if (yPos > 160) { doc.addPage(); yPos = 15; }
                 doc.setFontSize(14);
                 doc.text("Visualisasi Data", 15, yPos);
                 yPos += 8;
-                doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 60);
-                doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 60);
+                doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 53); // Proporsional
+                doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 53); // Proporsional
 
                 doc.save('hasil-uji-homogenitas-onthesis.pdf');
 
@@ -418,18 +431,20 @@ $(document).ready(function() {
                     <style>
                         body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
                         h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; }
-                        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-                        th, td { border: 1px solid #000; padding: 5px; text-align: left; }
-                        th { font-weight: bold; background-color: #D3D3D3; }
+                        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; border: 1px solid #000; }
+                        th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+                        th { font-weight: bold; background-color: #E0E0E0; }
+                        .spss-title-cell { text-align: left; font-weight: bold; border-bottom: 1px solid #000; }
                     </style>
                     <h1>Laporan Uji Homogenitas - OnThesis</h1>
                 `;
                 content += `<p>${$('#summaryText').text()}</p>`;
                 
                 let tableHtml = `
-                    <h4>Test of Homogeneity of Variances</h4>
+                    <h4>Tabel 1</h4>
                     <table>
                         <thead>
+                            <tr><th class="spss-title-cell" colspan="5">Test of Homogeneity of Variances</th></tr>
                             <tr>
                                 <th></th>
                                 <th>${statisticName}</th>
@@ -452,8 +467,18 @@ $(document).ready(function() {
                 content += tableHtml;
                 
                 content += `<h3>Visualisasi Data</h3>`;
-                const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
-                const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
+                const boxplotLayout = getPlotlyLayout('Box Plot', true);
+                const violinplotLayout = getPlotlyLayout('Violin Plot', true);
+                
+                await Plotly.relayout('boxplot', boxplotLayout);
+                await Plotly.relayout('violinplot', violinplotLayout);
+
+                const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 800, height: 500});
+                const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 800, height: 500});
+                
+                await Plotly.relayout('boxplot', getPlotlyLayout('Box Plot Sebaran Data per Grup'));
+                await Plotly.relayout('violinplot', getPlotlyLayout('Violin Plot Sebaran Data per Grup'));
+
                 content += `<h4>Box Plot</h4><p><img src="${boxplotImg}" style="width:500px; height:auto;" /></p>`;
                 content += `<h4>Violin Plot</h4><p><img src="${violinplotImg}" style="width:500px; height:auto;" /></p>`;
 
