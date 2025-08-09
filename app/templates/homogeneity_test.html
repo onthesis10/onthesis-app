@@ -8,9 +8,11 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<!-- Pustaka untuk Export PDF Profesional -->
+<!-- Pustaka untuk Export Profesional -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
     /* Penyesuaian Gaya DataTable agar sesuai Tema */
@@ -39,7 +41,7 @@
     table.dataTable.no-footer {
         border-bottom-color: var(--border-panel) !important;
     }
-    /* PERUBAHAN GAYA TABEL */
+    /* Gaya Tabel SPSS */
     table.dataTable thead {
         background-color: var(--accent-cyan);
     }
@@ -111,14 +113,20 @@
             <div class="apex-card p-6">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
                     <h3 class="text-xl font-bold text-text-primary">2. Hasil Uji Homogenitas</h3>
-                    <button id="exportPDF" class="btn-secondary text-sm flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        <span class="btn-text">Export PDF</span>
+                    <div class="flex gap-2">
+                        <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <span class="btn-text">Export PDF</span>
+                        </button>
+                        <button id="export-doc-btn" class="btn-secondary text-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5V20a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4.5M16 4.5h-4a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h4M16 4.5V2M8 13h8M8 17h8"></path></svg>
+                            <span class="btn-text">Export DOC</span>
+                        </button>
                         <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    </button>
+                    </div>
                 </div>
                 <div id="summaryText" class="text-text-secondary mb-4 p-4 bg-bg-canvas rounded-lg border border-border-panel"></div>
-                <h4 class="text-md font-bold text-text-primary mb-2">Test of Homogeneity</h4>
+                <h4 class="text-md font-bold text-text-primary mb-2">Test of Homogeneity of Variances</h4>
                 <table id="resultTable" class="display" style="width:100%">
                     <!-- Header akan diisi oleh JavaScript -->
                 </table>
@@ -144,6 +152,8 @@
                 </div>
             </div>
         </div>
+        <!-- Elemen tersembunyi untuk ekspor DOC -->
+        <div id="exportContent" class="hidden"></div>
     </div>
 </div>
 {% endblock %}
@@ -359,21 +369,14 @@ $(document).ready(function() {
         });
     });
 
-    $('#exportPDF').click(function() {
-        if (!analysisResult) {
-            alert("Lakukan analisis terlebih dahulu.");
-            return;
-        }
-        const btn = $(this);
-        const btnText = btn.find('.btn-text');
-        const spinner = btn.find('.spinner');
-
-        btnText.text('Mengekspor...');
-        spinner.removeClass('hidden');
+    const exportHandler = async (format) => {
+        const btn = $(`#export-${format}-btn`);
+        const spinner = btn.siblings('.spinner').first();
         btn.prop('disabled', true);
+        spinner.removeClass('hidden');
 
-        const createPdf = async () => {
-            try {
+        try {
+            if (format === 'pdf') {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 let yPos = 15;
@@ -392,7 +395,7 @@ $(document).ready(function() {
                     html: '#resultTable', 
                     startY: yPos,
                     theme: 'grid',
-                    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] } // Warna biru
+                    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] }
                 });
                 yPos = doc.autoTable.previous.finalY + 10;
                 
@@ -408,18 +411,66 @@ $(document).ready(function() {
 
                 doc.save('hasil-uji-homogenitas-onthesis.pdf');
 
-            } catch(e) {
-                console.error("Gagal membuat PDF:", e);
-                alert("Terjadi kesalahan saat mengekspor PDF.");
-            } finally {
-                btnText.text('Export PDF');
-                spinner.addClass('hidden');
-                btn.prop('disabled', false);
-            }
-        };
+            } else if (format === 'doc') {
+                const uji = $('#ujiSelector').val();
+                const statisticName = uji === 'levene' ? 'Levene Statistic' : 'Bartlett Statistic';
+                let content = `
+                    <style>
+                        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+                        h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; }
+                        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+                        th, td { border: 1px solid #000; padding: 5px; text-align: left; }
+                        th { font-weight: bold; background-color: #D3D3D3; }
+                    </style>
+                    <h1>Laporan Uji Homogenitas - OnThesis</h1>
+                `;
+                content += `<p>${$('#summaryText').text()}</p>`;
+                
+                let tableHtml = `
+                    <h4>Test of Homogeneity of Variances</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>${statisticName}</th>
+                                <th>df1</th>
+                                <th>df2</th>
+                                <th>Sig.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: bold;">${analysisResult.table[0].test}</td>
+                                <td>${Number(analysisResult.table[0].statistic).toFixed(4)}</td>
+                                <td>${analysisResult.table[0].df1 ?? ''}</td>
+                                <td>${analysisResult.table[0].df2 ?? ''}</td>
+                                <td>${Number(analysisResult.table[0].p).toFixed(4)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+                content += tableHtml;
+                
+                content += `<h3>Visualisasi Data</h3>`;
+                const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
+                const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
+                content += `<h4>Box Plot</h4><p><img src="${boxplotImg}" style="width:500px; height:auto;" /></p>`;
+                content += `<h4>Violin Plot</h4><p><img src="${violinplotImg}" style="width:500px; height:auto;" /></p>`;
 
-        createPdf();
-    });
+                var converted = htmlDocx.asBlob(content);
+                saveAs(converted, 'hasil-uji-homogenitas-onthesis.doc');
+            }
+        } catch (e) {
+            console.error("Gagal mengekspor:", e);
+            alert("Terjadi kesalahan saat mengekspor file.");
+        } finally {
+            btn.prop('disabled', false);
+            spinner.addClass('hidden');
+        }
+    };
+
+    $('#export-pdf-btn').on('click', () => exportHandler('pdf'));
+    $('#export-doc-btn').on('click', () => exportHandler('doc'));
 
     // Inisialisasi
     resetGroups(2);
