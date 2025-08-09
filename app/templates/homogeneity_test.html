@@ -259,7 +259,6 @@ $(document).ready(function() {
             $('#resultCard').slideDown();
             $('#summaryText').html(`<strong>Interpretasi:</strong> ${analysisResult.summary || ''}`);
             
-            // Hancurkan tabel lama jika ada dan buat ulang dengan header baru
             if (dataTable) {
                 dataTable.destroy();
             }
@@ -407,7 +406,7 @@ $(document).ready(function() {
                     await doc.html(interpretationDiv, {
                         x: 15, y: yPos, width: 180, windowWidth: 650,
                     });
-                    yPos = doc.lastAutoTable.finalY || yPos + 60;
+                    yPos = doc.internal.lastAutotable.finalY ? doc.internal.lastAutotable.finalY + 10 : yPos + 60; // Fallback
                 }
 
                 const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
