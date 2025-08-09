@@ -39,9 +39,13 @@
     table.dataTable.no-footer {
         border-bottom-color: var(--border-panel) !important;
     }
+    /* PERUBAHAN GAYA TABEL */
+    table.dataTable thead {
+        background-color: var(--accent-cyan);
+    }
     table.dataTable thead th {
-        border-bottom: 1px solid var(--border-panel) !important;
-        color: var(--text-primary);
+        color: white !important;
+        border-bottom: 1px solid var(--accent-cyan) !important;
     }
     table.dataTable tbody tr {
         background-color: transparent !important;
@@ -114,7 +118,7 @@
                     </button>
                 </div>
                 <div id="summaryText" class="text-text-secondary mb-4 p-4 bg-bg-canvas rounded-lg border border-border-panel"></div>
-                <h4 class="text-md font-bold text-text-primary mb-2">Test of Homogeneity of Variances</h4>
+                <h4 class="text-md font-bold text-text-primary mb-2">Test of Homogeneity</h4>
                 <table id="resultTable" class="display" style="width:100%">
                     <!-- Header akan diisi oleh JavaScript -->
                 </table>
@@ -388,7 +392,7 @@ $(document).ready(function() {
                     html: '#resultTable', 
                     startY: yPos,
                     theme: 'grid',
-                    headStyles: { fillColor: [230, 230, 230], textColor: [20, 20, 20] }
+                    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] } // Warna biru
                 });
                 yPos = doc.autoTable.previous.finalY + 10;
                 
