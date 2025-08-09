@@ -412,11 +412,19 @@ def api_normality():
         shapiro_stat, shapiro_p = stats.shapiro(arr)
         ks_stat, ks_p = stats.kstest((arr - mean)/sd, 'norm')
 
-        summary = "Data berdistribusi normal" if shapiro_p > 0.05 and ks_p > 0.05 else "Data tidak berdistribusi normal"
+        shapiro_p_rounded = round(shapiro_p, 3)
+        ks_p_rounded = round(ks_p, 3)
+
+        if shapiro_p > 0.05:
+            conclusion = "berdistribusi normal"
+        else:
+            conclusion = "tidak berdistribusi normal"
+        
+        summary = f"Hasil uji Shapiro-Wilk menunjukkan nilai signifikansi p = {shapiro_p_rounded}. Karena nilai p > 0.05, dapat disimpulkan bahwa data {conclusion}."
 
         table = [
-            {"test": "Shapiro–Wilk", "statistic": round(shapiro_stat, 3), "df": n, "p": round(shapiro_p, 3)},
-            {"test": "Kolmogorov–Smirnov", "statistic": round(ks_stat, 3), "df": n, "p": round(ks_p, 3)}
+            {"test": "Shapiro-Wilk", "statistic": round(shapiro_stat, 3), "df": n, "p": shapiro_p_rounded},
+            {"test": "Kolmogorov-Smirnov", "statistic": round(ks_stat, 3), "df": n, "p": ks_p_rounded}
         ]
 
         return jsonify({"summary": summary, "mean": round(mean, 3), "std_dev": round(sd, 3), "n": n, "table": table})

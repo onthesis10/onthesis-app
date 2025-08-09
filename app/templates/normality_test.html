@@ -56,26 +56,22 @@
     table.dataTable tbody td {
         color: var(--text-secondary) !important;
     }
-    /* Styling untuk checkbox agar sesuai tema */
-    .form-checkbox {
-        appearance: none;
-        background-color: var(--bg-canvas);
-        border: 1px solid var(--border-panel);
-        padding: 0;
-        display: inline-block;
-        vertical-align: middle;
-        width: 1.25em;
-        height: 1.25em;
-        border-radius: 0.25rem;
-        cursor: pointer;
+    /* Gaya Tabel SPSS */
+    table.spss-table thead .spss-title-row th {
+        background-color: transparent !important;
+        color: var(--text-primary) !important;
+        font-size: 1.1em;
+        font-weight: bold;
+        padding-left: 0;
+        border-bottom: 2px solid var(--text-primary) !important;
     }
-    .form-checkbox:checked {
-        background-color: var(--accent-cyan);
-        border-color: var(--accent-cyan);
-        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
-        background-size: 100% 100%;
-        background-position: center;
-        background-repeat: no-repeat;
+    table.spss-table thead .spss-header-row th {
+        color: var(--text-primary) !important;
+        font-weight: bold;
+    }
+    .highlight {
+        color: var(--accent-cyan);
+        font-weight: 600;
     }
 </style>
 {% endblock %}
@@ -87,15 +83,12 @@
         <p class="text-lg text-text-secondary mt-1">Analisis satu atau beberapa variabel data sekaligus.</p>
     </header>
 
-    <!-- Kontainer utama dengan tata letak vertikal -->
     <div class="max-w-4xl mx-auto space-y-8">
-        
         <!-- Kartu Input Data -->
         <div class="apex-card p-6 text-center">
             <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data Anda</h3>
-            <p class="text-sm text-text-secondary mb-4 max-w-2xl mx-auto">Anda bisa menambahkan beberapa grup/variabel untuk diuji secara bersamaan. Masukkan data secara manual atau unggah file CSV.</p>
+            <p class="text-sm text-text-secondary mb-4 max-w-2xl mx-auto">Anda bisa menambahkan beberapa variabel untuk diuji secara bersamaan. Masukkan data secara manual atau unggah file CSV.</p>
             
-            <!-- Kontainer untuk Grup Data Dinamis -->
             <div id="data-groups-container" class="space-y-4 text-left">
                 <!-- Grup data akan ditambahkan di sini oleh JavaScript -->
             </div>
@@ -105,67 +98,24 @@
                 <button id="upload-csv-btn" class="btn-secondary flex-1">Unggah CSV</button>
                 <input type="file" id="csv-file-input" class="hidden" accept=".csv">
             </div>
-             <div class="mt-4 text-xs text-text-secondary p-3 bg-bg-canvas rounded-md text-left">
-                <strong>Syarat CSV:</strong> Pastikan file Anda memiliki baris pertama sebagai header (nama variabel). Setiap kolom setelahnya akan dianggap sebagai satu grup data. Pisahkan data hanya dengan koma (,).
-            </div>
-
-            <!-- Pilihan Visualisasi -->
-            <div class="mt-6 pt-6 border-t border-border-panel text-left">
-                <h4 class="text-lg font-bold text-text-primary mb-4 text-center">Pilih Visualisasi</h4>
-                <div class="max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-text-secondary">
-                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
-                        <input type="checkbox" id="check-hist" class="form-checkbox" checked>
-                        <span>Histogram</span>
-                    </label>
-                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
-                        <input type="checkbox" id="check-qq" class="form-checkbox" checked>
-                        <span>Q-Q Plot</span>
-                    </label>
-                    <label class="flex items-center justify-center sm:justify-start space-x-2 cursor-pointer p-2 rounded-lg hover:bg-bg-canvas">
-                        <input type="checkbox" id="check-box" class="form-checkbox" checked>
-                        <span>Box Plot</span>
-                    </label>
-                </div>
-            </div>
-
             <div class="mt-6">
                 <button id="btnBackend" class="btn-primary w-full md:w-1/2 mx-auto">Jalankan Analisis</button>
             </div>
         </div>
 
-        <!-- Kontainer Output (Awalnya tersembunyi) -->
+        <!-- Kontainer Output -->
         <div id="output" class="space-y-8" style="display:none;">
-            
-            <!-- Kartu Hasil Analisis & Interpretasi AI -->
-            <div class="apex-card p-6">
-                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                    <h3 class="text-xl font-bold text-text-primary">2. Hasil & Interpretasi</h3>
-                    <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        <span class="btn-text">Export PDF</span>
-                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    </button>
-                </div>
-                <div id="summary-container" class="space-y-4">
-                    <!-- Ringkasan hasil akan ditampilkan di sini -->
-                </div>
-                <div class="mt-6 border-t border-border-panel pt-6">
-                    <h4 class="text-lg font-bold text-text-primary mb-2">Interpretasi AI</h4>
-                    <button id="interpret-btn" class="btn-secondary w-full mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                        <span class="btn-text">Jelaskan Semua Hasil Ini</span>
-                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    </button>
-                    <div id="interpretation-output" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
-                </div>
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-text-primary">Hasil Analisis</h2>
+                <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span class="btn-text">Export PDF</span>
+                    <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                </button>
             </div>
 
-            <!-- Kartu Visualisasi Data -->
-            <div class="apex-card p-6">
-                <h3 class="text-xl font-bold text-text-primary mb-4 text-center">3. Visualisasi Data</h3>
-                <div id="plots-container" class="space-y-8">
-                    <!-- Grafik akan ditampilkan di sini secara vertikal -->
-                </div>
+            <div id="results-container" class="space-y-12">
+                <!-- Hasil untuk setiap variabel akan ditampilkan di sini -->
             </div>
         </div>
     </div>
@@ -174,322 +124,180 @@
 
 {% block page_scripts %}
 <script>
-    $(document).ready(function(){
-        const dataGroupsContainer = $('#data-groups-container');
-        let groupCount = 0;
-        let analysisResult = null;
+$(document).ready(function(){
+    let analysisResults = [];
 
-        const addDataGroup = (name = '', data = '') => {
-            groupCount++;
-            const groupHtml = `
-                <div class="data-group p-4 border border-border-panel rounded-lg bg-bg-canvas" data-group-id="${groupCount}">
-                    <div class="flex justify-between items-center mb-2">
-                        <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full" value="${name || `Variabel ${groupCount}`}" placeholder="Nama Variabel">
-                        <button class="text-text-secondary hover:text-red-400 remove-group-btn text-xl font-bold">&times;</button>
-                    </div>
-                    <textarea class="feedback-form-input h-24 data-input" placeholder="Masukkan data...">${data}</textarea>
+    const addDataGroup = (name = '', data = '') => {
+        const groupCount = $('#data-groups-container').children().length + 1;
+        const groupName = name || `Variabel ${groupCount}`;
+        const groupHtml = `
+            <div class="data-group p-4 border border-border-panel rounded-lg bg-bg-canvas">
+                <div class="flex justify-between items-center mb-2">
+                    <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full group-name-input" value="${groupName}" placeholder="Nama Variabel">
+                    <button class="text-text-secondary hover:text-red-400 remove-group-btn text-xl font-bold">&times;</button>
                 </div>
-            `;
-            dataGroupsContainer.append(groupHtml);
-        };
+                <textarea class="feedback-form-input h-24 data-input" placeholder="Masukkan data...">${data}</textarea>
+            </div>
+        `;
+        $('#data-groups-container').append(groupHtml);
+    };
 
-        addDataGroup();
+    addDataGroup();
 
-        $('#add-group-btn').on('click', () => addDataGroup());
-        dataGroupsContainer.on('click', '.remove-group-btn', function() { $(this).closest('.data-group').remove(); });
-        $('#upload-csv-btn').on('click', () => $('#csv-file-input').click());
-        $('#csv-file-input').on('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        dataGroupsContainer.empty();
-                        groupCount = 0;
-                        results.meta.fields.forEach(header => {
-                            const values = results.data.map(row => row[header]).join('\\n');
-                            addDataGroup(header, values);
-                        });
-                    }
-                });
-            }
-        });
+    $('#add-group-btn').on('click', () => addDataGroup());
+    $('#data-groups-container').on('click', '.remove-group-btn', function() { $(this).closest('.data-group').remove(); });
+    $('#upload-csv-btn').on('click', () => $('#csv-file-input').click());
 
-        const getPlotlyLayout = (title) => {
-            const isLight = document.documentElement.classList.contains('light');
-            return {
-                title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
-                paper_bgcolor: 'transparent',
-                plot_bgcolor: 'transparent',
-                font: { color: isLight ? '#5E6278' : '#8B949E' },
-                xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
-                yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' }
-            };
-        };
-
-        $('#btnBackend').on('click', function(){
-            const groupsData = [];
-            $('.data-group').each(function() {
-                const name = $(this).find('input[type="text"]').val();
-                const rawData = $(this).find('textarea').val();
-                const values = rawData.split(/[ ,\n\t]+/).map(Number).filter(x => !isNaN(x));
-                if (values.length > 0) {
-                    groupsData.push({ name, values });
+    $('#csv-file-input').on('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    $('#data-groups-container').empty();
+                    results.meta.fields.forEach(header => {
+                        const values = results.data.map(row => row[header]).join('\\n');
+                        addDataGroup(header, values);
+                    });
                 }
             });
-
-            if (groupsData.length === 0) {
-                alert('Masukkan data setidaknya pada satu variabel.');
-                return;
-            }
-
-            const promises = groupsData.map(group => $.ajax({
-                url: "{{ url_for('api_normality') }}",
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ values: group.values }),
-            }));
-
-            Promise.all(promises).then(results => {
-                analysisResult = results.map((res, i) => ({ name: groupsData[i].name, ...res }));
-                
-                $('#summary-container').empty();
-                $('#plots-container').empty();
-
-                analysisResult.forEach(res => {
-                    const summaryClass = res.summary.includes("tidak") ? "text-red-400" : "text-green-400";
-                    const summaryHtml = `
-                        <div class="pb-4 border-b border-border-panel last:border-b-0">
-                            <h4 class="font-bold text-text-primary">${res.name}</h4>
-                            <p class="${summaryClass}">${res.summary}</p>
-                            <div class="overflow-x-auto mt-2">
-                                <table class="min-w-full text-sm">
-                                    <thead><tr class="text-left text-text-secondary">
-                                        <th class="p-2">Test</th><th class="p-2 text-right">Statistic</th><th class="p-2 text-right">df</th><th class="p-2 text-right">p-value</th>
-                                    </tr></thead>
-                                    <tbody>${res.table.map(row => `
-                                        <tr class="border-t border-border-panel">
-                                            <td class="p-2">${row.test}</td>
-                                            <td class="p-2 text-right">${row.statistic.toFixed(3)}</td>
-                                            <td class="p-2 text-right">${row.df}</td>
-                                            <td class="p-2 text-right ${row.p < 0.05 ? 'text-accent-cyan font-bold' : ''}">${row.p.toFixed(3)}</td>
-                                        </tr>`).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    `;
-                    $('#summary-container').append(summaryHtml);
-
-                    const plotId = `plot-${res.name.replace(/\s+/g, '-')}`;
-                    
-                    const plotHtml = `
-                        <div class="space-y-8">
-                            <h4 class="text-lg font-bold text-text-primary text-center">${res.name}</h4>
-                            <div id="hist-container-${plotId}" class="apex-card p-6" style="display: none;">
-                                <h4 class="text-md font-bold text-text-primary mb-2">Histogram</h4>
-                                <div id="hist-${plotId}"></div>
-                                <p class="text-xs text-text-secondary mt-2 pt-2 border-t border-border-panel">Histogram memvisualisasikan distribusi frekuensi data. Untuk data normal, distribusinya akan menyerupai bentuk lonceng yang simetris.</p>
-                            </div>
-                            <div id="qq-container-${plotId}" class="apex-card p-6" style="display: none;">
-                                <h4 class="text-md font-bold text-text-primary mb-2">Q-Q Plot</h4>
-                                <div id="qq-${plotId}"></div>
-                                <p class="text-xs text-text-secondary mt-2 pt-2 border-t border-border-panel">Q-Q (Quantile-Quantile) Plot membandingkan distribusi data Anda dengan distribusi normal. Jika titik-titik data mengikuti garis lurus, ini menandakan normalitas.</p>
-                            </div>
-                            <div id="box-container-${plotId}" class="apex-card p-6" style="display: none;">
-                                <h4 class="text-md font-bold text-text-primary mb-2">Box Plot</h4>
-                                <div id="box-${plotId}"></div>
-                                <p class="text-xs text-text-secondary mt-2 pt-2 border-t border-border-panel">Box Plot menunjukkan ringkasan statistik (median, kuartil) dan mendeteksi pencilan (outliers). Data normal cenderung memiliki box plot yang simetris.</p>
-                            </div>
-                        </div>
-                    `;
-                    $('#plots-container').append(plotHtml);
-
-                    const dataValues = groupsData.find(g => g.name === res.name).values;
-                    
-                    if ($('#check-hist').is(':checked')) {
-                        $(`#hist-container-${plotId}`).show();
-                        Plotly.newPlot(`hist-${plotId}`, [{ x: dataValues, type: 'histogram', histnorm: 'probability density', name: 'Data', marker: { color: 'rgba(34, 211, 238, 0.6)' } }], getPlotlyLayout(''));
-                    }
-                    
-                    if ($('#check-qq').is(':checked')) {
-                        $(`#qq-container-${plotId}`).show();
-                        let sorted = [...dataValues].sort((a,b)=>a-b);
-                        let quantiles = sorted.map((_,i) => (i+0.5)/res.n);
-                        let theoretical = quantiles.map(q => res.mean + res.std_dev*Math.sqrt(2)*erfinv(2*q-1));
-                        Plotly.newPlot(`qq-${plotId}`, [
-                            {x: theoretical, y: sorted, mode:'markers', name:'Data', marker: { color: 'rgba(34, 211, 238, 0.8)' }},
-                            {x: theoretical, y: theoretical, mode:'lines', name:'Garis Normal', line: { color: document.documentElement.classList.contains('light') ? '#181C32' : '#E6EDF3' }}
-                        ], getPlotlyLayout(''));
-                    }
-
-                    if ($('#check-box').is(':checked')) {
-                        $(`#box-container-${plotId}`).show();
-                        Plotly.newPlot(`box-${plotId}`, [{ 
-                            y: dataValues, 
-                            type: 'box', 
-                            name: res.name, 
-                            marker: { color: 'rgba(56, 189, 248, 0.6)' },
-                            boxpoints: 'all',
-                            jitter: 0.3,
-                            pointpos: -1.8
-                        }], getPlotlyLayout(''));
-                    }
-                });
-
-                $('#output').show();
-                $('#interpretation-output').html('').hide();
-            }).catch(err => {
-                alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.error : 'Tidak dapat terhubung ke server.'));
-            });
-        });
-
-        $('#interpret-btn').on('click', function() {
-            if (!analysisResult || analysisResult.length === 0) {
-                alert("Lakukan analisis terlebih dahulu.");
-                return;
-            }
-            const btn = $(this);
-            const btnText = btn.find('.btn-text');
-            const spinner = btn.find('.spinner');
-
-            btnText.text('Menganalisis...');
-            spinner.removeClass('hidden');
-            btn.prop('disabled', true);
-
-            const stats_summary = analysisResult.map(res => 
-                `Variabel "${res.name}":\n- Kesimpulan: ${res.summary}\n- N: ${res.n}, Mean: ${res.mean.toFixed(3)}, Std Dev: ${res.std_dev.toFixed(3)}\n- Shapiro-Wilk p-value: ${res.table[0].p.toFixed(3)}\n- Kolmogorov-Smirnov p-value: ${res.table[1].p.toFixed(3)}`
-            ).join('\n\n');
-
-            const full_prompt = `
-                Berikut adalah hasil uji normalitas untuk beberapa variabel:\n
-                ${stats_summary}\n\n
-                Tugas Anda adalah memberikan interpretasi yang komprehensif dalam format HTML. Lakukan hal berikut:\n
-                1. Untuk setiap variabel, jelaskan hasilnya secara individual. Sebutkan nilai p-value dari kedua uji (Shapiro-Wilk dan Kolmogorov-Smirnov) dan jelaskan artinya berdasarkan ambang batas signifikansi (alpha = 0.05). Berikan kesimpulan akhir apakah variabel tersebut berdistribusi normal atau tidak.\n
-                2. Setelah menganalisis semua variabel, berikan penjelasan umum tentang cara membaca setiap jenis visualisasi yang digunakan dalam konteks uji normalitas:\n
-                    - **Histogram**: Jelaskan apa itu histogram dan bagaimana bentuk lonceng yang simetris menunjukkan normalitas.\n
-                    - **Q-Q Plot**: Jelaskan apa itu Q-Q plot dan mengapa titik-titik yang mengikuti garis lurus menandakan normalitas.\n
-                    - **Box Plot**: Jelaskan apa itu box plot, bagian-bagiannya (median, kuartil), dan bagaimana box plot yang simetris tanpa banyak pencilan (outliers) dapat mengindikasikan normalitas.\n
-                Gunakan heading (h4, h5), paragraf (p), serta list (ul, li) dan tebal (strong) untuk menyusun jawaban yang rapi dan mudah dibaca.
-            `;
-
-            $.ajax({
-                url: "{{ url_for('interpret_analysis') }}",
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ stats: full_prompt }),
-                success: function(res) {
-                    $('#interpretation-output').html(res.interpretation).show();
-                },
-                error: function(err) {
-                    $('#interpretation-output').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
-                },
-                complete: function() {
-                    btnText.text('Jelaskan Hasil Ini');
-                    spinner.addClass('hidden');
-                    btn.prop('disabled', false);
-                }
-            });
-        });
-
-        $('#export-pdf-btn').on('click', async function() {
-            if (!analysisResult) {
-                alert("Lakukan analisis terlebih dahulu.");
-                return;
-            }
-            const btn = $(this);
-            const btnText = btn.find('.btn-text');
-            const spinner = btn.find('.spinner');
-
-            btnText.text('Mengekspor...');
-            spinner.removeClass('hidden');
-            btn.prop('disabled', true);
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            let yPos = 15;
-
-            pdf.setFontSize(18);
-            pdf.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
-            yPos += 15;
-
-            for (const res of analysisResult) {
-                if (yPos > 250) { pdf.addPage(); yPos = 15; }
-                
-                pdf.setFontSize(14);
-                pdf.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
-                yPos += 8;
-
-                pdf.autoTable({
-                    startY: yPos,
-                    head: [['Test', 'Statistic', 'df', 'p-value']],
-                    body: res.table.map(row => [row.test, row.statistic.toFixed(3), row.df, row.p.toFixed(3)]),
-                    theme: 'grid',
-                });
-                yPos = pdf.autoTable.previous.finalY + 10;
-
-                const plotId = `plot-${res.name.replace(/\s+/g, '-')}`;
-                
-                let activePlots = [];
-                if ($('#check-hist').is(':checked')) activePlots.push({id: `hist-${plotId}`, title: "Histogram"});
-                if ($('#check-qq').is(':checked')) activePlots.push({id: `qq-${plotId}`, title: "Q-Q Plot"});
-                if ($('#check-box').is(':checked')) activePlots.push({id: `box-${plotId}`, title: "Box Plot"});
-
-                if (activePlots.length > 0) {
-                    if (yPos > 220) { pdf.addPage(); yPos = 15; }
-                    
-                    pdf.setFontSize(12);
-                    pdf.text("Visualisasi Data", 15, yPos);
-                    yPos += 6;
-
-                    const imageDatas = await Promise.all(
-                        activePlots.map(p => Plotly.toImage(p.id, {format: 'png', width: 500, height: 400}))
-                    );
-                    
-                    for(let i = 0; i < imageDatas.length; i++) {
-                        const plot = activePlots[i];
-                        const imgData = imageDatas[i];
-                        if (yPos > 220) { pdf.addPage(); yPos = 15; }
-                        pdf.setFontSize(10);
-                        pdf.text(plot.title, 15, yPos);
-                        yPos += 5;
-                        pdf.addImage(imgData, 'PNG', 15, yPos, 180, 100);
-                        yPos += 110;
-                    }
-                }
-            }
-            
-            const interpretationDiv = document.getElementById('interpretation-output');
-            if (interpretationDiv && interpretationDiv.style.display !== 'none' && interpretationDiv.innerHTML.trim() !== '') {
-                if (yPos > 200) { pdf.addPage(); yPos = 15; }
-
-                pdf.setFontSize(14);
-                pdf.text("Interpretasi AI", 15, yPos);
-                yPos += 2;
-
-                await pdf.html(interpretationDiv, {
-                    x: 15,
-                    y: yPos,
-                    width: 180,
-                    windowWidth: 650,
-                });
-            }
-
-            pdf.save('hasil-uji-normalitas-onthesis.pdf');
-
-            btnText.text('Export PDF');
-            spinner.addClass('hidden');
-            btn.prop('disabled', false);
-        });
+        }
     });
 
-    function erfinv(x){
-        let a = 0.147;
-        let ln = Math.log(1 - x*x);
-        let part1 = 2/(Math.PI*a) + ln/2;
-        let part2 = ln/a;
-        return ( (x<0?-1:1) * Math.sqrt( Math.sqrt(part1*part1 - part2) - part1 ) );
+    $('#btnBackend').on('click', async function() {
+        const groupsData = [];
+        $('.data-group').each(function() {
+            const name = $(this).find('.group-name-input').val();
+            const rawData = $(this).find('textarea').val();
+            const values = rawData.split(/[ ,\n\t]+/).map(Number).filter(x => !isNaN(x));
+            if (values.length > 0) {
+                groupsData.push({ name, values });
+            }
+        });
+
+        if (groupsData.length === 0) {
+            alert('Masukkan data setidaknya pada satu variabel.');
+            return;
+        }
+
+        const button = $(this);
+        button.prop('disabled', true).text('Menganalisis...');
+        $('#results-container').empty();
+        analysisResults = [];
+
+        for (const group of groupsData) {
+            try {
+                const response = await fetch("{{ url_for('api_normality') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ values: group.values }),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                
+                analysisResults.push({ name: group.name, ...result });
+            } catch (error) {
+                analysisResults.push({ name: group.name, error: error.message });
+            }
+        }
+        
+        displayResults();
+        button.prop('disabled', false).text('Jalankan Analisis');
+    });
+
+    function displayResults() {
+        $('#output').show();
+        analysisResults.forEach((res, index) => {
+            const resultId = `result-${index}`;
+            let resultHtml = `<div class="apex-card p-6" id="${resultId}"><h3 class="text-xl font-bold text-text-primary mb-2">${res.name}</h3>`;
+
+            if (res.error) {
+                resultHtml += `<p class="text-red-500">${res.error}</p>`;
+            } else {
+                resultHtml += `
+                    <p class="text-text-secondary mb-4 p-4 bg-bg-canvas rounded-lg border border-border-panel">${res.summary}</p>
+                    <table class="display spss-table" style="width:100%">
+                        <thead>
+                            <tr class="spss-title-row"><th colspan="4">Tests of Normality</th></tr>
+                            <tr class="spss-header-row">
+                                <th></th>
+                                <th>Statistic</th>
+                                <th>df</th>
+                                <th>Sig.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${res.table.map(row => `
+                                <tr>
+                                    <td><strong>${row.test}</strong></td>
+                                    <td>${row.statistic.toFixed(3)}</td>
+                                    <td>${row.df}</td>
+                                    <td class="${row.p < 0.05 ? 'highlight' : ''}">${row.p.toFixed(3)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+            resultHtml += '</div>';
+            $('#results-container').append(resultHtml);
+        });
     }
+
+    $('#export-pdf-btn').on('click', async function() {
+        const btn = $(this);
+        btn.prop('disabled', true).find('.spinner').removeClass('hidden');
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            let yPos = 15;
+
+            doc.setFontSize(18);
+            doc.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
+            yPos += 15;
+
+            for (const res of analysisResults) {
+                if (res.error) continue;
+
+                if (yPos > 250) { doc.addPage(); yPos = 15; }
+
+                doc.setFontSize(14);
+                doc.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
+                yPos += 8;
+
+                doc.setFontSize(10);
+                const splitSummary = doc.splitTextToSize(res.summary, 180);
+                doc.text(splitSummary, 15, yPos);
+                yPos += (splitSummary.length * 4) + 8;
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: [
+                        [{ content: 'Tests of Normality', colSpan: 4, styles: { halign: 'left', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0], lineColor: [0,0,0], lineWidth: {top: 0.2, bottom: 0.2} } }],
+                        ['', 'Statistic', 'df', 'Sig.']
+                    ],
+                    body: res.table.map(row => [
+                        { content: row.test, styles: { fontStyle: 'bold' } },
+                        row.statistic.toFixed(3),
+                        row.df,
+                        row.p.toFixed(3)
+                    ]),
+                    theme: 'grid',
+                    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] }
+                });
+                yPos = doc.autoTable.previous.finalY + 15;
+            }
+
+            doc.save('hasil-uji-normalitas-onthesis.pdf');
+        } catch (e) {
+            console.error("Gagal membuat PDF:", e);
+            alert("Terjadi kesalahan saat mengekspor PDF.");
+        } finally {
+            btn.prop('disabled', false).find('.spinner').addClass('hidden');
+        }
+    });
+});
 </script>
 {% endblock %}
