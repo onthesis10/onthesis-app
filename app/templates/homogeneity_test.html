@@ -56,6 +56,11 @@
         color: var(--accent-cyan);
         font-weight: 600;
     }
+    /* Gaya untuk menandai input yang error */
+    .input-error {
+        border-color: #ef4444 !important; /* Warna merah */
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
 </style>
 {% endblock %}
 
@@ -151,12 +156,6 @@ $(document).ready(function() {
             groupsContainer.append(createGroup(i));
         }
     }
-
-    function getAllGroups() {
-        return $('.data-input').map(function() {
-            return $(this).val().trim().split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
-        }).get().filter(g => g.length > 1);
-    }
     
     function getPlotlyLayout(title) {
         const isLight = document.documentElement.classList.contains('light');
@@ -184,11 +183,35 @@ $(document).ready(function() {
     });
 
     $('#runAnalysis').click(async function() {
-        const groups = getAllGroups();
-        if (groups.length < 2) {
+        // --- LOGIKA VALIDASI BARU ---
+        $('.data-input').removeClass('input-error'); // Hapus error style lama
+        let hasError = false;
+        let validGroups = [];
+
+        $('.data-input').each(function() {
+            const textarea = $(this);
+            const rawData = textarea.val().trim();
+            if (rawData === '') return; // Abaikan grup yang kosong
+
+            const values = rawData.split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+            
+            if (values.length < 2) {
+                hasError = true;
+                textarea.addClass('input-error'); // Tandai grup yang salah
+            }
+            validGroups.push(values);
+        });
+
+        if (hasError) {
+            alert('Setiap grup yang diisi harus memiliki minimal 2 data poin. Grup yang bermasalah telah ditandai dengan warna merah.');
+            return;
+        }
+
+        if (validGroups.length < 2) {
             alert('Analisis memerlukan minimal 2 grup data yang valid.');
             return;
         }
+        // --- AKHIR LOGIKA VALIDASI BARU ---
 
         const uji = $('#ujiSelector').val();
         const button = $(this);
@@ -198,7 +221,7 @@ $(document).ready(function() {
             const response = await fetch(`/api/${uji}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ groups })
+                body: JSON.stringify({ groups: validGroups }) // Kirim data yang sudah divalidasi
             });
 
             if (!response.ok) {
@@ -224,12 +247,12 @@ $(document).ready(function() {
             });
             dataTable.draw();
 
-            $('#metaInfo').html(`<b>Jumlah data per grup:</b> ${groups.map(g => g.length).join(' &middot; ')}`);
+            $('#metaInfo').html(`<b>Jumlah data per grup:</b> ${validGroups.map(g => g.length).join(' &middot; ')}`);
 
-            const boxTraces = groups.map((g, i) => ({ y: g, type: 'box', name: `Grup ${i + 1}`, boxpoints: 'all', jitter: 0.3, pointpos: -1.8 }));
+            const boxTraces = validGroups.map((g, i) => ({ y: g, type: 'box', name: `Grup ${i + 1}`, boxpoints: 'all', jitter: 0.3, pointpos: -1.8 }));
             Plotly.newPlot('boxplot', boxTraces, getPlotlyLayout('Box Plot Sebaran Data per Grup'));
 
-            const violinTraces = groups.map((g, i) => ({ y: g, type: 'violin', name: `Grup ${i + 1}`, box: { visible: true }, meanline: { visible: true } }));
+            const violinTraces = validGroups.map((g, i) => ({ y: g, type: 'violin', name: `Grup ${i + 1}`, box: { visible: true }, meanline: { visible: true } }));
             Plotly.newPlot('violinplot', violinTraces, getPlotlyLayout('Violin Plot Sebaran Data per Grup'));
 
         } catch (e) {
