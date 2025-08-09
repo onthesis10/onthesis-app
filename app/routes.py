@@ -216,6 +216,10 @@ def data_analysis(): return render_template('data_analysis.html')
 @login_required
 def normality_test(): return render_template('normality_test.html')
 
+@app.route('/homogeneity_test')
+@login_required
+def homogeneity_test(): return render_template('homogeneity_test.html')
+
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
@@ -416,6 +420,73 @@ def api_normality():
         ]
 
         return jsonify({"summary": summary, "mean": round(mean, 3), "std_dev": round(sd, 3), "n": n, "table": table})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/levene', methods=['POST'])
+@login_required
+def api_levene():
+    try:
+        data = request.get_json()
+        groups = data.get('groups')
+        if not groups or not isinstance(groups, list) or len(groups) < 2:
+            return jsonify({'error': 'Minimal 2 grup data diperlukan'}), 400
+
+        cleaned_groups = [np.array(g, dtype=float)[~np.isnan(g)] for g in groups]
+        group_sizes = [len(g) for g in cleaned_groups]
+        if any(size < 2 for size in group_sizes):
+            return jsonify({'error': 'Setiap grup minimal punya 2 data'}), 400
+
+        stat, p_value = stats.levene(*cleaned_groups)
+        summary = "Berdasarkan Levene's Test, varians antar grup bersifat homogen (p > 0.05)." if p_value > 0.05 else "Berdasarkan Levene's Test, varians antar grup tidak homogen (p <= 0.05)."
+
+        table = [{
+            "test": "Levene’s Test",
+            "statistic": round(stat, 4),
+            "df1": len(cleaned_groups) - 1,
+            "df2": sum(group_sizes) - len(cleaned_groups),
+            "p": round(p_value, 4)
+        }]
+
+        return jsonify({
+            "summary": summary,
+            "n_per_group": group_sizes,
+            "table": table
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/bartlett', methods=['POST'])
+@login_required
+def api_bartlett():
+    try:
+        data = request.get_json()
+        groups = data.get('groups')
+        if not groups or not isinstance(groups, list) or len(groups) < 2:
+            return jsonify({'error': 'Minimal 2 grup data diperlukan'}), 400
+
+        cleaned_groups = [np.array(g, dtype=float)[~np.isnan(g)] for g in groups]
+        group_sizes = [len(g) for g in cleaned_groups]
+        if any(size < 2 for size in group_sizes):
+            return jsonify({'error': 'Setiap grup minimal punya 2 data'}), 400
+
+        stat, p_value = stats.bartlett(*cleaned_groups)
+        summary = "Berdasarkan Bartlett's Test, varians antar grup bersifat homogen (p > 0.05)." if p_value > 0.05 else "Berdasarkan Bartlett's Test, varians antar grup tidak homogen (p <= 0.05)."
+
+        table = [{
+            "test": "Bartlett’s Test",
+            "statistic": round(stat, 4),
+            "df1": len(cleaned_groups) - 1,
+            "df2": None, # Bartlett's test does not have df2
+            "p": round(p_value, 4)
+        }]
+
+        return jsonify({
+            "summary": summary,
+            "n_per_group": group_sizes,
+            "table": table
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -1,0 +1,278 @@
+{% extends "layout.html" %}
+
+{% block title %}Uji Homogenitas - OnThesis{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka untuk Grafik & Tabel -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<!-- Pustaka untuk Export PDF Profesional -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+    /* Penyesuaian Gaya DataTable agar sesuai Tema */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_processing,
+    .dataTables_wrapper .dataTables_paginate {
+        color: var(--text-secondary) !important;
+        font-size: 0.875rem;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        color: var(--text-secondary) !important;
+        border-color: var(--border-panel) !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: var(--accent-cyan) !important;
+        color: white !important;
+        border-color: var(--accent-cyan) !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: var(--bg-canvas) !important;
+        border-color: var(--border-panel) !important;
+    }
+    table.dataTable.no-footer {
+        border-bottom-color: var(--border-panel) !important;
+    }
+    table.dataTable thead th {
+        border-bottom: 1px solid var(--border-panel) !important;
+        color: var(--text-primary);
+    }
+    table.dataTable tbody tr {
+        background-color: transparent !important;
+    }
+    table.dataTable tbody tr:hover {
+        background-color: var(--bg-canvas) !important;
+    }
+    table.dataTable tbody td {
+        color: var(--text-secondary) !important;
+    }
+    .highlight {
+        color: var(--accent-cyan);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in-up">
+    <header class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold text-text-primary">Uji Homogenitas Varians</h1>
+        <p class="text-lg text-text-secondary mt-1">Lakukan Levene's Test atau Bartlett's Test untuk membandingkan varians antar grup.</p>
+    </header>
+
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <!-- Kartu Input -->
+        <div class="apex-card p-6">
+            <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Grup</h3>
+            <p class="text-sm text-text-secondary mb-4 max-w-2xl mx-auto text-center">Masukkan data untuk setiap grup. Minimal 2 grup diperlukan untuk analisis.</p>
+            
+            <div id="groupsContainer" class="space-y-4 text-left">
+                <!-- Grup data dinamis -->
+            </div>
+
+            <div class="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border-panel">
+                <button id="addGroup" class="btn-secondary flex-1">+ Tambah Grup</button>
+                <button id="removeGroup" class="btn-secondary flex-1">- Hapus Grup</button>
+                <button id="loadSample" class="btn-secondary flex-1">Muat Contoh</button>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-border-panel">
+                <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+                    <select id="ujiSelector" class="feedback-form-input md:w-auto">
+                        <option value="levene">Levene's Test</option>
+                        <option value="bartlett">Bartlett's Test</option>
+                    </select>
+                    <button id="runAnalysis" class="btn-primary w-full md:w-auto">Jalankan Analisis</button>
+                </div>
+                <p class="text-xs text-text-secondary text-center mt-4">
+                    <strong>Levene's Test</strong> lebih robust untuk data yang tidak berdistribusi normal. 
+                    <strong>Bartlett's Test</strong> lebih sensitif tetapi mensyaratkan data berdistribusi normal.
+                </p>
+            </div>
+        </div>
+
+        <!-- Kontainer Output -->
+        <div id="resultCard" class="space-y-8" style="display:none;">
+            <div class="apex-card p-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h3 class="text-xl font-bold text-text-primary">2. Hasil Uji Homogenitas</h3>
+                    <button id="exportPDF" class="btn-secondary text-sm flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        Export PDF
+                    </button>
+                </div>
+                <div id="summaryText" class="text-text-secondary mb-4"></div>
+                <table id="resultTable" class="display" style="width:100%">
+                    <thead><tr><th>Uji</th><th>Statistik</th><th>df1</th><th>df2</th><th>P-value</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <div class="text-sm text-text-secondary mt-4" id="metaInfo"></div>
+            </div>
+
+            <div class="apex-card p-6">
+                <h3 class="text-xl font-bold text-text-primary mb-4 text-center">3. Visualisasi Data</h3>
+                <div id="plots" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div id="boxplot" class="w-full h-96"></div>
+                    <div id="violinplot" class="w-full h-96"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+$(document).ready(function() {
+    const groupsContainer = $('#groupsContainer');
+    let dataTable = null;
+
+    function createGroup(index, value = '') {
+        const groupName = `Grup ${index + 1}`;
+        const groupHtml = `
+            <div class="data-group p-4 border border-border-panel rounded-lg bg-bg-canvas" data-index="${index}">
+                <label class="font-semibold text-text-primary">${groupName}</label>
+                <textarea class="feedback-form-input mt-2 data-input" placeholder="Masukkan data dipisah koma, spasi, atau baris baru...">${value}</textarea>
+            </div>
+        `;
+        return groupHtml;
+    }
+
+    function resetGroups(count = 2) {
+        groupsContainer.empty();
+        for (let i = 0; i < count; i++) {
+            groupsContainer.append(createGroup(i));
+        }
+    }
+
+    function getAllGroups() {
+        return $('.data-input').map(function() {
+            return $(this).val().trim().split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+        }).get().filter(g => g.length > 1);
+    }
+    
+    function getPlotlyLayout(title) {
+        const isLight = document.documentElement.classList.contains('light');
+        return {
+            title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            font: { color: isLight ? '#5E6278' : '#8B949E' },
+            xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
+            yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' }
+        };
+    }
+
+    $('#addGroup').click(() => groupsContainer.append(createGroup(groupsContainer.children().length)));
+    $('#removeGroup').click(() => {
+        if (groupsContainer.children().length > 2) {
+            groupsContainer.children().last().remove();
+        }
+    });
+    $('#loadSample').click(() => {
+        resetGroups(3);
+        $('.data-input').eq(0).val('22, 23, 25, 24, 23, 26, 28');
+        $('.data-input').eq(1).val('18, 19, 23, 24, 25, 21, 20');
+        $('.data-input').eq(2).val('29, 31, 33, 32, 34, 28, 30');
+    });
+
+    $('#runAnalysis').click(async function() {
+        const groups = getAllGroups();
+        if (groups.length < 2) {
+            alert('Analisis memerlukan minimal 2 grup data yang valid.');
+            return;
+        }
+
+        const uji = $('#ujiSelector').val();
+        const button = $(this);
+        button.prop('disabled', true).text('Menganalisis...');
+
+        try {
+            const response = await fetch(`/api/${uji}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groups })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Terjadi kesalahan pada server.');
+            }
+
+            const json = await response.json();
+            
+            $('#resultCard').slideDown();
+            $('#summaryText').html(json.summary || '');
+            
+            if (!dataTable) {
+                dataTable = $('#resultTable').DataTable({
+                    paging: false, searching: false, info: false, ordering: false
+                });
+            }
+            dataTable.clear();
+            (json.table || []).forEach(r => {
+                const pValue = (typeof r.p === 'number') ? r.p : parseFloat(r.p);
+                const pCell = pValue < 0.05 ? `<span class='highlight'>${pValue.toFixed(4)}</span>` : pValue.toFixed(4);
+                dataTable.row.add([r.test || '', Number(r.statistic).toFixed(4), r.df1 ?? '', r.df2 ?? '', pCell]);
+            });
+            dataTable.draw();
+
+            $('#metaInfo').html(`<b>Jumlah data per grup:</b> ${groups.map(g => g.length).join(' &middot; ')}`);
+
+            const boxTraces = groups.map((g, i) => ({ y: g, type: 'box', name: `Grup ${i + 1}`, boxpoints: 'all', jitter: 0.3, pointpos: -1.8 }));
+            Plotly.newPlot('boxplot', boxTraces, getPlotlyLayout('Box Plot Sebaran Data per Grup'));
+
+            const violinTraces = groups.map((g, i) => ({ y: g, type: 'violin', name: `Grup ${i + 1}`, box: { visible: true }, meanline: { visible: true } }));
+            Plotly.newPlot('violinplot', violinTraces, getPlotlyLayout('Violin Plot Sebaran Data per Grup'));
+
+        } catch (e) {
+            alert('Error: ' + e.message);
+        } finally {
+            button.prop('disabled', false).text('Jalankan Analisis');
+        }
+    });
+
+    $('#exportPDF').click(async function() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        let yPos = 15;
+
+        doc.setFontSize(18);
+        doc.text("Laporan Uji Homogenitas - OnThesis", 105, yPos, { align: 'center' });
+        yPos += 15;
+
+        doc.setFontSize(12);
+        const summary = $('#summaryText').text();
+        const splitSummary = doc.splitTextToSize(summary, 180);
+        doc.text(splitSummary, 15, yPos);
+        yPos += (splitSummary.length * 5) + 5;
+        
+        doc.autoTable({ html: '#resultTable', startY: yPos });
+        yPos = doc.autoTable.previous.finalY + 15;
+
+        try {
+            const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
+            const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
+
+            if (yPos > 160) { doc.addPage(); yPos = 15; }
+            doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 60);
+            doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 60);
+        } catch(e) {
+            console.error("Gagal membuat gambar plot untuk PDF:", e);
+        }
+
+        doc.save('hasil-uji-homogenitas-onthesis.pdf');
+    });
+
+    // Inisialisasi
+    resetGroups(2);
+});
+</script>
+{% endblock %}

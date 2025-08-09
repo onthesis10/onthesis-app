@@ -1,48 +1,57 @@
 {% extends "layout.html" %}
 
-{% block title %}Pusat Analisis Data - OnThesis{% endblock %}
+{% block title %}Analisis Data - OnThesis{% endblock %}
 
 {% block content %}
 <div class="animate-fade-in-up">
     <header class="mb-8 text-center">
-        <h1 class="text-4xl font-extrabold text-text-primary">Pusat Analisis Data</h1>
-        <p class="text-lg text-text-secondary mt-1">Pilih alat analisis statistik yang Anda butuhkan.</p>
+        <h1 class="text-4xl font-extrabold text-text-primary">Analisis Data Statistik</h1>
+        <p class="text-lg text-text-secondary mt-1">Pilih alat analisis yang Anda butuhkan untuk memulai.</p>
     </header>
 
-    <!-- Grid Fitur Analisis Data -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-        
-        <!-- Kartu: Uji Normalitas -->
-        <a href="{{ url_for('normality_test') }}" class="apex-card group">
-             <div class="flex items-center gap-4 mb-4">
-                <div class="p-3 bg-gray-800/50 dark:bg-gray-800 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="M12 20V10M18 20V4M6 20V16"/></svg>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Card Uji Normalitas -->
+        <a href="{{ url_for('normality_test') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
+                    <!-- Icon: Bar Chart -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                        <line x1="12" y1="20" x2="12" y2="10"></line>
+                        <line x1="18" y1="20" x2="18" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="16"></line>
+                    </svg>
                 </div>
-                <h3 class="text-lg font-bold text-text-primary">Uji Normalitas</h3>
-             </div>
-             <p class="text-sm text-text-secondary">Pastikan distribusi data Anda normal dengan uji Shapiro-Wilk & Kolmogorov-Smirnov.</p>
+                <div>
+                    <h3 class="font-bold text-text-primary">Uji Normalitas</h3>
+                    <p class="text-sm text-text-secondary">Cek apakah data Anda berdistribusi normal.</p>
+                </div>
+            </div>
+        </a>
+        
+        <!-- Card Uji Homogenitas (BARU) -->
+        <a href="{{ url_for('homogeneity_test') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
+                    <!-- Icon: Layers -->
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-primary">Uji Homogenitas</h3>
+                    <p class="text-sm text-text-secondary">Bandingkan varians antar grup data.</p>
+                </div>
+            </div>
         </a>
 
-        <!-- Kartu: Statistik Deskriptif (Placeholder) -->
-        <div class="apex-card group opacity-50 cursor-not-allowed">
-             <div class="flex items-center gap-4 mb-4">
-                <div class="p-3 bg-gray-800/50 dark:bg-gray-800 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-secondary"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                </div>
-                <h3 class="text-lg font-bold text-text-primary">Statistik Deskriptif</h3>
-             </div>
-             <p class="text-sm text-text-secondary">Dapatkan ringkasan data (mean, median, modus, dll.) secara instan. <span class="text-accent-cyan text-xs font-bold">(Segera Hadir)</span></p>
-        </div>
-
-        <!-- Kartu: Uji Validitas & Reliabilitas (Placeholder) -->
-        <div class="apex-card group opacity-50 cursor-not-allowed">
-             <div class="flex items-center gap-4 mb-4">
-                <div class="p-3 bg-gray-800/50 dark:bg-gray-800 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-secondary"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
-                </div>
-                <h3 class="text-lg font-bold text-text-primary">Uji Validitas & Reliabilitas</h3>
-             </div>
-             <p class="text-sm text-text-secondary">Pastikan kuesioner Anda akurat dan konsisten. <span class="text-accent-cyan text-xs font-bold">(Segera Hadir)</span></p>
+        <!-- Placeholder untuk alat analisis lainnya -->
+        <div class="apex-card p-6 bg-bg-canvas border-2 border-dashed border-border-panel flex items-center justify-center">
+            <div class="text-center">
+                <h3 class="font-bold text-text-secondary">Segera Hadir</h3>
+                <p class="text-sm text-text-secondary">Alat analisis lainnya sedang disiapkan.</p>
+            </div>
         </div>
 
     </div>
