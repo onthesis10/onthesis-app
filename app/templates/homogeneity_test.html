@@ -4,13 +4,13 @@
 
 {% block page_styles %}
 <!-- Pustaka untuk Grafik & Tabel -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="[https://cdn.plot.ly/plotly-latest.min.js](https://cdn.plot.ly/plotly-latest.min.js)"></script>
+<script src="[https://code.jquery.com/jquery-3.6.0.min.js](https://code.jquery.com/jquery-3.6.0.min.js)"></script>
+<link rel="stylesheet" href="[https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css](https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css)">
+<script src="[https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js](https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js)"></script>
 <!-- Pustaka untuk Export PDF Profesional -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+<script src="[https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js](https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js)"></script>
+<script src="[https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js](https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js)"></script>
 
 <style>
     /* Penyesuaian Gaya DataTable agar sesuai Tema */
@@ -109,8 +109,9 @@
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
                     <h3 class="text-xl font-bold text-text-primary">2. Hasil Uji Homogenitas</h3>
                     <button id="exportPDF" class="btn-secondary text-sm flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        Export PDF
+                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span class="btn-text">Export PDF</span>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                     </button>
                 </div>
                 <div id="summaryText" class="text-text-secondary mb-4"></div>
@@ -124,7 +125,7 @@
                 <div class="mt-6 border-t border-border-panel pt-6">
                     <h4 class="text-lg font-bold text-text-primary mb-2">Interpretasi AI</h4>
                     <button id="interpretBtn" class="btn-secondary w-full mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                         <span class="btn-text">Jelaskan Hasil Ini</span>
                         <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                     </button>
@@ -226,7 +227,7 @@ $(document).ready(function() {
         const uji = $('#ujiSelector').val();
         const button = $(this);
         button.prop('disabled', true).text('Menganalisis...');
-        $('#interpretationOutput').hide().empty(); // Sembunyikan interpretasi lama
+        $('#interpretationOutput').hide().empty();
 
         try {
             const response = await fetch(`/api/${uji}`, {
@@ -240,7 +241,7 @@ $(document).ready(function() {
                 throw new Error(errorData.error || 'Terjadi kesalahan pada server.');
             }
 
-            analysisResult = await response.json(); // Simpan hasil ke variabel global
+            analysisResult = await response.json();
             
             $('#resultCard').slideDown();
             $('#summaryText').html(analysisResult.summary || '');
@@ -303,7 +304,7 @@ $(document).ready(function() {
                 - **Box Plot:** Bagaimana perbandingan tinggi dan sebaran kotak (interquartile range) antar grup dapat memberikan petunjuk visual tentang homogenitas varians.
                 - **Violin Plot:** Bagaimana bentuk 'violin' yang serupa lebarnya antar grup mengindikasikan varians yang homogen.
             
-            Gunakan format HTML yang rapi dengan heading (<h4>), paragraf (<p>), list (<ul>, <li>), dan teks tebal (<strong>) untuk menyorot poin-poin penting.
+            Gunakan format yang rapi menggunakan elemen HTML seperti <h4>, <p>, <ul>, <li>, dan <strong> untuk menyorot poin-poin penting. Jangan sertakan tag <html>, <body>, atau \`\`\`html.
         `;
 
         $.ajax({
@@ -312,7 +313,9 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify({ stats: prompt }),
             success: function(res) {
-                $('#interpretationOutput').html(res.interpretation).show();
+                // Membersihkan output dari markdown code block jika ada
+                const cleanedHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
+                $('#interpretationOutput').html(cleanedHtml).show();
             },
             error: function(err) {
                 $('#interpretationOutput').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
@@ -325,55 +328,76 @@ $(document).ready(function() {
         });
     });
 
-    $('#exportPDF').click(async function() {
+    $('#exportPDF').click(function() {
         if (!analysisResult) {
             alert("Lakukan analisis terlebih dahulu.");
             return;
         }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-        let yPos = 15;
+        const btn = $(this);
+        const btnText = btn.find('.btn-text');
+        const spinner = btn.find('.spinner');
 
-        doc.setFontSize(18);
-        doc.text("Laporan Uji Homogenitas - OnThesis", 105, yPos, { align: 'center' });
-        yPos += 15;
+        btnText.text('Mengekspor...');
+        spinner.removeClass('hidden');
+        btn.prop('disabled', true);
 
-        doc.setFontSize(12);
-        const summary = $('#summaryText').text();
-        const splitSummary = doc.splitTextToSize(summary, 180);
-        doc.text(splitSummary, 15, yPos);
-        yPos += (splitSummary.length * 5) + 5;
-        
-        doc.autoTable({ html: '#resultTable', startY: yPos });
-        yPos = doc.autoTable.previous.finalY + 10;
-        
-        const interpretationDiv = document.getElementById('interpretationOutput');
-        if (interpretationDiv && interpretationDiv.style.display !== 'none' && interpretationDiv.innerHTML.trim() !== '') {
-            if (yPos > 200) { doc.addPage(); yPos = 15; }
-            doc.setFontSize(14);
-            doc.text("Interpretasi AI", 15, yPos);
-            yPos += 2;
-            await doc.html(interpretationDiv, {
-                x: 15, y: yPos, width: 180, windowWidth: 650,
-            });
-            yPos = doc.lastAutoTable.finalY || yPos + 60; // Update yPos after html render
-        }
+        const createPdf = async () => {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                let yPos = 15;
 
-        try {
-            const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
-            const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
+                doc.setFontSize(18);
+                doc.text("Laporan Uji Homogenitas - OnThesis", 105, yPos, { align: 'center' });
+                yPos += 15;
 
-            if (yPos > 160) { doc.addPage(); yPos = 15; }
-            doc.setFontSize(14);
-            doc.text("Visualisasi Data", 15, yPos);
-            yPos += 8;
-            doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 60);
-            doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 60);
-        } catch(e) {
-            console.error("Gagal membuat gambar plot untuk PDF:", e);
-        }
+                doc.setFontSize(12);
+                const summary = $('#summaryText').text();
+                const splitSummary = doc.splitTextToSize(summary, 180);
+                doc.text(splitSummary, 15, yPos);
+                yPos += (splitSummary.length * 5) + 5;
+                
+                doc.autoTable({ html: '#resultTable', startY: yPos });
+                yPos = doc.autoTable.previous.finalY + 10;
+                
+                const interpretationDiv = document.getElementById('interpretationOutput');
+                if (interpretationDiv && interpretationDiv.style.display !== 'none' && interpretationDiv.innerHTML.trim() !== '') {
+                    if (yPos > 200) { doc.addPage(); yPos = 15; }
+                    doc.setFontSize(14);
+                    doc.text("Interpretasi AI", 15, yPos);
+                    yPos += 5;
+                    
+                    await doc.html(interpretationDiv, {
+                        x: 15, y: yPos, width: 180, windowWidth: 650,
+                    });
+                    // Perkiraan posisi setelah render HTML, tambahkan buffer
+                    const approxInterpretationHeight = (interpretationDiv.clientHeight / 3); // Perkiraan kasar
+                    yPos += approxInterpretationHeight + 10;
+                }
 
-        doc.save('hasil-uji-homogenitas-onthesis.pdf');
+                const boxplotImg = await Plotly.toImage('boxplot', {format: 'png', width: 700, height: 500});
+                const violinplotImg = await Plotly.toImage('violinplot', {format: 'png', width: 700, height: 500});
+
+                if (yPos > 160) { doc.addPage(); yPos = 15; }
+                doc.setFontSize(14);
+                doc.text("Visualisasi Data", 15, yPos);
+                yPos += 8;
+                doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 60);
+                doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 60);
+
+                doc.save('hasil-uji-homogenitas-onthesis.pdf');
+
+            } catch(e) {
+                console.error("Gagal membuat gambar plot untuk PDF:", e);
+                alert("Terjadi kesalahan saat mengekspor PDF.");
+            } finally {
+                btnText.text('Export PDF');
+                spinner.addClass('hidden');
+                btn.prop('disabled', false);
+            }
+        };
+
+        createPdf();
     });
 
     // Inisialisasi
