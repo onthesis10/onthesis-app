@@ -438,7 +438,11 @@ def api_levene():
             return jsonify({'error': 'Setiap grup minimal punya 2 data'}), 400
 
         stat, p_value = stats.levene(*cleaned_groups)
-        summary = "Berdasarkan Levene's Test, varians antar grup bersifat homogen (p > 0.05)." if p_value > 0.05 else "Berdasarkan Levene's Test, varians antar grup tidak homogen (p <= 0.05)."
+        
+        p_string = f"{p_value:.3f}"
+        comparison = "> 0.05" if p_value > 0.05 else "<= 0.05"
+        conclusion = "homogen" if p_value > 0.05 else "tidak homogen"
+        summary = f"Hasil Levene’s Test menunjukkan nilai Sig. = {p_string} ({comparison}), sehingga dapat disimpulkan varians data antar kelompok adalah {conclusion}."
 
         table = [{
             "test": "Levene’s Test",
@@ -453,6 +457,7 @@ def api_levene():
             "n_per_group": group_sizes,
             "table": table
         })
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -472,13 +477,17 @@ def api_bartlett():
             return jsonify({'error': 'Setiap grup minimal punya 2 data'}), 400
 
         stat, p_value = stats.bartlett(*cleaned_groups)
-        summary = "Berdasarkan Bartlett's Test, varians antar grup bersifat homogen (p > 0.05)." if p_value > 0.05 else "Berdasarkan Bartlett's Test, varians antar grup tidak homogen (p <= 0.05)."
+
+        p_string = f"{p_value:.3f}"
+        comparison = "> 0.05" if p_value > 0.05 else "<= 0.05"
+        conclusion = "homogen" if p_value > 0.05 else "tidak homogen"
+        summary = f"Hasil Bartlett's Test menunjukkan nilai Sig. = {p_string} ({comparison}), sehingga dapat disimpulkan varians data antar kelompok adalah {conclusion}."
 
         table = [{
             "test": "Bartlett’s Test",
             "statistic": round(stat, 4),
             "df1": len(cleaned_groups) - 1,
-            "df2": None, # Bartlett's test does not have df2
+            "df2": None,
             "p": round(p_value, 4)
         }]
 
