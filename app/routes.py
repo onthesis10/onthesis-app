@@ -581,7 +581,7 @@ def api_bartlett():
         return jsonify({'error': str(e)}), 500
         
 # =========================================================================
-# API STATISTIK DESKRIPTIF (FINAL & DIPERBAIKI)
+# API STATISTIK DESKRIPTIF (PERBAIKAN FINAL)
 # =========================================================================
 @app.route('/api/descriptive-analysis', methods=['POST'])
 @login_required
@@ -615,29 +615,35 @@ def api_descriptive_analysis():
             series = df[col].dropna()
             if len(series) < 2: continue
 
+            # --- PERBAIKAN DIMULAI DI SINI ---
+            # Setiap hasil dari pandas/numpy diubah secara eksplisit ke tipe data standar Python (int, float)
+            # Ini untuk mencegah error "not JSON serializable".
             results[col] = {
-                'n': len(series),
-                'mean': series.mean(),
-                'median': series.median(),
+                'n': int(len(series)),
+                'mean': float(series.mean()),
+                'median': float(series.median()),
                 'mode': series.mode().tolist() if not series.mode().empty else ['N/A'],
-                'std': series.std(),
-                'variance': series.var(),
-                'range': series.max() - series.min(),
-                'min': series.min(),
-                'max': series.max(),
+                'std': float(series.std()),
+                'variance': float(series.var()),
+                'range': float(series.max() - series.min()),
+                'min': float(series.min()),
+                'max': float(series.max()),
             }
+            # --- PERBAIKAN SELESAI DI SINI ---
 
             sns.set_style("whitegrid")
             
-            fig, ax = plt.subplots()
-            sns.histplot(series, kde=True, ax=ax, color='#0284c7')
-            ax.set_title(f'Histogram - {col}')
-            plots[f'{col}_histogram'] = create_plot_as_base64(fig)
+            # Membuat plot histogram
+            fig_hist, ax_hist = plt.subplots()
+            sns.histplot(series, kde=True, ax=ax_hist, color='#0284c7')
+            ax_hist.set_title(f'Histogram - {col}')
+            plots[f'{col}_histogram'] = create_plot_as_base64(fig_hist)
 
-            fig, ax = plt.subplots()
-            sns.boxplot(x=series, ax=ax, color='#0284c7')
-            ax.set_title(f'Box Plot - {col}')
-            plots[f'{col}_boxplot'] = create_plot_as_base64(fig)
+            # Membuat plot boxplot
+            fig_box, ax_box = plt.subplots()
+            sns.boxplot(x=series, ax=ax_box, color='#0284c7')
+            ax_box.set_title(f'Box Plot - {col}')
+            plots[f'{col}_boxplot'] = create_plot_as_base64(fig_box)
 
         return jsonify({
             'columns': all_cols,
@@ -646,7 +652,10 @@ def api_descriptive_analysis():
         })
 
     except Exception as e:
+        # Menambahkan logging di sisi server untuk debugging yang lebih mudah
         print(f"Error in descriptive_analysis API: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
 
 
