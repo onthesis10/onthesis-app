@@ -4,6 +4,72 @@
 
 {% block page_styles %}
 <style>
+    /* Gaya untuk tombol aktif/non-aktif metode input */
+    #input-method-selector .active {
+        background-color: var(--accent-cyan);
+        color: white;
+        border-color: var(--accent-cyan);
+    }
+
+    /* Gaya untuk tabel input manual */
+    #data-input-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+    #data-input-table th, #data-input-table td {
+        border: 1px solid var(--border-panel);
+        padding: 8px;
+        text-align: center;
+        position: relative;
+    }
+    #data-input-table th {
+        background-color: var(--bg-canvas);
+        font-weight: bold;
+        color: var(--text-primary);
+    }
+    #data-input-table td {
+        background-color: var(--bg-default);
+    }
+    #data-input-table [contenteditable="true"] {
+        background-color: var(--bg-subtle);
+        outline: 2px solid transparent;
+        transition: outline 0.2s;
+    }
+    #data-input-table [contenteditable="true"]:focus {
+        outline: 2px solid var(--accent-cyan);
+        background-color: var(--bg-canvas);
+    }
+    .delete-btn {
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-weight: bold;
+        padding: 0 6px;
+        border-radius: 50%;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .delete-btn:hover {
+        background-color: var(--accent-red);
+        color: white;
+    }
+    .delete-row-btn {
+        padding: 4px 8px;
+    }
+    .delete-col-btn {
+        position: absolute;
+        top: -12px;
+        right: -8px;
+        background: var(--bg-default);
+        border: 1px solid var(--border-panel);
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Gaya untuk hasil analisis */
     .nav-tabs .nav-link {
         background-color: var(--bg-canvas);
         border: 1px solid var(--border-panel);
@@ -43,16 +109,16 @@
         <p class="text-lg text-text-secondary mt-1">Dapatkan ringkasan statistik dan visualisasi dari data Anda.</p>
     </header>
 
-    <div class="max-w-4xl mx-auto space-y-8">
+    <div class="max-w-6xl mx-auto space-y-8">
         <!-- Kartu Input -->
         <div class="apex-card p-6">
             <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Anda</h3>
             
             <!-- Pilihan Metode Input -->
-            <div class="max-w-md mx-auto mb-4">
+            <div class="max-w-md mx-auto mb-6">
                 <div class="flex rounded-lg shadow-sm" id="input-method-selector">
-                    <button data-method="file" class="btn-secondary flex-1 rounded-l-lg active">Unggah File</button>
-                    <button data-method="text" class="btn-secondary flex-1 rounded-r-lg">Input Teks</button>
+                    <button data-method="file" class="btn-secondary flex-1 rounded-l-lg active">Unggah File CSV</button>
+                    <button data-method="manual" class="btn-secondary flex-1 rounded-r-lg">Input Manual</button>
                 </div>
             </div>
 
@@ -65,8 +131,41 @@
                 <input type="file" id="file-input" class="hidden" accept=".csv">
                 <p id="file-name-display" class="text-sm text-center text-text-secondary mt-2"></p>
             </div>
-            <div id="text-input-area" class="text-left" style="display: none;">
-                <textarea id="raw-csv-data" class="feedback-form-input h-32" placeholder="Contoh:&#10;nilai,usia&#10;85,22&#10;90,23&#10;78,22"></textarea>
+            
+            <div id="manual-input-area" class="text-left" style="display: none;">
+                <div class="flex items-center gap-4 mb-4">
+                    <button id="add-variable-btn" class="btn-secondary text-sm">Tambah Variabel</button>
+                    <button id="add-row-btn" class="btn-secondary text-sm">Tambah Baris</button>
+                </div>
+                <div class="overflow-x-auto pb-4">
+                    <table id="data-input-table">
+                        <thead>
+                            <tr>
+                                <th class="w-16"></th>
+                                <th>
+                                    <span contenteditable="true">Variabel_1</span>
+                                    <span class="delete-btn delete-col-btn" title="Hapus Variabel">×</span>
+                                </th>
+                                <th>
+                                    <span contenteditable="true">Variabel_2</span>
+                                    <span class="delete-btn delete-col-btn" title="Hapus Variabel">×</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="delete-btn delete-row-btn" title="Hapus Baris">×</span></td>
+                                <td contenteditable="true"></td>
+                                <td contenteditable="true"></td>
+                            </tr>
+                            <tr>
+                                <td><span class="delete-btn delete-row-btn" title="Hapus Baris">×</span></td>
+                                <td contenteditable="true"></td>
+                                <td contenteditable="true"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="mt-6 flex justify-center">
@@ -95,6 +194,7 @@ $(document).ready(function() {
     let currentInputMethod = 'file';
     let analysisData = null;
 
+    // --- LOGIKA PENGALIHAN METODE INPUT ---
     $('#input-method-selector button').on('click', function() {
         currentInputMethod = $(this).data('method');
         $('#input-method-selector button').removeClass('active');
@@ -102,52 +202,129 @@ $(document).ready(function() {
 
         if (currentInputMethod === 'file') {
             $('#file-input-area').show();
-            $('#text-input-area').hide();
+            $('#manual-input-area').hide();
         } else {
             $('#file-input-area').hide();
-            $('#text-input-area').show();
+            $('#manual-input-area').show();
         }
     });
 
+    // --- LOGIKA UNGGAH FILE ---
     $('#file-input').on('change', function(event) {
         const file = event.target.files[0];
         if (file) {
             $('#file-name-display').text(`File terpilih: ${file.name}`);
+        } else {
+            $('#file-name-display').text('');
         }
     });
 
+    // --- LOGIKA TABEL INPUT MANUAL ---
+    function getColumnCount() {
+        return $('#data-input-table thead th').length - 1; // Kurangi 1 untuk kolom tombol hapus
+    }
+
+    $('#add-variable-btn').on('click', function() {
+        const newVarIndex = getColumnCount() + 1;
+        $('#data-input-table thead tr').append(`
+            <th>
+                <span contenteditable="true">Variabel_${newVarIndex}</span>
+                <span class="delete-btn delete-col-btn" title="Hapus Variabel">×</span>
+            </th>
+        `);
+        $('#data-input-table tbody tr').append('<td contenteditable="true"></td>');
+    });
+
+    $('#add-row-btn').on('click', function() {
+        let newRow = '<tr><td><span class="delete-btn delete-row-btn" title="Hapus Baris">×</span></td>';
+        for (let i = 0; i < getColumnCount(); i++) {
+            newRow += '<td contenteditable="true"></td>';
+        }
+        newRow += '</tr>';
+        $('#data-input-table tbody').append(newRow);
+    });
+
+    $('#data-input-table').on('click', '.delete-row-btn', function() {
+        if ($('#data-input-table tbody tr').length > 1) {
+            $(this).closest('tr').remove();
+        } else {
+            alert('Minimal harus ada satu baris data.');
+        }
+    });
+
+    $('#data-input-table').on('click', '.delete-col-btn', function() {
+        if (getColumnCount() > 1) {
+            const colIndex = $(this).closest('th').index();
+            $(this).closest('th').remove();
+            $('#data-input-table tbody tr').each(function() {
+                $(this).find('td').eq(colIndex).remove();
+            });
+        } else {
+            alert('Minimal harus ada satu variabel.');
+        }
+    });
+    
+    // --- LOGIKA JALANKAN ANALISIS ---
     $('#runAnalysis').on('click', async function() {
         const button = $(this);
-        button.prop('disabled', true).text('Menganalisis...');
+        button.prop('disabled', true).html('<div class="spinner w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto"></div>');
 
-        const formData = new FormData();
-        if (currentInputMethod === 'file') {
+        let requestOptions;
+
+        if (currentInputMethod === 'manual') {
+            const headers = [];
+            $('#data-input-table thead th span[contenteditable="true"]').each(function() {
+                headers.push($(this).text().trim());
+            });
+
+            const data = {};
+            headers.forEach(h => data[h] = []);
+
+            $('#data-input-table tbody tr').each(function() {
+                $(this).find('td[contenteditable="true"]').each(function(colIndex) {
+                    const value = $(this).text().trim();
+                    // Hanya tambahkan data jika tidak kosong, dan konversi ke angka jika memungkinkan
+                    if (value !== '') {
+                       data[headers[colIndex]].push(isNaN(parseFloat(value)) ? value : parseFloat(value));
+                    }
+                });
+            });
+
+            // Validasi: pastikan ada data untuk dianalisis
+            const totalDataPoints = Object.values(data).reduce((sum, arr) => sum + arr.length, 0);
+            if (totalDataPoints === 0) {
+                alert('Silakan masukkan data pada tabel.');
+                button.prop('disabled', false).text('Jalankan Analisis');
+                return;
+            }
+            
+            requestOptions = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            };
+
+        } else { // 'file'
             const file = $('#file-input')[0].files[0];
             if (!file) {
-                alert('Silakan pilih file untuk dianalisis.');
+                alert('Silakan pilih file CSV untuk dianalisis.');
                 button.prop('disabled', false).text('Jalankan Analisis');
                 return;
             }
+            const formData = new FormData();
             formData.append('file', file);
-        } else {
-            const rawCsv = $('#raw-csv-data').val();
-            if (!rawCsv.trim()) {
-                alert('Silakan masukkan data CSV.');
-                button.prop('disabled', false).text('Jalankan Analisis');
-                return;
-            }
-            formData.append('raw_csv', rawCsv);
+            requestOptions = {
+                method: 'POST',
+                body: formData,
+            };
         }
 
         try {
-            const response = await fetch("{{ url_for('descriptive_analysis') }}", {
-                method: 'POST',
-                body: formData,
-            });
+            const response = await fetch("{{ url_for('descriptive_analysis') }}", requestOptions);
             
             analysisData = await response.json();
             if (!response.ok) {
-                throw new Error(analysisData.error || 'Terjadi kesalahan tidak diketahui.');
+                throw new Error(analysisData.error || 'Terjadi kesalahan saat memproses data.');
             }
             
             displayResults(analysisData);
@@ -159,8 +336,14 @@ $(document).ready(function() {
         }
     });
 
+    // --- LOGIKA TAMPILKAN HASIL ---
+    // (Fungsi ini sama dengan kode Anda sebelumnya, tidak perlu diubah)
     function displayResults(data) {
         $('#output').show();
+        $('html, body').animate({
+            scrollTop: $("#output").offset().top - 80
+        }, 500);
+
         const tabsNav = $('#results-tabs-nav').empty();
         const tabsContent = $('#results-tabs-content').empty();
 
@@ -170,26 +353,23 @@ $(document).ready(function() {
             if (stats.n === 0) return;
 
             tabsNav.append(`
-                <button class="nav-link ${isActive ? 'active' : ''}" data-bs-toggle="tab" data-bs-target="#content-${col}" type="button">${col}</button>
+                <button class="nav-link ${isActive ? 'active' : ''}" data-bs-toggle="tab" data-bs-target="#content-${col.replace(/[^a-zA-Z0-9]/g, '-')}" type="button">${col}</button>
             `);
 
             const formatNum = (num) => (num !== null && num !== undefined) ? Number(num).toFixed(3) : 'N/A';
             
-            // Generate Frequency Table
             let freqTableHtml = '<table class="stat-table"><thead><tr><th>Nilai</th><th>Frekuensi</th><th>Persen (%)</th></tr></thead><tbody>';
             let valueCounts = {};
-            data.results[col].raw_data.forEach(val => { valueCounts[val] = (valueCounts[val] || 0) + 1; });
+            stats.raw_data.forEach(val => { valueCounts[val] = (valueCounts[val] || 0) + 1; });
             Object.entries(valueCounts).forEach(([value, count]) => {
                 const percent = ((count / stats.n) * 100).toFixed(2);
                 freqTableHtml += `<tr><td>${value}</td><td>${count}</td><td>${percent}%</td></tr>`;
             });
             freqTableHtml += '</tbody></table>';
 
-            // Generate Main Content
             tabsContent.append(`
-                <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="content-${col}">
+                <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="content-${col.replace(/[^a-zA-Z0-9]/g, '-')}">
                     
-                    <!-- Interpretasi AI -->
                     <div class="mb-6 border-b border-border-panel pb-6">
                         <h4 class="text-lg font-bold text-text-primary mb-2">Ringkasan Otomatis (AI)</h4>
                         <button class="btn-secondary w-full mb-4 interpret-btn" data-col="${col}">
@@ -197,11 +377,10 @@ $(document).ready(function() {
                             <span class="btn-text">Buat Interpretasi untuk Variabel '${col}'</span>
                             <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                         </button>
-                        <div id="interpretation-${col}" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
+                        <div id="interpretation-${col.replace(/[^a-zA-Z0-9]/g, '-')}" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Kolom Kiri: Tabel Statistik -->
                         <div class="space-y-6">
                             <div>
                                 <h4 class="text-lg font-bold text-text-primary mb-2">Ukuran Pemusatan</h4>
@@ -223,21 +402,19 @@ $(document).ready(function() {
                                 </tbody></table>
                             </div>
                         </div>
-                        <!-- Kolom Kanan: Tabel Frekuensi -->
                         <div>
                             <h4 class="text-lg font-bold text-text-primary mb-2">Distribusi Frekuensi</h4>
                             <div class="max-h-96 overflow-y-auto">${freqTableHtml}</div>
                         </div>
                     </div>
                     
-                    <!-- Visualisasi -->
                     <div class="mt-8 border-t border-border-panel pt-8">
                         <h3 class="text-xl font-bold text-text-primary mb-4 text-center">Visualisasi Data</h3>
-                        <div class="space-y-6">
-                            <img src="${data.plots[col+'_histogram']}" class="w-full rounded-lg border border-border-panel">
-                            <img src="${data.plots[col+'_boxplot']}" class="w-full rounded-lg border border-border-panel">
-                            <img src="${data.plots[col+'_barchart']}" class="w-full rounded-lg border border-border-panel">
-                            ${data.plots[col+'_pie'] ? `<img src="${data.plots[col+'_pie']}" class="w-full max-w-md mx-auto rounded-lg border border-border-panel">` : ''}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${data.plots[col+'_histogram'] ? `<img src="${data.plots[col+'_histogram']}" class="w-full rounded-lg border border-border-panel">` : ''}
+                            ${data.plots[col+'_boxplot'] ? `<img src="${data.plots[col+'_boxplot']}" class="w-full rounded-lg border border-border-panel">` : ''}
+                            ${data.plots[col+'_barchart'] ? `<img src="${data.plots[col+'_barchart']}" class="w-full rounded-lg border border-border-panel">` : ''}
+                            ${data.plots[col+'_pie'] ? `<div class="md:col-span-2 flex justify-center"><img src="${data.plots[col+'_pie']}" class="w-full max-w-md mx-auto rounded-lg border border-border-panel"></div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -253,7 +430,8 @@ $(document).ready(function() {
         });
     }
 
-    // Event listener untuk tombol interpretasi
+    // --- LOGIKA INTERPRETASI AI ---
+    // (Fungsi ini sama dengan kode Anda sebelumnya, hanya perlu penyesuaian selector)
     $(document).on('click', '.interpret-btn', function() {
         const btn = $(this);
         const col = btn.data('col');
@@ -265,26 +443,22 @@ $(document).ready(function() {
         spinner.removeClass('hidden');
         btn.prop('disabled', true);
 
-        const prompt = `
-            Anda adalah seorang ahli statistik. Berikan interpretasi profesional untuk hasil statistik deskriptif dari variabel "${col}" berikut dalam format HTML.
+        const prompt = `Anda adalah seorang ahli statistik. Berikan interpretasi profesional untuk hasil statistik deskriptif dari variabel "${col}" berikut dalam format HTML.
 
-            **Data Statistik:**
-            - N (Jumlah Data): ${stats.n}
-            - Mean: ${stats.mean.toFixed(3)}
-            - Median: ${stats.median.toFixed(3)}
-            - Modus: ${stats.mode.join(', ')}
-            - Standar Deviasi: ${stats.std.toFixed(3)}
-            - Varian: ${stats.variance.toFixed(3)}
-            - Range: ${stats.range.toFixed(3)}
-            - Skewness: ${stats.skewness.toFixed(3)}
-            - Kurtosis: ${stats.kurtosis.toFixed(3)}
-            - Shapiro-Wilk (p-value): ${stats.shapiro_p ? stats.shapiro_p.toFixed(3) : 'N/A'}
+**Data Statistik:**
+- N (Jumlah Data): ${stats.n}
+- Mean: ${stats.mean.toFixed(3)}
+- Median: ${stats.median.toFixed(3)}
+- Modus: ${stats.mode.join(', ')}
+- Standar Deviasi: ${stats.std.toFixed(3)}
+- Varian: ${stats.variance.toFixed(3)}
+- Range: ${stats.range.toFixed(3)}
+- Skewness: ${stats.skewness.toFixed(3)}
+- Kurtosis: ${stats.kurtosis.toFixed(3)}
+- Shapiro-Wilk (p-value): ${stats.shapiro_p ? stats.shapiro_p.toFixed(3) : 'N/A'}
 
-            **Tugas Anda:**
-            Buat ringkasan naratif yang menjelaskan temuan utama dari data ini. Bahas tendensi sentral (mean, median, modus), sebaran data (standar deviasi, range), bentuk distribusi (skewness, kurtosis), dan jika ada, hasil uji normalitas (Shapiro-Wilk).
-            
-            Gunakan format yang rapi menggunakan elemen HTML seperti <h4>, <p>, dan <strong>. Jangan sertakan tag <html>, <body>, atau \`\`\`html.
-        `;
+**Tugas Anda:**
+Buat ringkasan naratif yang menjelaskan temuan utama dari data ini. Bahas tendensi sentral (mean, median, modus), sebaran data (standar deviasi, range), bentuk distribusi (skewness, kurtosis), dan jika ada, hasil uji normalitas (Shapiro-Wilk). Gunakan format yang rapi menggunakan elemen HTML seperti <h4>, <p>, dan <strong>. Jangan sertakan tag <html>, <body>, atau \`\`\`html.`;
 
         $.ajax({
             url: "{{ url_for('interpret_analysis') }}",
@@ -293,10 +467,10 @@ $(document).ready(function() {
             data: JSON.stringify({ stats: prompt }),
             success: function(res) {
                 const cleanedHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
-                $(`#interpretation-${col}`).html(cleanedHtml).show();
+                $(`#interpretation-${col.replace(/[^a-zA-Z0-9]/g, '-')}`).html(cleanedHtml).show();
             },
             error: function(err) {
-                $(`#interpretation-${col}`).html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
+                $(`#interpretation-${col.replace(/[^a-zA-Z0-9]/g, '-')}`).html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
             },
             complete: function() {
                 btnText.text(`Buat Interpretasi untuk Variabel '${col}'`);

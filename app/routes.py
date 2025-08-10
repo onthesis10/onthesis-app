@@ -98,7 +98,7 @@ def read_docx(file_stream):
 def descriptive_stats(series: pd.Series):
     s = series.dropna().astype(float)
     n = int(s.count())
-    if n == 0: return { 'n': 0 }
+    if n == 0: return { 'n': 0, 'raw_data': [] }
     
     mean = float(s.mean())
     median = float(s.median())
@@ -129,7 +129,8 @@ def descriptive_stats(series: pd.Series):
         'n': n, 'mean': mean, 'median': median, 'mode': mode_list, 'variance': var,
         'std': sd, 'min': minimum, 'max': maximum, 'range': rng, 'q1': q1,
         'q3': q3, 'iqr': iqr, 'skewness': skew, 'kurtosis': kurt,
-        'shapiro_w': shapiro_w, 'shapiro_p': shapiro_p, 'outliers': outliers
+        'shapiro_w': shapiro_w, 'shapiro_p': shapiro_p, 'outliers': outliers,
+        'raw_data': s.tolist()
     }
 
 def save_figure(fig, prefix='plot'):
@@ -623,32 +624,22 @@ def descriptive_analysis():
         if not is_allowed:
             return jsonify({'error': message}), 429
     try:
-        uploaded = request.files.get('file')
-        raw_text = request.form.get('raw_csv')
-        df = None
+        data = request.get_json()
+        variables = data.get('variables')
+        if not variables:
+            return jsonify({'error': 'Tidak ada data variabel yang diberikan.'}), 400
 
-        if uploaded and uploaded.filename != '':
-            if uploaded.filename.lower().endswith('.csv'):
-                df = pd.read_csv(uploaded)
-            else:
-                return jsonify({'error': 'Format file tidak valid. Harap unggah file CSV.'}), 400
-        elif raw_text and raw_text.strip() != '':
-            from io import StringIO
-            df = pd.read_csv(StringIO(raw_text))
-        else:
-            return jsonify({'error': 'Tidak ada data yang diberikan.'}), 400
-
-        numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
-        if not numeric_cols:
-            return jsonify({'error': 'Tidak ditemukan kolom numerik pada data.'}), 400
-
+        df = pd.DataFrame(variables)
+        
         results = {}
         plots = {}
+        columns = list(df.columns)
 
-        for col in numeric_cols:
+        for col in columns:
             stats_d = descriptive_stats(df[col])
             results[col] = stats_d
             s = df[col].dropna().astype(float)
+            if s.empty: continue
 
             # Histogram
             fig1, ax1 = plt.subplots()
@@ -662,10 +653,27 @@ def descriptive_analysis():
             ax2.set_title(f'Boxplot - {col}')
             plots[f'{col}_boxplot'] = save_figure(fig2, prefix=f'box_{col}')
 
+            # Bar Chart
+            vc = s.value_counts().sort_index()
+            if not vc.empty:
+                fig3, ax3 = plt.subplots()
+                vc.plot(kind='bar', ax=ax3, edgecolor='black')
+                ax3.set_title(f'Bar Chart Frekuensi - {col}')
+                plots[f'{col}_barchart'] = save_figure(fig3, prefix=f'bar_{col}')
+
+            # Pie Chart
+            if len(vc) > 1 and len(vc) <= 10:
+                fig4, ax4 = plt.subplots(figsize=(5,5))
+                vc.plot(kind='pie', ax=ax4, autopct='%1.1f%%', startangle=90)
+                ax4.set_ylabel('')
+                ax4.set_title(f'Pie Chart - {col}')
+                plots[f'{col}_pie'] = save_figure(fig4, prefix=f'pie_{col}')
+
+
         return jsonify({
             'results': results,
             'plots': plots,
-            'columns': numeric_cols
+            'columns': columns
         })
 
     except Exception as e:
