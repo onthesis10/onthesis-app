@@ -3,7 +3,8 @@
 {% block title %}Statistik Deskriptif - OnThesis{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka untuk Export Profesional -->
+<!-- Pustaka JavaScript yang Diperlukan (INI PERBAIKANNYA) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
@@ -67,10 +68,6 @@
     table.spss-table tr:last-child td {
         border-bottom: 2px solid var(--text-primary) !important;
     }
-    .highlight {
-        color: var(--accent-cyan);
-        font-weight: 600;
-    }
     .plots-container img {
         width: 100%;
         height: auto;
@@ -110,6 +107,10 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Pesan Error Dinamis -->
+        <div id="error-container" class="apex-card p-4 bg-red-500/10 border-red-500/30 text-red-400" style="display: none;"></div>
+
 
         <!-- Kontainer Output -->
         <div id="outputContainer" class="space-y-4" style="display:none;">
@@ -139,6 +140,11 @@
 $(document).ready(function() {
     let analysisData = null; // Simpan hasil lengkap dari server
 
+    const showError = (message) => {
+        $('#error-container').text(message).slideDown();
+        $('html, body').animate({ scrollTop: $("#error-container").offset().top - 80 }, 500);
+    };
+
     const createVariable = (name = '', data = '') => {
         const varCount = $('#variablesContainer').children().length + 1;
         const varName = name || `Variabel ${varCount}`;
@@ -146,7 +152,7 @@ $(document).ready(function() {
             <div class="data-variable p-4 border border-border-panel rounded-lg bg-bg-canvas">
                 <div class="flex justify-between items-center mb-2">
                     <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full variable-name-input" value="${varName}" placeholder="Nama Variabel">
-                    <button class="text-text-secondary hover:text-red-400 remove-variable-btn text-xl font-bold">&times;</button>
+                    <button class="text-text-secondary hover:text-red-400 remove-variable-btn text-xl font-bold" title="Hapus Variabel Ini">&times;</button>
                 </div>
                 <textarea class="feedback-form-input data-input" placeholder="Masukkan data numerik, pisahkan dengan koma, spasi, atau baris baru...">${data}</textarea>
             </div>
@@ -157,16 +163,20 @@ $(document).ready(function() {
     createVariable();
 
     $('#addVariable').click(() => createVariable());
+    
     $('#removeVariable').click(function() {
-        if ($('#variablesContainer').children().length > 1) {
-            $('#variablesContainer').children().last().remove();
+        if ($('#variablesContainer > .data-variable').length > 1) {
+            $('#variablesContainer > .data-variable').last().remove();
         } else {
-            alert('Minimal harus ada satu variabel.');
+            showError('Minimal harus ada satu variabel.');
         }
     });
+
     $('#variablesContainer').on('click', '.remove-variable-btn', function() {
-        if ($('#variablesContainer').children().length > 0) {
+        if ($('#variablesContainer > .data-variable').length > 1) {
             $(this).closest('.data-variable').remove();
+        } else {
+            showError('Minimal harus ada satu variabel.');
         }
     });
 
@@ -241,7 +251,8 @@ $(document).ready(function() {
     };
 
     $('#runAnalysis').click(async function() {
-        $('.data-input').removeClass('input-error');
+        $('#error-container').hide().empty();
+        $('.input-error').removeClass('input-error');
         let hasError = false;
         const dataForAnalysis = {};
         const variableNames = new Set();
@@ -261,7 +272,8 @@ $(document).ready(function() {
             } else if (variableNames.has(name)) {
                 hasError = true;
                 nameInput.addClass('input-error');
-                alert(`Nama variabel duplikat: "${name}". Harap gunakan nama yang unik.`);
+                showError(`Nama variabel duplikat: "${name}". Harap gunakan nama yang unik.`);
+                return false; // Hentikan .each loop
             }
             variableNames.add(name);
 
@@ -275,11 +287,11 @@ $(document).ready(function() {
         });
 
         if (hasError) {
-            alert('Setiap variabel harus punya nama unik dan minimal 2 data numerik. Bagian yang bermasalah telah ditandai.');
+            showError('Setiap variabel harus punya nama unik dan minimal 2 data numerik. Bagian yang bermasalah telah ditandai.');
             return;
         }
         if (Object.keys(dataForAnalysis).length === 0) {
-            alert('Tidak ada data valid untuk dianalisis.');
+            showError('Tidak ada data valid untuk dianalisis.');
             return;
         }
 
@@ -299,7 +311,7 @@ $(document).ready(function() {
             analysisData = await response.json();
             displayResults(analysisData);
         } catch (e) {
-            alert('Error: ' + e.message);
+            showError('Error: ' + e.message);
         } finally {
             button.prop('disabled', false).text('Jalankan Analisis');
         }
@@ -388,7 +400,7 @@ $(document).ready(function() {
 
     const exportHandler = async (format) => {
         if (!analysisData) {
-            alert("Lakukan analisis terlebih dahulu sebelum mengekspor.");
+            showError("Lakukan analisis terlebih dahulu sebelum mengekspor.");
             return;
         }
         
@@ -406,12 +418,12 @@ $(document).ready(function() {
                 });
                 const checkData = await checkResponse.json();
                 if (!checkData.allowed) {
-                    alert(checkData.message);
+                    showError(checkData.message);
                     btn.prop('disabled', false); spinner.addClass('hidden');
                     return;
                 }
             } catch (e) {
-                alert("Gagal memverifikasi status langganan.");
+                showError("Gagal memverifikasi status langganan.");
                 btn.prop('disabled', false); spinner.addClass('hidden');
                 return;
             }
@@ -422,7 +434,7 @@ $(document).ready(function() {
             const logoData = await loadImageAsBase64(logoUrl);
             const activeTabId = $('#results-tabs-content .tab-pane.active').attr('id');
             const safeColName = activeTabId.replace('tab-', '');
-            const colName = safeColName.replace(/_/g, ' ');
+            const colName = $('#results-tabs-nav .nav-link.active').text();
 
             if (format === 'pdf') {
                 const { jsPDF } = window.jspdf;
@@ -478,7 +490,7 @@ $(document).ready(function() {
             }
         } catch (e) {
             console.error("Gagal mengekspor:", e);
-            alert("Terjadi kesalahan saat mengekspor file.");
+            showError("Terjadi kesalahan saat membuat file ekspor.");
         } finally {
             btn.prop('disabled', false);
             spinner.addClass('hidden');
