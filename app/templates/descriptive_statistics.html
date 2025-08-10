@@ -4,13 +4,23 @@
 
 {% block page_styles %}
 <style>
-    /* Gaya untuk tab navigasi */
+    /* Gaya untuk input dinamis */
+    .variable-group {
+        transition: background-color 0.2s ease-in-out;
+    }
+    .input-error {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+
+    /* Gaya untuk output hasil dengan tab */
     .nav-tabs .nav-link {
         background-color: var(--bg-canvas);
         border: 1px solid var(--border-panel);
         color: var(--text-secondary);
         border-radius: 0.5rem 0.5rem 0 0;
         margin-right: 2px;
+        padding: 0.5rem 1rem;
     }
     .nav-tabs .nav-link.active {
         background-color: var(--accent-cyan);
@@ -24,8 +34,6 @@
         padding: 1.5rem;
         border-radius: 0 0 0.5rem 0.5rem;
     }
-
-    /* Gaya untuk tabel statistik di dalam tab */
     .stat-table {
         width: 100%;
         font-size: 0.9rem;
@@ -49,13 +57,10 @@
         color: var(--text-primary);
         font-weight: 600;
     }
-
-    /* Gaya untuk plot */
     .plots-container img {
         width: 100%;
         height: auto;
         border-radius: 0.5rem;
-        margin-top: 1rem;
         border: 1px solid var(--border-panel);
     }
 </style>
@@ -71,100 +76,37 @@
     <div class="max-w-6xl mx-auto space-y-8">
         <!-- Kartu Input -->
         <div class="apex-card p-6">
-            <form action="{{ url_for('descriptive_statistics') }}" method="post" enctype="multipart/form-data">
-                <div class="space-y-4">
-                    <div>
-                        <label for="file-input" class="btn-secondary w-full flex items-center justify-center gap-2 cursor-pointer">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            <span>Pilih File CSV</span>
-                        </label>
-                        <input type="file" id="file-input" name="file" class="hidden" accept=".csv">
-                        <p id="file-name-display" class="text-sm text-center text-text-secondary mt-2"></p>
-                    </div>
-                    
-                    <div class="text-center text-sm text-text-secondary">atau</div>
+            <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Variabel</h3>
+            <p class="text-sm text-text-secondary mb-4 max-w-2xl mx-auto text-center">Masukkan data untuk setiap variabel yang ingin dianalisis. Anda dapat menambah atau menghapus variabel sesuai kebutuhan.</p>
+            
+            <div id="variablesContainer" class="space-y-4 text-left">
+                <!-- Input variabel dinamis akan ditambahkan di sini oleh JavaScript -->
+            </div>
 
-                    <div>
-                        <label for="raw-csv-data" class="block text-sm font-medium text-text-secondary mb-1 text-center">Tempel data CSV di sini (baris pertama adalah header):</label>
-                        <textarea id="raw-csv-data" name="raw_csv" class="feedback-form-input h-32" placeholder="Contoh:&#10;nilai,usia&#10;85,22&#10;90,23&#10;78,22">{{ request.form['raw_csv'] }}</textarea>
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-center">
-                    <button type="submit" class="btn-primary w-full md:w-1/2">Jalankan Analisis</button>
-                </div>
-            </form>
-        </div>
-
-        {% if error %}
-        <div class="apex-card p-4 bg-red-500/10 border-red-500/30 text-red-400">
-            <p><strong>Error:</strong> {{ error }}</p>
-        </div>
-        {% endif %}
-
-        {% if results %}
-        <div id="output" class="space-y-8">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-text-primary">Hasil Analisis</h2>
+            <div class="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border-panel">
+                <button id="addVariable" class="btn-secondary flex-1">+ Tambah Variabel</button>
+                <button id="removeVariable" class="btn-secondary flex-1">- Hapus Variabel</button>
+                <button id="loadSample" class="btn-secondary flex-1">Muat Contoh</button>
             </div>
             
-            <!-- Navigasi Tab -->
-            <div class="nav nav-tabs" id="results-tabs-nav">
-            {% for col, stats in results.items() %}
-                <button class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-{{ col|replace(' ', '_') }}" type="button">{{ col }}</button>
-            {% endfor %}
-            </div>
-
-            <!-- Konten Tab -->
-            <div class="tab-content" id="results-tabs-content">
-            {% for col, stats in results.items() %}
-                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="tab-{{ col|replace(' ', '_') }}">
-                    
-                    <!-- Interpretasi AI -->
-                    <div class="mb-6 border-b border-border-panel pb-6">
-                        <h4 class="text-lg font-bold text-text-primary mb-2">Ringkasan Otomatis (AI)</h4>
-                        <button class="btn-secondary w-full mb-4 interpret-btn" data-col="{{ col }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                            <span class="btn-text">Buat Interpretasi untuk Variabel '{{ col }}'</span>
-                            <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                        </button>
-                        <div id="interpretation-{{ col|replace(' ', '_') }}" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-subtle p-4 rounded-lg border border-border-panel" style="display: none;"></div>
-                    </div>
-
-                    <!-- Grid untuk Statistik dan Plot -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Kolom Kiri: Tabel Statistik -->
-                        <div class="space-y-6">
-                            <div>
-                                <h4 class="text-lg font-bold text-text-primary mb-2">Statistik Deskriptif</h4>
-                                <table class="stat-table">
-                                    <tbody>
-                                        <tr><th>Mean (Rata-rata)</th><td>{{ '%.3f'|format(stats.mean) }}</td></tr>
-                                        <tr><th>Median (Nilai Tengah)</th><td>{{ '%.3f'|format(stats.median) }}</td></tr>
-                                        <tr><th>Modus</th><td>{{ stats.mode|join(', ') }}</td></tr>
-                                        <tr><th>Std. Deviasi</th><td>{{ '%.3f'|format(stats.std) }}</td></tr>
-                                        <tr><th>Varian</th><td>{{ '%.3f'|format(stats.variance) }}</td></tr>
-                                        <tr><th>Range</th><td>{{ '%.3f'|format(stats.range) }}</td></tr>
-                                        <tr><th>Minimum</th><td>{{ '%.3f'|format(stats.min) }}</td></tr>
-                                        <tr><th>Maksimum</th><td>{{ '%.3f'|format(stats.max) }}</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <!-- Kolom Kanan: Visualisasi -->
-                        <div class="plots-container space-y-4">
-                            {% if plots[col + '_histogram'] %}
-                                <img src="{{ plots[col + '_histogram'] }}" alt="Histogram untuk {{ col }}">
-                            {% endif %}
-                            {% if plots[col + '_boxplot'] %}
-                                <img src="{{ plots[col + '_boxplot'] }}" alt="Boxplot untuk {{ col }}">
-                            {% endif %}
-                        </div>
-                    </div>
+            <div class="mt-6 pt-6 border-t border-border-panel">
+                <div class="flex justify-center">
+                    <button id="runAnalysis" class="btn-primary w-full md:w-1/2">Jalankan Analisis</button>
                 </div>
-            {% endfor %}
             </div>
         </div>
-        {% endif %}
+        
+        <!-- Pesan Error Dinamis -->
+        <div id="error-container" class="apex-card p-4 bg-red-500/10 border-red-500/30 text-red-400" style="display: none;"></div>
+
+        <!-- Kontainer Output -->
+        <div id="output" class="space-y-4" style="display:none;">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-text-primary">Hasil Analisis</h2>
+            </div>
+            <div id="results-tabs-nav" class="nav nav-tabs"></div>
+            <div id="results-tabs-content" class="tab-content"></div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -172,47 +114,167 @@
 {% block page_scripts %}
 <script>
 $(document).ready(function() {
-    // Menampilkan nama file yang dipilih
-    $('#file-input').on('change', function(event) {
-        const file = event.target.files[0];
-        if (file) {
-            $('#file-name-display').text(`File terpilih: ${file.name}`);
+    let analysisData = null; // Untuk menyimpan hasil analisis
+
+    const createVariable = (name = '', data = '') => {
+        const varCount = $('#variablesContainer').children().length + 1;
+        const varName = name || `Variabel_${varCount}`;
+        const varHtml = `
+            <div class="variable-group p-4 border border-border-panel rounded-lg bg-bg-canvas">
+                <div class="flex justify-between items-center mb-2">
+                    <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full variable-name-input" value="${varName}" placeholder="Nama Variabel">
+                    <button class="text-text-secondary hover:text-red-400 remove-variable-btn text-xl font-bold" title="Hapus Variabel Ini">&times;</button>
+                </div>
+                <textarea class="feedback-form-input data-input h-24" placeholder="Masukkan data numerik, pisahkan dengan koma, spasi, atau baris baru...">${data}</textarea>
+            </div>
+        `;
+        $('#variablesContainer').append(varHtml);
+    };
+
+    createVariable(); // Mulai dengan satu input
+
+    $('#addVariable').on('click', () => createVariable());
+
+    $('#removeVariable').on('click', function() {
+        if ($('#variablesContainer > .variable-group').length > 1) {
+            $('#variablesContainer > .variable-group').last().remove();
         } else {
-            $('#file-name-display').text('');
+            alert('Minimal harus ada satu variabel.');
+        }
+    });
+    
+    $('#variablesContainer').on('click', '.remove-variable-btn', function() {
+        if ($('#variablesContainer > .variable-group').length > 1) {
+            $(this).closest('.variable-group').remove();
+        } else {
+            alert('Minimal harus ada satu variabel.');
         }
     });
 
-    // Logika untuk mengaktifkan tab
-    $('#results-tabs-nav .nav-link').on('click', function(e) {
+    $('#loadSample').on('click', () => {
+        $('#variablesContainer').empty();
+        createVariable('Tinggi_Badan_cm', '165, 170, 155, 180, 168, 172, 160, 175, 166, 159');
+        createVariable('Skor_IQ', '110, 112, 105, 120, 115, 118, 108, 122, 113, 109');
+    });
+
+    $('#runAnalysis').on('click', async function() {
+        $('.input-error').removeClass('input-error');
+        $('#error-container').hide().empty();
+        let hasError = false;
+        const dataForAnalysis = {};
+        const variableNames = new Set();
+
+        $('.variable-group').each(function() {
+            const nameInput = $(this).find('.variable-name-input');
+            let name = nameInput.val().trim().replace(/\s+/g, '_');
+            const textarea = $(this).find('.data-input');
+            const rawData = textarea.val().trim();
+            
+            if (!name) { hasError = true; nameInput.addClass('input-error'); return; }
+            if (variableNames.has(name)) { alert(`Nama variabel duplikat: "${name}".`); hasError = true; nameInput.addClass('input-error'); return; }
+            variableNames.add(name);
+
+            if (rawData === '') { hasError = true; textarea.addClass('input-error'); return; }
+            const values = rawData.split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+            if (values.length < 2) { hasError = true; textarea.addClass('input-error'); } 
+            else { dataForAnalysis[name] = values; }
+        });
+
+        if (hasError) { alert('Periksa input Anda. Setiap variabel harus punya nama unik dan minimal 2 data numerik.'); return; }
+        if (Object.keys(dataForAnalysis).length === 0) { alert('Tidak ada data valid untuk dianalisis.'); return; }
+
+        const button = $(this);
+        button.prop('disabled', true).html('<div class="spinner w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto"></div>');
+        $('#output').slideUp();
+
+        try {
+            const response = await fetch("{{ url_for('api_descriptive_analysis') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataForAnalysis)
+            });
+
+            const result = await response.json();
+            if (!response.ok) { throw new Error(result.error || 'Terjadi kesalahan pada server.'); }
+            
+            analysisData = result; // Simpan hasil untuk interpretasi AI
+            displayResults(analysisData);
+
+        } catch (e) {
+            $('#error-container').text(e.message).slideDown();
+        } finally {
+            button.prop('disabled', false).text('Jalankan Analisis');
+        }
+    });
+
+    function displayResults(data) {
+        const tabsNav = $('#results-tabs-nav').empty();
+        const tabsContent = $('#results-tabs-content').empty();
+
+        data.columns.forEach((col, index) => {
+            const isActive = index === 0;
+            const stats = data.results[col];
+            if (!stats || stats.n === 0) return;
+            const safeColId = col.replace(/[^a-zA-Z0-9]/g, '_');
+
+            tabsNav.append(`<button class="nav-link ${isActive ? 'active' : ''}" data-bs-toggle="tab" data-bs-target="#tab-${safeColId}" type="button">${col}</button>`);
+            
+            const formatNum = (num) => (num !== null && num !== undefined) ? Number(num).toFixed(3) : 'N/A';
+            
+            tabsContent.append(`
+                <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="tab-${safeColId}">
+                    <div class="mb-6 border-b border-border-panel pb-6">
+                        <h4 class="text-lg font-bold text-text-primary mb-2">Ringkasan Otomatis (AI)</h4>
+                        <button class="btn-secondary w-full mb-4 interpret-btn" data-col="${col}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                            <span class="btn-text">Buat Interpretasi untuk Variabel '${col}'</span>
+                            <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        </button>
+                        <div id="interpretation-${safeColId}" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-subtle p-4 rounded-lg border border-border-panel" style="display: none;"></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-lg font-bold text-text-primary mb-2">Statistik Deskriptif</h4>
+                            <table class="stat-table"><tbody>
+                                <tr><th>Mean</th><td>${formatNum(stats.mean)}</td></tr>
+                                <tr><th>Median</th><td>${formatNum(stats.median)}</td></tr>
+                                <tr><th>Modus</th><td>${stats.mode.join(', ')}</td></tr>
+                                <tr><th>Std. Deviasi</th><td>${formatNum(stats.std)}</td></tr>
+                                <tr><th>Varian</th><td>${formatNum(stats.variance)}</td></tr>
+                                <tr><th>Range</th><td>${formatNum(stats.range)}</td></tr>
+                                <tr><th>Minimum</th><td>${formatNum(stats.min)}</td></tr>
+                                <tr><th>Maksimum</th><td>${formatNum(stats.max)}</td></tr>
+                            </tbody></table>
+                        </div>
+                        <div class="plots-container space-y-4">
+                            ${data.plots[col+'_histogram'] ? `<img src="${data.plots[col+'_histogram']}" alt="Histogram">` : ''}
+                            ${data.plots[col+'_boxplot'] ? `<img src="${data.plots[col+'_boxplot']}" alt="Boxplot">` : ''}
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+
+        $('#output').slideDown();
+        $('html, body').animate({ scrollTop: $("#output").offset().top - 80 }, 500);
+    }
+
+    $(document).on('click', '.nav-link', function(e) {
         e.preventDefault();
-        // Hapus kelas aktif dari semua tombol dan panel
-        $('#results-tabs-nav .nav-link').removeClass('active');
-        $('#results-tabs-content .tab-pane').removeClass('show active');
-        
-        // Tambahkan kelas aktif ke tombol yang diklik dan panel targetnya
+        $('.nav-link').removeClass('active');
+        $('.tab-pane').removeClass('show active');
         $(this).addClass('active');
         $($(this).data('bs-target')).addClass('show active');
     });
 
-    // Logika untuk tombol Interpretasi AI
-    $('.interpret-btn').on('click', function() {
+    $(document).on('click', '.interpret-btn', function() {
         const btn = $(this);
         const col = btn.data('col');
         const safeColId = col.replace(/[^a-zA-Z0-9]/g, '_');
+        const stats = analysisData.results[col];
         const btnText = btn.find('.btn-text');
         const spinner = btn.find('.spinner');
         const outputDiv = $(`#interpretation-${safeColId}`);
-
-        // Ambil data statistik langsung dari tabel hasil
-        const stats = {
-            n: parseFloat($(`#tab-${safeColId} .stat-table:contains('Mean')`).closest('.result-block').find('h3 > span').text().match(/n=(\d+)/)[1]),
-            mean: parseFloat($(`#tab-${safeColId} .stat-table th:contains('Mean')`).next('td').text()),
-            median: parseFloat($(`#tab-${safeColId} .stat-table th:contains('Median')`).next('td').text()),
-            mode: $(`#tab-${safeColId} .stat-table th:contains('Modus')`).next('td').text(),
-            std: parseFloat($(`#tab-${safeColId} .stat-table th:contains('Std. Deviasi')`).next('td').text()),
-            variance: parseFloat($(`#tab-${safeColId} .stat-table th:contains('Varian')`).next('td').text()),
-            range: parseFloat($(`#tab-${safeColId} .stat-table th:contains('Range')`).next('td').text()),
-        };
 
         btnText.text('Menganalisis...');
         spinner.removeClass('hidden');
@@ -225,27 +287,20 @@ $(document).ready(function() {
 - N (Jumlah Data): ${stats.n}
 - Mean: ${stats.mean.toFixed(3)}
 - Median: ${stats.median.toFixed(3)}
-- Modus: ${stats.mode}
+- Modus: ${stats.mode.join(', ')}
 - Standar Deviasi: ${stats.std.toFixed(3)}
-- Varian: ${stats.variance.toFixed(3)}
-- Range: ${stats.range.toFixed(3)}
 
 **Tugas Anda:**
-Buat ringkasan naratif yang mudah dipahami yang menjelaskan temuan utama. Bahas tendensi sentral (mean, median, modus) dan sebaran data (standar deviasi, range). Gunakan format yang rapi dengan elemen HTML seperti <h4>, <p>, dan <strong>. Jangan sertakan tag <html>, <body>, atau \`\`\`html.`;
+Buat ringkasan naratif yang mudah dipahami. Bahas tendensi sentral (mean, median, modus) dan sebaran data (standar deviasi). Gunakan format HTML yang rapi dengan <h4>, <p>, dan <strong>. Jangan sertakan tag <html> atau <body>.`;
 
         $.ajax({
             url: "{{ url_for('interpret_analysis') }}",
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ stats: prompt }),
-            success: function(res) {
-                const cleanedHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
-                outputDiv.html(cleanedHtml).slideDown();
-            },
-            error: function(err) {
-                outputDiv.html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).slideDown();
-            },
-            complete: function() {
+            success: (res) => outputDiv.html(res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim()).slideDown(),
+            error: (err) => outputDiv.html(`<p class="text-red-400">Gagal: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).slideDown(),
+            complete: () => {
                 btnText.text(`Buat Interpretasi untuk Variabel '${col}'`);
                 spinner.addClass('hidden');
                 btn.prop('disabled', false);
