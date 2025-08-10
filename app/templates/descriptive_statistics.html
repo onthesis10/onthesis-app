@@ -74,6 +74,26 @@
         border-radius: 0.5rem;
         border: 1px solid var(--border-panel);
     }
+    
+    /* --- PERBAIKAN: Gaya untuk Teks Interpretasi AI --- */
+    .prose h4 {
+        font-size: 1.05rem; /* Sedikit lebih besar dari teks biasa */
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+    }
+    .prose p {
+        font-size: 0.95rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+    .prose p:last-child {
+        margin-bottom: 0;
+    }
+    .prose strong {
+        color: var(--text-primary);
+    }
 </style>
 {% endblock %}
 
@@ -199,12 +219,9 @@ $(document).ready(function() {
 
             tabsNav.append(`<button class="nav-link ${isActive ? 'active' : ''}" data-bs-target="#tab-${safeColName}" type="button">${colName}</button>`);
             
-            // --- PERBAIKAN FORMAT ANGKA ---
             const formatNum = (num) => {
                 if (num === null || num === undefined) return 'N/A';
-                // Menggunakan toFixed(3) lalu parseFloat untuk menghilangkan .000 yang tidak perlu
                 let formatted = parseFloat(Number(num).toFixed(3));
-                // Menggunakan toLocaleString untuk format ribuan jika perlu
                 return formatted.toLocaleString('id-ID', { maximumFractionDigits: 3 });
             };
 
@@ -234,7 +251,6 @@ $(document).ready(function() {
                 </div>`;
             tabsContent.append(tabContentHtml);
 
-            // Render table dengan gaya baru
             const table = $(`#table-${safeColName}`);
             table.html(`
                 <thead>
@@ -280,7 +296,7 @@ $(document).ready(function() {
                 hasError = true;
                 nameInput.addClass('input-error');
                 showError(`Nama variabel duplikat: "${name}". Harap gunakan nama yang unik.`);
-                return false; // Hentikan .each loop
+                return false;
             }
             variableNames.add(name);
 
@@ -324,7 +340,6 @@ $(document).ready(function() {
         }
     });
 
-    // Handle tab clicks
     $('#results-tabs-nav').on('click', '.nav-link', function(e) {
         e.preventDefault();
         $('#results-tabs-nav .nav-link').removeClass('active');
@@ -333,7 +348,7 @@ $(document).ready(function() {
         $($(this).data('bs-target')).addClass('show active');
     });
 
-    // Handle AI Interpretation
+    // --- PERBAIKAN: PROMPT INTERPRETASI AI ---
     $('#results-tabs-content').on('click', '.interpret-btn', function() {
         const colName = $(this).data('col-name');
         const stats = analysisData.results[colName];
@@ -346,23 +361,24 @@ $(document).ready(function() {
         spinner.removeClass('hidden');
         btn.prop('disabled', true);
 
+        const formatNum = (num) => parseFloat(Number(num).toFixed(2)).toLocaleString('id-ID');
+
         const prompt = `
-            Anda adalah seorang ahli statistik. Berikan interpretasi profesional untuk hasil statistik deskriptif dari variabel "${colName}" berikut.
+            Anda adalah seorang analis data ahli yang memberikan penjelasan ringkas dan lugas.
+            Berdasarkan data statistik untuk variabel **"${colName}"** berikut:
+            - **Mean:** ${formatNum(stats.mean)}
+            - **Median:** ${formatNum(stats.median)}
+            - **Standar Deviasi:** ${formatNum(stats.std)}
 
-            **Data Statistik:**
-            - N (Jumlah Data): ${stats.n}
-            - Mean: ${stats.mean.toFixed(3)}
-            - Median: ${stats.median.toFixed(3)}
-            - Modus: ${Array.isArray(stats.mode) ? stats.mode.join(', ') : 'N/A'}
-            - Standar Deviasi: ${stats.std.toFixed(3)}
-            - Range: ${stats.range.toFixed(3)}
+            Berikan interpretasi dalam format HTML dengan poin-poin berikut:
+            1.  <h4>Tendensi Sentral</h4>
+                <p>Jelaskan secara singkat apa arti perbandingan antara Mean dan Median. (Contoh: "Nilai Mean (rata-rata) dan Median (nilai tengah) hampir sama, menunjukkan sebaran data yang cenderung simetris.")</p>
+            2.  <h4>Sebaran Data</h4>
+                <p>Jelaskan apa arti nilai Standar Deviasi ini. (Contoh: "Standar deviasi sebesar ${formatNum(stats.std)} menunjukkan bahwa sebagian besar data cukup mengumpul di sekitar nilai rata-rata.")</p>
+            3.  <h4>Kesimpulan</h4>
+                <p>Berikan satu kalimat kesimpulan umum tentang karakteristik data ini.</p>
 
-            **Tugas Anda:**
-            1.  **Tendensi Sentral:** Jelaskan apa arti Mean, Median, dan Modus. Bandingkan nilainya, apakah hampir sama atau berbeda jauh? Apa artinya jika berbeda?
-            2.  **Sebaran Data:** Jelaskan apa arti Standar Deviasi dan Range. Apakah datanya cenderung menyebar atau mengumpul di sekitar rata-rata?
-            3.  **Kesimpulan Umum:** Berikan ringkasan singkat tentang karakteristik data variabel "${colName}" berdasarkan statistik ini.
-            
-            Gunakan format HTML yang rapi (<h4>, <p>, <ul>, <li>, <strong>). Jangan sertakan tag <html> atau <body>.
+            Pastikan jawaban Anda singkat, jelas, dan profesional. Jangan gunakan paragraf yang panjang. Jangan sertakan tag \`<html>\` atau \`<body>\`.
         `;
         
         $.ajax({
@@ -391,7 +407,7 @@ $(document).ready(function() {
     const loadImageAsBase64 = (url) => {
         return new Promise((resolve, reject) => {
             if (!url) {
-                resolve(null); // Resolve with null if URL is invalid
+                resolve(null);
                 return;
             }
             const img = new Image();
@@ -476,7 +492,7 @@ $(document).ready(function() {
                 yPos += 75;
 
                 if(pieImgData){
-                    doc.addImage(pieImgData, 'PNG', 15, yPos, 90, 68);
+                    doc.addImage(pieImgData, 'PNG', 60, yPos, 90, 68); // Centered pie chart
                 }
 
                 doc.save(`hasil-deskriptif-${safeColName}.pdf`);
