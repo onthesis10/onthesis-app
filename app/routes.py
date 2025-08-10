@@ -97,7 +97,6 @@ def read_docx(file_stream):
     text = "\n".join([para.text for para in doc.paragraphs])
     return text
 
-# FUNGSI HELPER BARU UNTUK PLOT STATISTIK DESKRIPTIF
 def create_plot_as_base64(fig):
     """Mengubah figure Matplotlib menjadi string base64."""
     buf = io.BytesIO()
@@ -252,11 +251,6 @@ def normality_test(): return render_template('normality_test.html')
 @app.route('/homogeneity_test')
 @login_required
 def homogeneity_test(): return render_template('homogeneity_test.html')
-
-@app.route('/descriptive-statistics')
-@login_required
-def descriptive_statistics():
-    return render_template('descriptive_statistics.html')
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -581,113 +575,77 @@ def api_bartlett():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
         
-@app.route('/descriptive-analysis', methods=['POST'])
+# =========================================================================
+# RUTE STATISTIK DESKRIPTIF (VERSI BARU & DIPERBAIKI DENGAN SSR)
+# =========================================================================
+@app.route('/descriptive_statistics', methods=['GET', 'POST'])
 @login_required
-def descriptive_analysis():
-    # Pembatasan Fitur PRO
-    if not current_user.is_pro:
-        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
-        if not is_allowed:
-            return jsonify({'error': message}), 429
+def descriptive_statistics():
+    if request.method == 'POST':
+        if not current_user.is_pro:
+            is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+            if not is_allowed:
+                return render_template('descriptive_statistics.html', error=message)
 
-    df = None
-    try:
-        if not request.is_json:
-            return jsonify({'error': 'Format request tidak valid, harus JSON.'}), 400
-
-        data = request.get_json()
-        if not data or not any(data.values()):
-             return jsonify({'error': 'Tidak ada data yang dikirim untuk dianalisis.'}), 400
-        
-        df = pd.DataFrame.from_dict(data, orient='index').transpose()
-        
-        for col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-
-        if df.empty:
-            return jsonify({'error': 'Data kosong setelah diproses.'}), 400
-
-        all_cols = df.columns.tolist()
-        results = {}
-        plots = {}
-        
-        for col in all_cols:
-            series = df[col].dropna()
-            if len(series) < 2:
-                continue
-
-            n = len(series)
-            mean = series.mean()
-            median = series.median()
-            mode = series.mode().tolist() if not series.mode().empty else ['N/A']
-            std = series.std()
-            variance = series.var()
-            range_val = series.max() - series.min()
-            min_val = series.min()
-            max_val = series.max()
-            q1 = series.quantile(0.25)
-            q3 = series.quantile(0.75)
-            iqr = q3 - q1
-            skewness = series.skew()
-            kurtosis = series.kurt()
-            shapiro_p = stats.shapiro(series).pvalue if n >= 3 else None
-
-            results[col] = {
-                'n': n, 'mean': mean, 'median': median, 'mode': mode,
-                'std': std, 'variance': variance, 'range': range_val,
-                'min': min_val, 'max': max_val, 'q1': q1, 'q3': q3,
-                'iqr': iqr, 'skewness': skewness, 'kurtosis': kurtosis,
-                'shapiro_p': shapiro_p, 'raw_data': series.tolist()
-            }
-
-            sns.set_style("whitegrid")
-            
-            fig, ax = plt.subplots()
-            sns.histplot(series, kde=True, ax=ax, color='#0284c7')
-            ax.set_title(f'Histogram & Distribusi: {col}')
-            ax.set_xlabel(col)
-            ax.set_ylabel('Frekuensi')
-            plots[f'{col}_histogram'] = create_plot_as_base64(fig)
-
-            fig, ax = plt.subplots()
-            sns.boxplot(x=series, ax=ax, color='#0284c7')
-            ax.set_title(f'Box Plot: {col}')
-            ax.set_xlabel(col)
-            plots[f'{col}_boxplot'] = create_plot_as_base64(fig)
-            
-            unique_values = series.nunique()
-            
-            if unique_values > 1 and unique_values <= 20:
-                value_counts = series.value_counts().sort_index()
-                fig, ax = plt.subplots()
-                sns.barplot(x=value_counts.index, y=value_counts.values, ax=ax, color='#0284c7')
-                ax.set_title(f'Bar Chart Frekuensi: {col}')
-                ax.set_xlabel(col)
-                ax.set_ylabel('Jumlah')
-                plt.xticks(rotation=45, ha='right')
-                plots[f'{col}_barchart'] = create_plot_as_base64(fig)
+        df = None
+        try:
+            if 'file' in request.files and request.files['file'].filename != '':
+                file = request.files['file']
+                if not file.filename.lower().endswith('.csv'):
+                    return render_template('descriptive_statistics.html', error='Format file tidak valid. Harap unggah file .csv')
+                df = pd.read_csv(file)
+            elif 'raw_csv' in request.form and request.form['raw_csv'].strip():
+                raw_csv_data = request.form['raw_csv']
+                df = pd.read_csv(io.StringIO(raw_csv_data))
             else:
-                plots[f'{col}_barchart'] = None
+                return render_template('descriptive_statistics.html', error='Tidak ada data yang diinput. Silakan unggah file CSV atau tempel data.')
 
-            if 2 < unique_values <= 8:
+            if df.empty:
+                return render_template('descriptive_statistics.html', error='Data kosong setelah diproses.')
+
+            numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+            if not numeric_cols:
+                return render_template('descriptive_statistics.html', error='Tidak ada kolom data numerik yang ditemukan untuk dianalisis.')
+            
+            df_numeric = df[numeric_cols]
+            results = {}
+            plots = {}
+
+            for col in df_numeric.columns:
+                series = df_numeric[col].dropna()
+                if len(series) < 2: continue
+
+                results[col] = {
+                    'n': len(series),
+                    'mean': series.mean(),
+                    'median': series.median(),
+                    'mode': series.mode().tolist() if not series.mode().empty else ['N/A'],
+                    'std': series.std(),
+                    'variance': series.var(),
+                    'range': series.max() - series.min(),
+                    'min': series.min(),
+                    'max': series.max(),
+                }
+
+                sns.set_style("whitegrid")
+                
                 fig, ax = plt.subplots()
-                series.value_counts().plot.pie(autopct='%1.1f%%', startangle=90, ax=ax, colormap='Blues_r')
-                ax.set_ylabel('')
-                ax.set_title(f'Proporsi: {col}')
-                plots[f'{col}_pie'] = create_plot_as_base64(fig)
-            else:
-                plots[f'{col}_pie'] = None
+                sns.histplot(series, kde=True, ax=ax, color='#0284c7')
+                ax.set_title(f'Histogram - {col}')
+                plots[f'{col}_histogram'] = create_plot_as_base64(fig)
 
-        return jsonify({
-            'columns': all_cols,
-            'results': results,
-            'plots': plots
-        })
+                fig, ax = plt.subplots()
+                sns.boxplot(x=series, ax=ax, color='#0284c7')
+                ax.set_title(f'Box Plot - {col}')
+                plots[f'{col}_boxplot'] = create_plot_as_base64(fig)
 
-    except Exception as e:
-        print(f"Error in descriptive_analysis: {e}")
-        return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
+            return render_template('descriptive_statistics.html', results=results, plots=plots)
 
+        except Exception as e:
+            print(f"Error in descriptive_statistics POST: {e}")
+            return render_template('descriptive_statistics.html', error=f'Terjadi kesalahan internal: {str(e)}')
+
+    return render_template('descriptive_statistics.html')
 
 @app.route('/api/get-usage-status')
 @login_required
