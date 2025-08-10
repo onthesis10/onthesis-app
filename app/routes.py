@@ -17,7 +17,7 @@ from werkzeug.utils import secure_filename
 # --- Impor untuk Analisis Statistik ---
 from scipy import stats
 import numpy as np
-import pandas as pd  # Ditambahkan untuk pengolahan data
+import pandas as pd
 
 # --- Impor dari __init__.py ---
 from app import app, db, login_manager
@@ -123,7 +123,7 @@ def check_and_update_usage(user_id, feature_name):
         citation_total = usage_data.get('citation_count', 0)
         usage_data = {
             'paraphrase_count': 0, 'chat_count': 0, 'search_count': 0,
-            'writing_assistant_count': 0, 'data_analysis_count': 0,
+            'writing_assistant_count': 0, 'data_analysis_count': 0, 'export_doc_count': 0,
             'last_reset_date': today_str, 'citation_count': citation_total
         }
         user_ref.set({'usage_limits': usage_data}, merge=True)
@@ -137,7 +137,7 @@ def check_and_update_usage(user_id, feature_name):
     return True, "OK"
 
 def check_and_update_pro_trial(user_id, feature_name):
-    PRO_TRIAL_LIMITS = {'writing_assistant': 3, 'data_analysis': 3}
+    PRO_TRIAL_LIMITS = {'writing_assistant': 3, 'data_analysis': 3, 'export_doc': 1}
     limit = PRO_TRIAL_LIMITS.get(feature_name)
     if limit is None: return True, "OK"
     user_ref = db.collection('users').document(user_id)
@@ -243,6 +243,28 @@ def user_profile():
 # =========================================================================
 # RUTE API
 # =========================================================================
+
+@app.route('/api/check-pro-trial-usage', methods=['POST'])
+@login_required
+def check_pro_trial_usage():
+    if current_user.is_pro:
+        return jsonify({'allowed': True})
+    
+    try:
+        data = request.get_json()
+        feature_name = data.get('feature')
+        if not feature_name:
+            return jsonify({'error': 'Nama fitur diperlukan.'}), 400
+        
+        # This function checks AND increments the count
+        is_allowed, message = check_and_update_pro_trial(current_user.id, feature_name)
+        
+        if not is_allowed:
+            return jsonify({'allowed': False, 'message': message}), 429
+        
+        return jsonify({'allowed': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/writing-assistant', methods=['POST'])
 @login_required
@@ -401,7 +423,6 @@ def api_normality():
         if not values or not isinstance(values, list):
             return jsonify({'error': 'Data angka diperlukan dalam array'}), 400
         
-        # Menggunakan Pandas untuk membersihkan data dan kalkulasi
         s = pd.Series(values, dtype=float).dropna()
         
         if len(s) < 3:
@@ -424,7 +445,6 @@ def api_normality():
         
         summary = f"Hasil uji Shapiro-Wilk menunjukkan nilai signifikansi p = {shapiro_p_rounded}. Karena nilai p > 0.05, dapat disimpulkan bahwa data {conclusion}."
 
-        # Membuat tabel hasil menggunakan Pandas DataFrame
         df_table = pd.DataFrame({
             "test": ["Shapiro-Wilk", "Kolmogorov-Smirnov"],
             "statistic": [shapiro_stat, ks_stat],
@@ -464,7 +484,6 @@ def api_levene():
         conclusion = "homogen" if p_value > 0.05 else "tidak homogen"
         summary = f"Hasil Levene’s Test menunjukkan nilai Sig. = {p_string} ({comparison}), sehingga dapat disimpulkan varians data antar kelompok adalah {conclusion}."
 
-        # Membuat tabel hasil menggunakan Pandas DataFrame
         df_table = pd.DataFrame({
             "test": ["Levene’s Test"],
             "statistic": [stat],
@@ -507,7 +526,6 @@ def api_bartlett():
         conclusion = "homogen" if p_value > 0.05 else "tidak homogen"
         summary = f"Hasil Bartlett's Test menunjukkan nilai Sig. = {p_string} ({comparison}), sehingga dapat disimpulkan varians data antar kelompok adalah {conclusion}."
 
-        # Membuat tabel hasil menggunakan Pandas DataFrame
         df_table = pd.DataFrame({
             "test": ["Bartlett’s Test"],
             "statistic": [stat],
@@ -532,7 +550,7 @@ def api_bartlett():
 def get_usage_status():
     if current_user.is_pro:
         return jsonify({'status': 'pro', 'message': 'Akses Penuh Tanpa Batas'})
-    LIMITS = {'paraphrase': 5, 'chat': 10, 'search': 5, 'citation': 15, 'writing_assistant': 3, 'data_analysis': 3}
+    LIMITS = {'paraphrase': 5, 'chat': 10, 'search': 5, 'citation': 15, 'writing_assistant': 3, 'data_analysis': 3, 'export_doc': 1}
     user_ref = db.collection('users').document(current_user.id)
     user_doc = user_ref.get()
     if not user_doc.exists: return jsonify({'error': 'User not found'}), 404
@@ -550,6 +568,7 @@ def get_usage_status():
         'citation_remaining': LIMITS['citation'] - usage_data.get('citation_count', 0),
         'writing_assistant_remaining': LIMITS['writing_assistant'] - usage_data.get('writing_assistant_count', 0),
         'data_analysis_remaining': LIMITS['data_analysis'] - usage_data.get('data_analysis_count', 0),
+        'export_doc_remaining': LIMITS['export_doc'] - usage_data.get('export_doc_count', 0),
         'limits': LIMITS
     })
 

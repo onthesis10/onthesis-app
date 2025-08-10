@@ -42,21 +42,25 @@
         border-bottom-color: var(--border-panel) !important;
     }
     /* Gaya Tabel SPSS */
-    table.dataTable thead {
-        background-color: var(--accent-cyan);
-    }
-    table.dataTable thead th {
-        color: white !important;
-        border-bottom: 1px solid var(--accent-cyan) !important;
-    }
-    table.dataTable tbody tr {
+    table.spss-table thead .spss-title-row th {
         background-color: transparent !important;
+        color: var(--text-primary) !important;
+        font-size: 1.1em;
+        font-weight: bold;
+        padding: 8px 0;
+        text-align: left;
+        border-bottom: 2px solid var(--text-primary) !important;
     }
-    table.dataTable tbody tr:hover {
-        background-color: var(--bg-canvas) !important;
+    table.spss-table thead .spss-header-row th {
+        color: var(--text-primary) !important;
+        font-weight: bold;
+        padding: 8px;
+        border-bottom: 1px solid var(--border-panel) !important;
     }
-    table.dataTable tbody td {
+    table.spss-table tbody td {
+        padding: 8px;
         color: var(--text-secondary) !important;
+        border-bottom: 1px solid var(--border-panel);
     }
     .highlight {
         color: var(--accent-cyan);
@@ -90,6 +94,7 @@
 
             <div class="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border-panel">
                 <button id="addGroup" class="btn-secondary flex-1">+ Tambah Grup</button>
+                <button id="removeGroup" class="btn-secondary flex-1">- Hapus Grup</button>
                 <button id="loadSample" class="btn-secondary flex-1">Muat Contoh</button>
             </div>
             
@@ -126,9 +131,8 @@
                     </div>
                 </div>
                 <div id="summaryText" class="text-text-secondary mb-4 p-4 bg-bg-canvas rounded-lg border border-border-panel"></div>
-                <h4 class="text-md font-bold text-text-primary mb-2">Test of Homogeneity of Variances</h4>
-                <table id="resultTable" class="display" style="width:100%">
-                    <!-- Header akan diisi oleh JavaScript -->
+                <table id="resultTable" class="display spss-table" style="width:100%">
+                    <!-- Header dan Body akan diisi oleh JavaScript -->
                 </table>
                 <div class="text-sm text-text-secondary mt-4" id="metaInfo"></div>
                 
@@ -161,13 +165,11 @@
 {% block page_scripts %}
 <script>
 $(document).ready(function() {
-    const groupsContainer = $('#groupsContainer');
-    let dataTable = null;
     let analysisResult = null;
     let groupDataForPlots = [];
 
-    function createGroup(name = '', data = '') {
-        const groupCount = groupsContainer.children().length + 1;
+    const createGroup = (name = '', data = '') => {
+        const groupCount = $('#groupsContainer').children().length + 1;
         const groupName = name || `Grup ${groupCount}`;
         const groupHtml = `
             <div class="data-group p-4 border border-border-panel rounded-lg bg-bg-canvas">
@@ -175,20 +177,32 @@ $(document).ready(function() {
                     <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full group-name-input" value="${groupName}" placeholder="Nama Grup">
                     <button class="text-text-secondary hover:text-red-400 remove-group-btn text-xl font-bold">&times;</button>
                 </div>
-                <textarea class="feedback-form-input data-input" placeholder="Masukkan data dipisah koma, spasi, atau baris baru...">${data}</textarea>
+                <textarea class="feedback-form-input data-input" placeholder="Masukkan data...">${data}</textarea>
             </div>
         `;
-        groupsContainer.append(groupHtml);
-    }
+        $('#groupsContainer').append(groupHtml);
+    };
 
-    function resetGroups(count = 2) {
-        groupsContainer.empty();
-        for (let i = 0; i < count; i++) {
-            createGroup();
+    createGroup();
+    createGroup();
+
+    $('#addGroup').click(() => createGroup());
+    $('#removeGroup').click(function() {
+        if ($('#groupsContainer').children().length > 2) {
+            $('#groupsContainer').children().last().remove();
+        } else {
+            alert('Minimal harus ada 2 grup.');
         }
-    }
-    
-    function getPlotlyLayout(title, forExport = false) {
+    });
+
+    $('#loadSample').click(() => {
+        $('#groupsContainer').empty();
+        createGroup('Kelas A', '22, 23, 25, 24, 23, 26, 28');
+        createGroup('Kelas B', '18, 19, 23, 24, 25, 21, 20');
+        createGroup('Kelas C', '29, 31, 33, 32, 34, 28, 30');
+    });
+
+    const getPlotlyLayout = (title, forExport = false) => {
         const isLight = document.documentElement.classList.contains('light');
         const titleColor = forExport ? '#000000' : (isLight ? '#181C32' : '#E6EDF3');
         const textColor = forExport ? '#000000' : (isLight ? '#5E6278' : '#8B949E');
@@ -202,23 +216,7 @@ $(document).ready(function() {
             xaxis: { gridcolor: gridColor, zerolinecolor: gridColor },
             yaxis: { gridcolor: gridColor, zerolinecolor: gridColor }
         };
-    }
-
-    $('#addGroup').click(() => createGroup());
-    groupsContainer.on('click', '.remove-group-btn', function() {
-        if (groupsContainer.children().length > 2) {
-            $(this).closest('.data-group').remove();
-        } else {
-            alert('Minimal harus ada 2 grup.');
-        }
-    });
-
-    $('#loadSample').click(() => {
-        groupsContainer.empty();
-        createGroup('Kelas A', '22, 23, 25, 24, 23, 26, 28');
-        createGroup('Kelas B', '18, 19, 23, 24, 25, 21, 20');
-        createGroup('Kelas C', '29, 31, 33, 32, 34, 28, 30');
-    });
+    };
 
     $('#runAnalysis').click(async function() {
         $('.data-input').removeClass('input-error');
@@ -277,13 +275,13 @@ $(document).ready(function() {
             $('#resultCard').slideDown();
             $('#summaryText').html(`<strong>Interpretasi:</strong> ${analysisResult.summary || ''}`);
             
-            if (dataTable) {
-                dataTable.destroy();
-            }
             const statisticName = uji === 'levene' ? 'Levene Statistic' : 'Bartlett Statistic';
-            $('#resultTable').html(`
+            const table = $('#resultTable');
+            table.empty();
+            table.html(`
                 <thead>
-                    <tr>
+                    <tr class="spss-title-row"><th colspan="5">Test of Homogeneity of Variances</th></tr>
+                    <tr class="spss-header-row">
                         <th></th>
                         <th>${statisticName}</th>
                         <th>df1</th>
@@ -294,16 +292,20 @@ $(document).ready(function() {
                 <tbody></tbody>
             `);
 
-            dataTable = $('#resultTable').DataTable({
-                paging: false, searching: false, info: false, ordering: false
-            });
-            
+            const tableBody = table.find('tbody');
             (analysisResult.table || []).forEach(r => {
                 const pValue = (typeof r.p === 'number') ? r.p : parseFloat(r.p);
                 const pCell = pValue < 0.05 ? `<span class='highlight'>${pValue.toFixed(4)}</span>` : pValue.toFixed(4);
-                dataTable.row.add(['', Number(r.statistic).toFixed(4), r.df1 ?? '', r.df2 ?? '', pCell]);
+                tableBody.append(`
+                    <tr>
+                        <td><strong>${r.test}</strong></td>
+                        <td>${Number(r.statistic).toFixed(4)}</td>
+                        <td>${r.df1 ?? ''}</td>
+                        <td>${r.df2 ?? ''}</td>
+                        <td>${pCell}</td>
+                    </tr>
+                `);
             });
-            dataTable.draw();
 
             $('#metaInfo').html(`<b>Jumlah data per grup:</b> ${validGroups.map(g => g.length).join(' &middot; ')}`);
 
@@ -396,6 +398,28 @@ $(document).ready(function() {
         btn.prop('disabled', true);
         spinner.removeClass('hidden');
 
+        if (format === 'doc') {
+            try {
+                const checkResponse = await fetch("{{ url_for('check_pro_trial_usage') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feature: 'export_doc' })
+                });
+                const checkData = await checkResponse.json();
+                if (!checkData.allowed) {
+                    alert(checkData.message);
+                    btn.prop('disabled', false);
+                    spinner.addClass('hidden');
+                    return;
+                }
+            } catch (e) {
+                alert("Gagal memverifikasi status langganan.");
+                btn.prop('disabled', false);
+                spinner.addClass('hidden');
+                return;
+            }
+        }
+
         try {
             const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
             const logoData = await loadImageAsBase64(logoUrl);
@@ -429,8 +453,8 @@ $(document).ready(function() {
                 });
                 yPos = doc.autoTable.previous.finalY + 10;
                 
-                const boxplotLayout = getPlotlyLayout('Box Plot Sebaran Data per Grup', true);
-                const violinplotLayout = getPlotlyLayout('Violin Plot Sebaran Data per Grup', true);
+                const boxplotLayout = getPlotlyLayout('Box Plot', true);
+                const violinplotLayout = getPlotlyLayout('Violin Plot', true);
                 
                 await Plotly.relayout('boxplot', boxplotLayout);
                 await Plotly.relayout('violinplot', violinplotLayout);
