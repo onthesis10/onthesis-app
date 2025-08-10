@@ -580,10 +580,7 @@ def api_bartlett():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-# =========================================================================
-# FUNGSI STATISTIK DESKRIPTIF (VERSI BARU & DIPERBAIKI)
-# =========================================================================
+        
 @app.route('/descriptive-analysis', methods=['POST'])
 @login_required
 def descriptive_analysis():
