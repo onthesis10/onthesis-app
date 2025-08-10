@@ -11,7 +11,7 @@ import requests
 import google.generativeai as genai
 import time
 import midtransclient
-from datetime import date
+from datetime import date, datetime, timedelta # Ditambahkan untuk tanggal kedaluwarsa
 from werkzeug.utils import secure_filename
 import uuid
 import io
@@ -106,17 +106,24 @@ def create_plot_as_base64(fig):
 
 
 # =========================================================================
-# MODEL PENGGUNA & LOADER
+# MODEL PENGGUNA & LOADER (DIPERBARUI DENGAN LOGIKA PRO)
 # =========================================================================
 class User(UserMixin):
-    def __init__(self, id, displayName, password_hash=None, email=None, is_pro=False, picture=None):
+    def __init__(self, id, displayName, password_hash=None, email=None, picture=None, pro_expiry_date=None):
         self.id = id
         self.displayName = displayName
         self.username = displayName
         self.email = email
-        self.is_pro = is_pro
         self.picture = picture
         self.password_hash = password_hash
+        self.pro_expiry_date = pro_expiry_date
+
+    @property
+    def is_pro(self):
+        """Properti dinamis untuk mengecek status PRO berdasarkan tanggal kedaluwarsa."""
+        if self.pro_expiry_date and isinstance(self.pro_expiry_date, datetime):
+            return self.pro_expiry_date > datetime.now()
+        return False
 
     def check_password(self, password):
         if self.password_hash is None: return False
@@ -129,14 +136,21 @@ def load_user(user_id):
         user_doc = db.collection('users').document(user_id).get()
         if user_doc.exists:
             user_data = user_doc.to_dict()
-            return User(id=user_id, displayName=user_data.get('displayName'), email=user_data.get('email'), password_hash=user_data.get('password_hash'), is_pro=user_data.get('isPro', False), picture=user_data.get('picture'))
+            return User(
+                id=user_id, 
+                displayName=user_data.get('displayName'), 
+                email=user_data.get('email'), 
+                password_hash=user_data.get('password_hash'), 
+                picture=user_data.get('picture'),
+                pro_expiry_date=user_data.get('proExpiryDate') # Memuat tanggal kedaluwarsa
+            )
         return None
     except Exception as e:
         print(f"Error saat memuat pengguna dari Firestore: {e}")
         return None
 
 # =========================================================================
-# FUNGSI HELPER UNTUK PEMBATASAN FITUR
+# FUNGSI HELPER UNTUK PEMBATASAN FITUR (DIPERBARUI)
 # =========================================================================
 def check_and_update_usage(user_id, feature_name):
     FEATURE_LIMITS = {
@@ -178,7 +192,7 @@ def check_and_update_pro_trial(user_id, feature_name):
     count_key = f"{feature_name}_count"
     current_count = usage_data.get(count_key, 0)
     if current_count >= limit:
-        return False, f"Anda telah menggunakan semua percobaan gratis ({limit}x) untuk fitur PRO ini. Silakan upgrade."
+        return False, "UPGRADE_REQUIRED" # Diubah untuk mengirim sinyal redirect
     user_ref.update({f'usage_limits.{count_key}': firestore.Increment(1)})
     return True, "OK"
 
@@ -276,6 +290,13 @@ def user_profile():
     client_key = os.getenv('MIDTRANS_CLIENT_KEY')
     return render_template('user-profile.html', midtrans_client_key=client_key)
 
+@app.route('/upgrade')
+@login_required
+def upgrade_page():
+    """Rute baru untuk halaman upgrade."""
+    client_key = os.getenv('MIDTRANS_CLIENT_KEY')
+    return render_template('upgrade.html', client_key=client_key)
+
 # =========================================================================
 # RUTE API
 # =========================================================================
@@ -295,6 +316,11 @@ def check_pro_trial_usage():
         is_allowed, message = check_and_update_pro_trial(current_user.id, feature_name)
         
         if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({
+                    'allowed': False, 
+                    'redirect': url_for('upgrade_page')
+                }), 429
             return jsonify({'allowed': False, 'message': message}), 429
         
         return jsonify({'allowed': True})
@@ -306,7 +332,10 @@ def check_pro_trial_usage():
 def api_writing_assistant():
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'writing_assistant')
-        if not is_allowed: return jsonify({'error': message}), 429
+        if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+            return jsonify({'error': message}), 429
     try:
         data = request.get_json()
         task = data.get('task')
@@ -330,7 +359,10 @@ def api_writing_assistant():
 def interpret_analysis():
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
-        if not is_allowed: return jsonify({'error': message}), 429
+        if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+            return jsonify({'error': message}), 429
     try:
         stats_text = request.get_json().get('stats')
         if not stats_text: return jsonify({'error': 'Data statistik tidak boleh kosong.'}), 400
@@ -452,6 +484,12 @@ def analyze_document():
 @app.route('/api/normality', methods=['POST'])
 @login_required
 def api_normality():
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+            return jsonify({'error': message}), 429
     try:
         data = request.get_json()
         values = data.get('values')
@@ -501,6 +539,12 @@ def api_normality():
 @app.route('/api/levene', methods=['POST'])
 @login_required
 def api_levene():
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+            return jsonify({'error': message}), 429
     try:
         data = request.get_json()
         groups = data.get('groups')
@@ -543,6 +587,12 @@ def api_levene():
 @app.route('/api/bartlett', methods=['POST'])
 @login_required
 def api_bartlett():
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+            return jsonify({'error': message}), 429
     try:
         data = request.get_json()
         groups = data.get('groups')
@@ -580,15 +630,14 @@ def api_bartlett():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
         
-# =========================================================================
-# API STATISTIK DESKRIPTIF (PERBAIKAN FINAL)
-# =========================================================================
 @app.route('/api/descriptive-analysis', methods=['POST'])
 @login_required
 def api_descriptive_analysis():
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
         if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
             return jsonify({'error': message}), 429
 
     try:
@@ -615,7 +664,6 @@ def api_descriptive_analysis():
             series = df[col].dropna()
             if len(series) < 2: continue
 
-            # Mengubah hasil dari pandas/numpy ke tipe data standar Python
             results[col] = {
                 'n': int(len(series)),
                 'mean': float(series.mean()),
@@ -630,37 +678,29 @@ def api_descriptive_analysis():
 
             sns.set_style("whitegrid")
             
-            # Membuat plot histogram
             fig_hist, ax_hist = plt.subplots()
             sns.histplot(series, kde=True, ax=ax_hist, color='#0284c7')
             ax_hist.set_title(f'Histogram - {col}')
             plots[f'{col}_histogram'] = create_plot_as_base64(fig_hist)
 
-            # Membuat plot boxplot
             fig_box, ax_box = plt.subplots()
             sns.boxplot(x=series, ax=ax_box, color='#0284c7')
             ax_box.set_title(f'Box Plot - {col}')
             plots[f'{col}_boxplot'] = create_plot_as_base64(fig_box)
 
-            # --- PENAMBAHAN PIE CHART ---
             try:
-                # Mengelompokkan data menjadi 5 kategori untuk pie chart
-                # Ini berguna untuk data kontinu
-                if series.nunique() > 1:
-                    binned_data = pd.cut(series, bins=5, precision=0, include_lowest=True).value_counts().sort_index()
-                    
+                if series.nunique() > 1 and series.nunique() <= 10: # Pie chart for categorical or low-cardinality data
+                    pie_data = series.value_counts()
                     fig_pie, ax_pie = plt.subplots()
-                    ax_pie.pie(binned_data, labels=binned_data.index.astype(str), autopct='%1.1f%%', startangle=90)
-                    ax_pie.axis('equal')  # Memastikan pie chart berbentuk lingkaran
+                    ax_pie.pie(pie_data, labels=pie_data.index.astype(str), autopct='%1.1f%%', startangle=90)
+                    ax_pie.axis('equal')
                     ax_pie.set_title(f'Distribusi Proporsi - {col}')
                     plots[f'{col}_piechart'] = create_plot_as_base64(fig_pie)
                 else:
                     plots[f'{col}_piechart'] = None
             except Exception as pie_e:
                 print(f"Tidak dapat membuat pie chart untuk {col}: {pie_e}")
-                plots[f'{col}_piechart'] = None # Kirim null jika gagal
-            # --- AKHIR PENAMBAHAN PIE CHART ---
-
+                plots[f'{col}_piechart'] = None
         return jsonify({
             'columns': all_cols,
             'results': results,
@@ -668,7 +708,6 @@ def api_descriptive_analysis():
         })
 
     except Exception as e:
-        # Menambahkan logging di sisi server untuk debugging yang lebih mudah
         print(f"Error in descriptive_analysis API: {e}")
         import traceback
         traceback.print_exc()
@@ -738,7 +777,9 @@ def verify_google_token():
                 'displayName': decoded_token.get('name', decoded_token.get('email')),
                 'email': decoded_token.get('email'),
                 'picture': decoded_token.get('picture'),
-                'isPro': False, 'password_hash': None
+                'isPro': False, 
+                'password_hash': None,
+                'proExpiryDate': None
             }
             user_ref.set(user_data)
             user = load_user(uid)
@@ -753,8 +794,13 @@ def create_transaction():
     try:
         if not midtrans_snap:
             return jsonify({'status': 'error', 'message': 'Layanan pembayaran tidak terkonfigurasi.'}), 503
-        order_id = f"ONTESIS-PRO-{current_user.id}-{int(time.time())}"
-        transaction_details = {"order_id": order_id, "gross_amount": 50000}
+        data = request.get_json()
+        plan = data.get('plan')
+        amount = data.get('amount')
+        if not plan or not amount:
+            return jsonify({'status': 'error', 'message': 'Detail paket tidak lengkap.'}), 400
+        order_id = f"ONTESIS-PRO-{current_user.id}-{plan}-{int(time.time())}"
+        transaction_details = {"order_id": order_id, "gross_amount": int(amount)}
         customer_details = {"first_name": current_user.displayName, "email": current_user.email}
         transaction = midtrans_snap.create_transaction({
             "transaction_details": transaction_details,
@@ -773,10 +819,23 @@ def payment_notification():
         fraud_status = notification_json.get('fraud_status')
         if transaction_status == 'settlement' and fraud_status == 'accept':
             parts = order_id.split('-')
-            if len(parts) >= 3 and parts[0] == 'ONTESIS' and parts[1] == 'PRO':
+            if len(parts) >= 4 and parts[0] == 'ONTESIS' and parts[1] == 'PRO':
                 user_id = parts[2]
-                db.collection('users').document(user_id).update({'isPro': True})
-                print(f"Sukses: Pengguna {user_id} telah di-upgrade ke PRO.")
+                plan = parts[3]
+                now = datetime.now()
+                expiry_date = None
+                if plan == 'weekly':
+                    expiry_date = now + timedelta(days=7)
+                elif plan == 'monthly':
+                    expiry_date = now + timedelta(days=30)
+                elif plan == 'yearly':
+                    expiry_date = now + timedelta(days=365)
+                if expiry_date:
+                    db.collection('users').document(user_id).update({
+                        'proExpiryDate': expiry_date,
+                        'lastSubscriptionPlan': plan
+                    })
+                    print(f"Sukses: Pengguna {user_id} telah upgrade ke paket {plan}.")
         return jsonify({'status': 'ok'}), 200
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")

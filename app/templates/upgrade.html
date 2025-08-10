@@ -1,0 +1,136 @@
+{% extends "layout.html" %}
+
+{% block title %}Upgrade ke OnThesis PRO{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka Midtrans Snap -->
+<script type="text/javascript"
+    src="https://app.sandbox.midtrans.com/snap/snap.js"
+    data-client-key="{{ client_key }}"></script>
+
+<style>
+    .plan-card {
+        transition: all 0.3s ease;
+        border: 2px solid var(--border-panel);
+    }
+    .plan-card:hover {
+        transform: translateY(-8px);
+        border-color: var(--accent-cyan);
+    }
+    .plan-card.recommended {
+        border-color: var(--accent-cyan);
+        box-shadow: 0 0 25px var(--accent-cyan-glow);
+    }
+    .feature-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .feature-list svg {
+        flex-shrink: 0;
+        color: var(--accent-cyan);
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in-up">
+    <header class="mb-12 text-center">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-text-primary">Buka Potensi Penuh OnThesis</h1>
+        <p class="text-lg text-text-secondary mt-4 max-w-2xl mx-auto">Berhentilah dibatasi oleh kuota gratisan. Skripsimu butuh yang terbaik.</p>
+    </header>
+
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        <!-- Paket Mingguan -->
+        <div class="apex-card !p-8 plan-card flex flex-col">
+            <h3 class="text-2xl font-bold text-text-primary">Mingguan</h3>
+            <p class="text-text-secondary mb-6">Untuk kejar deadline.</p>
+            <p class="text-4xl font-extrabold text-text-primary mb-6">Rp 19.000</p>
+            <button class="btn-secondary w-full mt-auto select-plan-btn" data-plan="weekly" data-amount="19000">Pilih Paket</button>
+        </div>
+
+        <!-- Paket Bulanan (Rekomendasi) -->
+        <div class="apex-card !p-8 plan-card recommended flex flex-col">
+            <div class="absolute top-4 right-4 bg-accent-cyan text-bg-panel text-xs font-bold px-3 py-1 rounded-full">Paling Populer</div>
+            <h3 class="text-2xl font-bold text-text-primary">Bulanan</h3>
+            <p class="text-text-secondary mb-6">Teman begadang terbaik.</p>
+            <p class="text-4xl font-extrabold text-text-primary mb-6">Rp 30.000</p>
+            <button class="btn-primary w-full mt-auto select-plan-btn" data-plan="monthly" data-amount="30000">Pilih Paket</button>
+        </div>
+
+        <!-- Paket Tahunan -->
+        <div class="apex-card !p-8 plan-card flex flex-col">
+            <h3 class="text-2xl font-bold text-text-primary">Tahunan</h3>
+            <p class="text-text-secondary mb-6">Untuk pejuang sejati.</p>
+            <p class="text-4xl font-extrabold text-text-primary mb-6">Rp 300.000</p>
+            <button class="btn-secondary w-full mt-auto select-plan-btn" data-plan="yearly" data-amount="300000">Pilih Paket</button>
+        </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto mt-16 text-center">
+        <h3 class="text-2xl font-bold text-text-primary mb-8">Semua Paket PRO Mendapatkan:</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+            <ul class="feature-list">
+                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Akses **tanpa batas** ke semua fitur AI (Parafrase, Analisis Data, dll).</span></li>
+                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Ekspor hasil analisis ke PDF dan DOCX tanpa watermark.</span></li>
+            </ul>
+            <ul class="feature-list">
+                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Prioritas dukungan pelanggan jika kamu menemukan masalah.</span></li>
+                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Dukungan langsung untuk perkembangan OnThesis di masa depan.</span></li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+$(document).ready(function() {
+    $('.select-plan-btn').on('click', function() {
+        const button = $(this);
+        const originalText = button.text();
+        button.prop('disabled', true).text('Memproses...');
+
+        const plan = $(this).data('plan');
+        const amount = $(this).data('amount');
+
+        $.ajax({
+            url: "{{ url_for('create_transaction') }}",
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ plan: plan, amount: amount }),
+            success: function(res) {
+                if (res.token) {
+                    snap.pay(res.token, {
+                        onSuccess: function(result){
+                            alert("Pembayaran berhasil!"); console.log(result);
+                            window.location.href = "{{ url_for('dashboard') }}";
+                        },
+                        onPending: function(result){
+                            alert("Menunggu pembayaran Anda!"); console.log(result);
+                        },
+                        onError: function(result){
+                            alert("Pembayaran gagal!"); console.log(result);
+                        },
+                        onClose: function(){
+                            alert('Anda menutup popup tanpa menyelesaikan pembayaran');
+                        }
+                    });
+                } else {
+                    alert('Gagal mendapatkan token pembayaran.');
+                }
+            },
+            error: function(err) {
+                alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.message : 'Tidak dapat terhubung ke server.'));
+            },
+            complete: function() {
+                button.prop('disabled', false).text(originalText);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
