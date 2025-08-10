@@ -615,9 +615,7 @@ def api_descriptive_analysis():
             series = df[col].dropna()
             if len(series) < 2: continue
 
-            # --- PERBAIKAN DIMULAI DI SINI ---
-            # Setiap hasil dari pandas/numpy diubah secara eksplisit ke tipe data standar Python (int, float)
-            # Ini untuk mencegah error "not JSON serializable".
+            # Mengubah hasil dari pandas/numpy ke tipe data standar Python
             results[col] = {
                 'n': int(len(series)),
                 'mean': float(series.mean()),
@@ -629,7 +627,6 @@ def api_descriptive_analysis():
                 'min': float(series.min()),
                 'max': float(series.max()),
             }
-            # --- PERBAIKAN SELESAI DI SINI ---
 
             sns.set_style("whitegrid")
             
@@ -644,6 +641,25 @@ def api_descriptive_analysis():
             sns.boxplot(x=series, ax=ax_box, color='#0284c7')
             ax_box.set_title(f'Box Plot - {col}')
             plots[f'{col}_boxplot'] = create_plot_as_base64(fig_box)
+
+            # --- PENAMBAHAN PIE CHART ---
+            try:
+                # Mengelompokkan data menjadi 5 kategori untuk pie chart
+                # Ini berguna untuk data kontinu
+                if series.nunique() > 1:
+                    binned_data = pd.cut(series, bins=5, precision=0, include_lowest=True).value_counts().sort_index()
+                    
+                    fig_pie, ax_pie = plt.subplots()
+                    ax_pie.pie(binned_data, labels=binned_data.index.astype(str), autopct='%1.1f%%', startangle=90)
+                    ax_pie.axis('equal')  # Memastikan pie chart berbentuk lingkaran
+                    ax_pie.set_title(f'Distribusi Proporsi - {col}')
+                    plots[f'{col}_piechart'] = create_plot_as_base64(fig_pie)
+                else:
+                    plots[f'{col}_piechart'] = None
+            except Exception as pie_e:
+                print(f"Tidak dapat membuat pie chart untuk {col}: {pie_e}")
+                plots[f'{col}_piechart'] = None # Kirim null jika gagal
+            # --- AKHIR PENAMBAHAN PIE CHART ---
 
         return jsonify({
             'columns': all_cols,

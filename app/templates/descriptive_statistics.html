@@ -3,7 +3,7 @@
 {% block title %}Statistik Deskriptif - OnThesis{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka JavaScript yang Diperlukan (INI PERBAIKANNYA) -->
+<!-- Pustaka JavaScript yang Diperlukan -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -84,7 +84,7 @@
         <p class="text-lg text-text-secondary mt-1">Dapatkan ringkasan statistik dan visualisasi dari data Anda.</p>
     </header>
 
-    <div class="max-w-4xl mx-auto space-y-8">
+    <div class="max-w-6xl mx-auto space-y-8">
         
         <!-- Kartu Input -->
         <div class="apex-card p-6">
@@ -199,20 +199,27 @@ $(document).ready(function() {
 
             tabsNav.append(`<button class="nav-link ${isActive ? 'active' : ''}" data-bs-target="#tab-${safeColName}" type="button">${colName}</button>`);
             
-            const formatNum = (num) => (num !== null && num !== undefined) ? Number(num).toFixed(3) : 'N/A';
+            // --- PERBAIKAN FORMAT ANGKA ---
+            const formatNum = (num) => {
+                if (num === null || num === undefined) return 'N/A';
+                // Menggunakan toFixed(3) lalu parseFloat untuk menghilangkan .000 yang tidak perlu
+                let formatted = parseFloat(Number(num).toFixed(3));
+                // Menggunakan toLocaleString untuk format ribuan jika perlu
+                return formatted.toLocaleString('id-ID', { maximumFractionDigits: 3 });
+            };
 
             const tabContentHtml = `
                 <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="tab-${safeColName}">
                     <div class="apex-card p-6 mb-8">
-                        <h4 class="text-lg font-bold text-text-primary mb-2">Tabel Statistik Deskriptif</h4>
                         <table id="table-${safeColName}" class="spss-table"></table>
-                        <div class="text-sm text-text-secondary mt-4">N = ${stats.n}</div>
+                        <div class="text-sm text-text-secondary mt-2 text-right">N (Jumlah Data Valid) = ${stats.n}</div>
                     </div>
                     <div class="apex-card p-6">
                         <h3 class="text-xl font-bold text-text-primary mb-4 text-center">Visualisasi Distribusi</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 plots-container">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 plots-container">
                             <img id="hist-${safeColName}" src="${data.plots[colName+'_histogram']}" alt="Histogram of ${colName}">
                             <img id="boxplot-${safeColName}" src="${data.plots[colName+'_boxplot']}" alt="Boxplot of ${colName}">
+                            ${data.plots[colName+'_piechart'] ? `<img id="pie-${safeColName}" src="${data.plots[colName+'_piechart']}" alt="Pie Chart of ${colName}">` : '<div class="flex items-center justify-center h-full bg-bg-canvas border border-border-panel rounded-lg"><p class="text-center text-text-secondary">Pie chart tidak dapat dibuat.</p></div>'}
                         </div>
                     </div>
                     <div class="apex-card p-6 mt-8">
@@ -227,11 +234,11 @@ $(document).ready(function() {
                 </div>`;
             tabsContent.append(tabContentHtml);
 
-            // Render table
+            // Render table dengan gaya baru
             const table = $(`#table-${safeColName}`);
             table.html(`
                 <thead>
-                    <tr class="spss-title-row"><th colspan="2">Descriptive Statistics</th></tr>
+                    <tr class="spss-title-row"><th colspan="2">Statistik Deskriptif: ${colName}</th></tr>
                     <tr class="spss-header-row"><th>Ukuran</th><th>Nilai</th></tr>
                 </thead>
                 <tbody>
@@ -383,6 +390,10 @@ $(document).ready(function() {
     // --- Export Logic ---
     const loadImageAsBase64 = (url) => {
         return new Promise((resolve, reject) => {
+            if (!url) {
+                resolve(null); // Resolve with null if URL is invalid
+                return;
+            }
             const img = new Image();
             img.crossOrigin = 'Anonymous';
             img.onload = () => {
@@ -393,7 +404,7 @@ $(document).ready(function() {
                 ctx.drawImage(img, 0, 0);
                 resolve(canvas.toDataURL('image/png'));
             };
-            img.onerror = reject;
+            img.onerror = () => reject(new Error('Gagal memuat gambar untuk ekspor.'));
             img.src = url;
         });
     };
@@ -450,15 +461,23 @@ $(document).ready(function() {
                 
                 const histImgSrc = $(`#hist-${safeColName}`).attr('src');
                 const boxplotImgSrc = $(`#boxplot-${safeColName}`).attr('src');
+                const pieImgSrc = $(`#pie-${safeColName}`).attr('src');
+
                 const histImgData = await loadImageAsBase64(histImgSrc);
                 const boxplotImgData = await loadImageAsBase64(boxplotImgSrc);
-
-                if (yPos > 160) { doc.addPage(); addHeader(doc); yPos = 25; }
+                const pieImgData = pieImgSrc ? await loadImageAsBase64(pieImgSrc) : null;
+                
+                if (yPos > 200) { doc.addPage(); addHeader(doc); yPos = 25; }
                 doc.setFontSize(14);
                 doc.text("Visualisasi Data", 15, yPos);
                 yPos += 8;
-                doc.addImage(histImgData, 'PNG', 15, yPos, 85, 64);
-                doc.addImage(boxplotImgData, 'PNG', 110, yPos, 85, 64);
+                doc.addImage(histImgData, 'PNG', 15, yPos, 90, 68);
+                doc.addImage(boxplotImgData, 'PNG', 110, yPos, 90, 68);
+                yPos += 75;
+
+                if(pieImgData){
+                    doc.addImage(pieImgData, 'PNG', 15, yPos, 90, 68);
+                }
 
                 doc.save(`hasil-deskriptif-${safeColName}.pdf`);
 
@@ -479,11 +498,17 @@ $(document).ready(function() {
                 
                 const histImgSrc = $(`#hist-${safeColName}`).attr('src');
                 const boxplotImgSrc = $(`#boxplot-${safeColName}`).attr('src');
+                const pieImgSrc = $(`#pie-${safeColName}`).attr('src');
+
                 const histImgData = await loadImageAsBase64(histImgSrc);
                 const boxplotImgData = await loadImageAsBase64(boxplotImgSrc);
+                const pieImgData = pieImgSrc ? await loadImageAsBase64(pieImgSrc) : null;
 
                 content += `<h4>Histogram</h4><p><img src="${histImgData}" style="width:450px; height:auto;" /></p>`;
                 content += `<h4>Box Plot</h4><p><img src="${boxplotImgData}" style="width:450px; height:auto;" /></p>`;
+                if(pieImgData){
+                    content += `<h4>Pie Chart</h4><p><img src="${pieImgData}" style="width:450px; height:auto;" /></p>`;
+                }
 
                 var converted = htmlDocx.asBlob(content);
                 saveAs(converted, `hasil-deskriptif-${safeColName}.doc`);
