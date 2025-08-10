@@ -252,6 +252,11 @@ def normality_test(): return render_template('normality_test.html')
 @login_required
 def homogeneity_test(): return render_template('homogeneity_test.html')
 
+@app.route('/descriptive_statistics')
+@login_required
+def descriptive_statistics():
+    return render_template('descriptive_statistics.html')
+
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
@@ -576,76 +581,74 @@ def api_bartlett():
         return jsonify({'error': str(e)}), 500
         
 # =========================================================================
-# RUTE STATISTIK DESKRIPTIF (VERSI BARU & DIPERBAIKI DENGAN SSR)
+# API STATISTIK DESKRIPTIF (FINAL & DIPERBAIKI)
 # =========================================================================
-@app.route('/descriptive_statistics', methods=['GET', 'POST'])
+@app.route('/api/descriptive-analysis', methods=['POST'])
 @login_required
-def descriptive_statistics():
-    if request.method == 'POST':
-        if not current_user.is_pro:
-            is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
-            if not is_allowed:
-                return render_template('descriptive_statistics.html', error=message)
+def api_descriptive_analysis():
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            return jsonify({'error': message}), 429
 
-        df = None
-        try:
-            if 'file' in request.files and request.files['file'].filename != '':
-                file = request.files['file']
-                if not file.filename.lower().endswith('.csv'):
-                    return render_template('descriptive_statistics.html', error='Format file tidak valid. Harap unggah file .csv')
-                df = pd.read_csv(file)
-            elif 'raw_csv' in request.form and request.form['raw_csv'].strip():
-                raw_csv_data = request.form['raw_csv']
-                df = pd.read_csv(io.StringIO(raw_csv_data))
-            else:
-                return render_template('descriptive_statistics.html', error='Tidak ada data yang diinput. Silakan unggah file CSV atau tempel data.')
+    try:
+        if not request.is_json:
+            return jsonify({'error': 'Format request tidak valid, harus JSON.'}), 400
 
-            if df.empty:
-                return render_template('descriptive_statistics.html', error='Data kosong setelah diproses.')
+        data = request.get_json()
+        if not data or not any(data.values()):
+             return jsonify({'error': 'Tidak ada data yang dikirim untuk dianalisis.'}), 400
+        
+        df = pd.DataFrame.from_dict(data, orient='index').transpose()
+        
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
-            numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
-            if not numeric_cols:
-                return render_template('descriptive_statistics.html', error='Tidak ada kolom data numerik yang ditemukan untuk dianalisis.')
+        if df.empty:
+            return jsonify({'error': 'Data kosong setelah diproses.'}), 400
+
+        all_cols = df.columns.tolist()
+        results = {}
+        plots = {}
+        
+        for col in all_cols:
+            series = df[col].dropna()
+            if len(series) < 2: continue
+
+            results[col] = {
+                'n': len(series),
+                'mean': series.mean(),
+                'median': series.median(),
+                'mode': series.mode().tolist() if not series.mode().empty else ['N/A'],
+                'std': series.std(),
+                'variance': series.var(),
+                'range': series.max() - series.min(),
+                'min': series.min(),
+                'max': series.max(),
+            }
+
+            sns.set_style("whitegrid")
             
-            df_numeric = df[numeric_cols]
-            results = {}
-            plots = {}
+            fig, ax = plt.subplots()
+            sns.histplot(series, kde=True, ax=ax, color='#0284c7')
+            ax.set_title(f'Histogram - {col}')
+            plots[f'{col}_histogram'] = create_plot_as_base64(fig)
 
-            for col in df_numeric.columns:
-                series = df_numeric[col].dropna()
-                if len(series) < 2: continue
+            fig, ax = plt.subplots()
+            sns.boxplot(x=series, ax=ax, color='#0284c7')
+            ax.set_title(f'Box Plot - {col}')
+            plots[f'{col}_boxplot'] = create_plot_as_base64(fig)
 
-                results[col] = {
-                    'n': len(series),
-                    'mean': series.mean(),
-                    'median': series.median(),
-                    'mode': series.mode().tolist() if not series.mode().empty else ['N/A'],
-                    'std': series.std(),
-                    'variance': series.var(),
-                    'range': series.max() - series.min(),
-                    'min': series.min(),
-                    'max': series.max(),
-                }
+        return jsonify({
+            'columns': all_cols,
+            'results': results,
+            'plots': plots
+        })
 
-                sns.set_style("whitegrid")
-                
-                fig, ax = plt.subplots()
-                sns.histplot(series, kde=True, ax=ax, color='#0284c7')
-                ax.set_title(f'Histogram - {col}')
-                plots[f'{col}_histogram'] = create_plot_as_base64(fig)
+    except Exception as e:
+        print(f"Error in descriptive_analysis API: {e}")
+        return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
 
-                fig, ax = plt.subplots()
-                sns.boxplot(x=series, ax=ax, color='#0284c7')
-                ax.set_title(f'Box Plot - {col}')
-                plots[f'{col}_boxplot'] = create_plot_as_base64(fig)
-
-            return render_template('descriptive_statistics.html', results=results, plots=plots)
-
-        except Exception as e:
-            print(f"Error in descriptive_statistics POST: {e}")
-            return render_template('descriptive_statistics.html', error=f'Terjadi kesalahan internal: {str(e)}')
-
-    return render_template('descriptive_statistics.html')
 
 @app.route('/api/get-usage-status')
 @login_required
