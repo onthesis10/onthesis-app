@@ -373,6 +373,24 @@ $(document).ready(function() {
         });
     });
 
+    // Fungsi untuk memuat gambar sebagai base64
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    };
+
     const exportHandler = async (format) => {
         const btn = $(`#export-${format}-btn`);
         const spinner = btn.siblings('.spinner').first();
@@ -380,14 +398,22 @@ $(document).ready(function() {
         spinner.removeClass('hidden');
 
         try {
+            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-blue.png') }}";
+            const logoData = await loadImageAsBase64(logoUrl);
+
             if (format === 'pdf') {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 let yPos = 15;
 
+                const addHeader = () => {
+                    doc.addImage(logoData, 'PNG', 15, 10, 30, 8);
+                };
+
+                addHeader();
                 doc.setFontSize(18);
-                doc.text("Laporan Uji Homogenitas - OnThesis", 105, yPos, { align: 'center' });
-                yPos += 15;
+                doc.text("Laporan Uji Homogenitas - OnThesis", 105, 25, { align: 'center' });
+                yPos = 40;
 
                 doc.setFontSize(12);
                 const summary = $('#summaryText').text();
@@ -415,12 +441,12 @@ $(document).ready(function() {
                 await Plotly.relayout('boxplot', getPlotlyLayout('Box Plot Sebaran Data per Grup'));
                 await Plotly.relayout('violinplot', getPlotlyLayout('Violin Plot Sebaran Data per Grup'));
 
-                if (yPos > 160) { doc.addPage(); yPos = 15; }
+                if (yPos > 160) { doc.addPage(); addHeader(); yPos = 25; }
                 doc.setFontSize(14);
                 doc.text("Visualisasi Data", 15, yPos);
                 yPos += 8;
-                doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 53); // Proporsional
-                doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 53); // Proporsional
+                doc.addImage(boxplotImg, 'PNG', 15, yPos, 85, 53);
+                doc.addImage(violinplotImg, 'PNG', 110, yPos, 85, 53);
 
                 doc.save('hasil-uji-homogenitas-onthesis.pdf');
 
@@ -431,10 +457,10 @@ $(document).ready(function() {
                     <style>
                         body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
                         h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; }
-                        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; border: 1px solid #000; }
-                        th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+                        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+                        th, td { border: 1px solid #000; padding: 6px; text-align: left; vertical-align: top; }
                         th { font-weight: bold; background-color: #E0E0E0; }
-                        .spss-title-cell { text-align: left; font-weight: bold; border-bottom: 1px solid #000; }
+                        .spss-title-cell { text-align: left; font-weight: bold; border: 1px solid #000; background-color: #E0E0E0;}
                     </style>
                     <h1>Laporan Uji Homogenitas - OnThesis</h1>
                 `;
