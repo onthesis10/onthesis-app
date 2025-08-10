@@ -216,15 +216,19 @@ $(document).ready(function(){
         }
     });
 
-    const getPlotlyLayout = (title) => {
+    const getPlotlyLayout = (title, forExport = false) => {
         const isLight = document.documentElement.classList.contains('light');
+        const titleColor = forExport ? '#000000' : (isLight ? '#181C32' : '#E6EDF3');
+        const textColor = forExport ? '#000000' : (isLight ? '#5E6278' : '#8B949E');
+        const gridColor = forExport ? '#cccccc' : (isLight ? '#DEE2E6' : '#30363D');
+
         return {
-            title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
+            title: { text: title, font: { color: titleColor } },
             paper_bgcolor: 'transparent',
             plot_bgcolor: 'transparent',
-            font: { color: isLight ? '#5E6278' : '#8B949E' },
-            xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
-            yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D', zerolinecolor: isLight ? '#DEE2E6' : '#30363D' },
+            font: { color: textColor },
+            xaxis: { gridcolor: gridColor, zerolinecolor: gridColor },
+            yaxis: { gridcolor: gridColor, zerolinecolor: gridColor },
             showlegend: false
         };
     };
@@ -364,6 +368,23 @@ $(document).ready(function(){
         });
     }
 
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    };
+
     const exportHandler = async (format) => {
         const btn = $(`#export-${format}-btn`);
         const spinner = btn.siblings('.spinner').first();
@@ -371,18 +392,27 @@ $(document).ready(function(){
         spinner.removeClass('hidden');
 
         try {
+            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
+            const logoData = await loadImageAsBase64(logoUrl);
+
             if (format === 'pdf') {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 let yPos = 15;
 
+                const addHeader = (docInstance) => {
+                    const pageWidth = docInstance.internal.pageSize.width;
+                    docInstance.addImage(logoData, 'PNG', pageWidth - 15 - 30, 10, 30, 8);
+                };
+
+                addHeader(doc);
                 doc.setFontSize(18);
-                doc.text("Laporan Uji Normalitas - OnThesis", 105, yPos, { align: 'center' });
-                yPos += 15;
+                doc.text("Laporan Uji Normalitas - OnThesis", 105, 25, { align: 'center' });
+                yPos = 40;
 
                 for (const [index, res] of analysisResults.entries()) {
                     if (res.error) continue;
-                    if (yPos > 220) { doc.addPage(); yPos = 15; }
+                    if (yPos > 220) { doc.addPage(); addHeader(doc); yPos = 25; }
 
                     doc.setFontSize(14);
                     doc.text(`Hasil untuk Variabel: ${res.name}`, 15, yPos);
@@ -412,18 +442,18 @@ $(document).ready(function(){
                     if ($('#check-box').is(':checked')) plotPromises.push({id: `box-${resultId}`, title: "Box Plot"});
                     
                     if(plotPromises.length > 0) {
-                        if (yPos > 150) { doc.addPage(); yPos = 15; }
+                        if (yPos > 150) { doc.addPage(); addHeader(doc); yPos = 25; }
                         doc.setFontSize(12);
                         doc.text("Visualisasi Data", 15, yPos);
                         yPos += 8;
                         
                         const images = await Promise.all(plotPromises.map(p => Plotly.toImage(p.id, {format: 'png', width: 800, height: 500})));
                         images.forEach((imgData, i) => {
-                            if (yPos > 210) { doc.addPage(); yPos = 15; }
+                            if (yPos > 210) { doc.addPage(); addHeader(doc); yPos = 25; }
                             doc.setFontSize(10);
                             doc.text(plotPromises[i].title, 15, yPos);
                             yPos += 5;
-                            doc.addImage(imgData, 'PNG', 15, yPos, 180, 112.5); // Proporsional
+                            doc.addImage(imgData, 'PNG', 15, yPos, 180, 112.5);
                             yPos += 120;
                         });
                     }
@@ -437,10 +467,9 @@ $(document).ready(function(){
                         body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
                         h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; }
                         table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-                        th, td { border: 1px solid #000; padding: 5px; text-align: left; }
-                        th { font-weight: bold; }
-                        .spss-title { text-align: left; font-weight: bold; border-top: 1px solid #000; border-left: 1px solid #000; border-right: 1px solid #000;}
-                        .spss-header { font-weight: bold; }
+                        th, td { border: 1px solid #000; padding: 6px; text-align: left; vertical-align: top; }
+                        th { font-weight: bold; background-color: #E0E0E0; }
+                        .spss-title-cell { text-align: left; font-weight: bold; border: 1px solid #000; background-color: #E0E0E0;}
                     </style>
                     <h1>Laporan Uji Normalitas - OnThesis</h1>
                 `;
@@ -449,27 +478,30 @@ $(document).ready(function(){
                     content += `<h2>Hasil untuk Variabel: ${res.name}</h2>`;
                     content += `<p>${res.summary}</p>`;
                     
-                    let tableHtml = `<table>
-                        <thead>
-                            <tr><th class="spss-title" colspan="4">Tests of Normality</th></tr>
-                            <tr>
-                                <th class="spss-header"></th>
-                                <th class="spss-header">Statistic</th>
-                                <th class="spss-header">df</th>
-                                <th class="spss-header">Sig.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${res.table.map(row => `
+                    let tableHtml = `
+                        <h4>Tabel 1</h4>
+                        <table>
+                            <thead>
+                                <tr><th class="spss-title-cell" colspan="4">Tests of Normality</th></tr>
                                 <tr>
-                                    <td style="font-weight: bold;">${row.test}</td>
-                                    <td>${row.statistic.toFixed(3)}</td>
-                                    <td>${row.df}</td>
-                                    <td>${row.p.toFixed(3)}</td>
+                                    <th></th>
+                                    <th>Statistic</th>
+                                    <th>df</th>
+                                    <th>Sig.</th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>`;
+                            </thead>
+                            <tbody>
+                                ${res.table.map(row => `
+                                    <tr>
+                                        <td style="font-weight: bold;">${row.test}</td>
+                                        <td>${row.statistic.toFixed(3)}</td>
+                                        <td>${row.df}</td>
+                                        <td>${row.p.toFixed(3)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
                     content += tableHtml;
                     
                     content += `<h3>Visualisasi Data</h3>`;

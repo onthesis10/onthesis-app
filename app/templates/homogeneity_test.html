@@ -373,7 +373,6 @@ $(document).ready(function() {
         });
     });
 
-    // Fungsi untuk memuat gambar sebagai base64
     const loadImageAsBase64 = (url) => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -398,7 +397,7 @@ $(document).ready(function() {
         spinner.removeClass('hidden');
 
         try {
-            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-blue.png') }}";
+            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
             const logoData = await loadImageAsBase64(logoUrl);
 
             if (format === 'pdf') {
@@ -406,11 +405,12 @@ $(document).ready(function() {
                 const doc = new jsPDF('p', 'mm', 'a4');
                 let yPos = 15;
 
-                const addHeader = () => {
-                    doc.addImage(logoData, 'PNG', 15, 10, 30, 8);
+                const addHeader = (docInstance) => {
+                    const pageWidth = docInstance.internal.pageSize.width;
+                    docInstance.addImage(logoData, 'PNG', pageWidth - 15 - 30, 10, 30, 8);
                 };
 
-                addHeader();
+                addHeader(doc);
                 doc.setFontSize(18);
                 doc.text("Laporan Uji Homogenitas - OnThesis", 105, 25, { align: 'center' });
                 yPos = 40;
@@ -441,7 +441,7 @@ $(document).ready(function() {
                 await Plotly.relayout('boxplot', getPlotlyLayout('Box Plot Sebaran Data per Grup'));
                 await Plotly.relayout('violinplot', getPlotlyLayout('Violin Plot Sebaran Data per Grup'));
 
-                if (yPos > 160) { doc.addPage(); addHeader(); yPos = 25; }
+                if (yPos > 160) { doc.addPage(); addHeader(doc); yPos = 25; }
                 doc.setFontSize(14);
                 doc.text("Visualisasi Data", 15, yPos);
                 yPos += 8;
