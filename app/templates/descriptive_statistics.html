@@ -114,8 +114,25 @@
 {% block page_scripts %}
 <script>
 $(document).ready(function() {
-    let analysisData = null; // Untuk menyimpan hasil analisis
+    // --- Variabel Global ---
+    let analysisData = null; // Untuk menyimpan hasil analisis dari server
 
+    // --- Fungsi Bantuan ---
+
+    /**
+     * Menampilkan pesan error di container khusus.
+     * @param {string} message - Pesan error yang akan ditampilkan.
+     */
+    const showError = (message) => {
+        $('#error-container').text(message).slideDown();
+        $('html, body').animate({ scrollTop: $("#error-container").offset().top - 80 }, 500);
+    };
+
+    /**
+     * Membuat elemen input baru untuk satu variabel.
+     * @param {string} name - Nama default untuk variabel.
+     * @param {string} data - Data default untuk variabel.
+     */
     const createVariable = (name = '', data = '') => {
         const varCount = $('#variablesContainer').children().length + 1;
         const varName = name || `Variabel_${varCount}`;
@@ -130,83 +147,11 @@ $(document).ready(function() {
         `;
         $('#variablesContainer').append(varHtml);
     };
-
-    createVariable(); // Mulai dengan satu input
-
-    $('#addVariable').on('click', () => createVariable());
-
-    $('#removeVariable').on('click', function() {
-        if ($('#variablesContainer > .variable-group').length > 1) {
-            $('#variablesContainer > .variable-group').last().remove();
-        } else {
-            alert('Minimal harus ada satu variabel.');
-        }
-    });
     
-    $('#variablesContainer').on('click', '.remove-variable-btn', function() {
-        if ($('#variablesContainer > .variable-group').length > 1) {
-            $(this).closest('.variable-group').remove();
-        } else {
-            alert('Minimal harus ada satu variabel.');
-        }
-    });
-
-    $('#loadSample').on('click', () => {
-        $('#variablesContainer').empty();
-        createVariable('Tinggi_Badan_cm', '165, 170, 155, 180, 168, 172, 160, 175, 166, 159');
-        createVariable('Skor_IQ', '110, 112, 105, 120, 115, 118, 108, 122, 113, 109');
-    });
-
-    $('#runAnalysis').on('click', async function() {
-        $('.input-error').removeClass('input-error');
-        $('#error-container').hide().empty();
-        let hasError = false;
-        const dataForAnalysis = {};
-        const variableNames = new Set();
-
-        $('.variable-group').each(function() {
-            const nameInput = $(this).find('.variable-name-input');
-            let name = nameInput.val().trim().replace(/\s+/g, '_');
-            const textarea = $(this).find('.data-input');
-            const rawData = textarea.val().trim();
-            
-            if (!name) { hasError = true; nameInput.addClass('input-error'); return; }
-            if (variableNames.has(name)) { alert(`Nama variabel duplikat: "${name}".`); hasError = true; nameInput.addClass('input-error'); return; }
-            variableNames.add(name);
-
-            if (rawData === '') { hasError = true; textarea.addClass('input-error'); return; }
-            const values = rawData.split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
-            if (values.length < 2) { hasError = true; textarea.addClass('input-error'); } 
-            else { dataForAnalysis[name] = values; }
-        });
-
-        if (hasError) { alert('Periksa input Anda. Setiap variabel harus punya nama unik dan minimal 2 data numerik.'); return; }
-        if (Object.keys(dataForAnalysis).length === 0) { alert('Tidak ada data valid untuk dianalisis.'); return; }
-
-        const button = $(this);
-        button.prop('disabled', true).html('<div class="spinner w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto"></div>');
-        $('#output').slideUp();
-
-        try {
-            const response = await fetch("{{ url_for('api_descriptive_analysis') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dataForAnalysis)
-            });
-
-            const result = await response.json();
-            if (!response.ok) { throw new Error(result.error || 'Terjadi kesalahan pada server.'); }
-            
-            analysisData = result; // Simpan hasil untuk interpretasi AI
-            displayResults(analysisData);
-
-        } catch (e) {
-            $('#error-container').text(e.message).slideDown();
-        } finally {
-            button.prop('disabled', false).text('Jalankan Analisis');
-        }
-    });
-
+    /**
+     * Menampilkan hasil analisis dalam bentuk tab.
+     * @param {object} data - Objek hasil dari API.
+     */
     function displayResults(data) {
         const tabsNav = $('#results-tabs-nav').empty();
         const tabsContent = $('#results-tabs-content').empty();
@@ -215,12 +160,16 @@ $(document).ready(function() {
             const isActive = index === 0;
             const stats = data.results[col];
             if (!stats || stats.n === 0) return;
+            
+            // Membuat ID yang aman untuk digunakan di HTML
             const safeColId = col.replace(/[^a-zA-Z0-9]/g, '_');
 
+            // Membuat tombol tab (nav-link)
             tabsNav.append(`<button class="nav-link ${isActive ? 'active' : ''}" data-bs-toggle="tab" data-bs-target="#tab-${safeColId}" type="button">${col}</button>`);
             
             const formatNum = (num) => (num !== null && num !== undefined) ? Number(num).toFixed(3) : 'N/A';
             
+            // Membuat konten tab (tab-pane)
             tabsContent.append(`
                 <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="tab-${safeColId}">
                     <div class="mb-6 border-b border-border-panel pb-6">
@@ -259,15 +208,113 @@ $(document).ready(function() {
         $('html, body').animate({ scrollTop: $("#output").offset().top - 80 }, 500);
     }
 
-    $(document).on('click', '.nav-link', function(e) {
-        e.preventDefault();
-        $('.nav-link').removeClass('active');
-        $('.tab-pane').removeClass('show active');
-        $(this).addClass('active');
-        $($(this).data('bs-target')).addClass('show active');
+    // --- Inisialisasi & Event Utama ---
+
+    createVariable(); // Mulai dengan satu input variabel saat halaman dimuat
+
+    $('#addVariable').on('click', () => createVariable());
+
+    $('#removeVariable').on('click', function() {
+        if ($('#variablesContainer > .variable-group').length > 1) {
+            $('#variablesContainer > .variable-group').last().remove();
+        } else {
+            showError('Minimal harus ada satu variabel.');
+        }
+    });
+    
+    // Event handler untuk tombol hapus per variabel
+    $('#variablesContainer').on('click', '.remove-variable-btn', function() {
+        if ($('#variablesContainer > .variable-group').length > 1) {
+            $(this).closest('.variable-group').remove();
+        } else {
+            showError('Minimal harus ada satu variabel.');
+        }
     });
 
-    $(document).on('click', '.interpret-btn', function() {
+    $('#loadSample').on('click', () => {
+        $('#variablesContainer').empty();
+        createVariable('Tinggi_Badan_cm', '165, 170, 155, 180, 168, 172, 160, 175, 166, 159');
+        createVariable('Skor_IQ', '110, 112, 105, 120, 115, 118, 108, 122, 113, 109');
+        $('#error-container').hide();
+    });
+
+    $('#runAnalysis').on('click', async function() {
+        // Reset UI
+        $('.input-error').removeClass('input-error');
+        $('#error-container').hide().empty();
+        let hasError = false;
+        const dataForAnalysis = {};
+        const variableNames = new Set();
+
+        // Validasi setiap input variabel
+        $('.variable-group').each(function() {
+            const nameInput = $(this).find('.variable-name-input');
+            let name = nameInput.val().trim().replace(/\s+/g, '_');
+            const textarea = $(this).find('.data-input');
+            const rawData = textarea.val().trim();
+            
+            if (!name) { hasError = true; nameInput.addClass('input-error'); return; }
+            if (variableNames.has(name)) {
+                showError(`Nama variabel duplikat: "${name}". Harap gunakan nama yang unik.`);
+                hasError = true;
+                nameInput.addClass('input-error');
+                return;
+            }
+            variableNames.add(name);
+
+            if (rawData === '') { hasError = true; textarea.addClass('input-error'); return; }
+            
+            const values = rawData.split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+            if (values.length < 2) {
+                hasError = true;
+                textarea.addClass('input-error');
+            } else {
+                dataForAnalysis[name] = values;
+            }
+        });
+
+        if (hasError) {
+            showError('Periksa kembali input Anda. Setiap variabel harus punya nama unik dan minimal 2 data numerik yang valid.');
+            return;
+        }
+        if (Object.keys(dataForAnalysis).length === 0) {
+            showError('Tidak ada data yang valid untuk dianalisis.');
+            return;
+        }
+
+        const button = $(this);
+        button.prop('disabled', true).html('<div class="spinner w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto"></div>');
+        $('#output').slideUp();
+
+        // Kirim data ke server
+        try {
+            const response = await fetch("{{ url_for('api_descriptive_analysis') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataForAnalysis)
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'Terjadi kesalahan pada server.');
+            }
+            
+            analysisData = result; 
+            displayResults(analysisData);
+
+        } catch (e) {
+            showError(e.message);
+        } finally {
+            button.prop('disabled', false).text('Jalankan Analisis');
+        }
+    });
+
+    // PERBAIKAN: Blok ini dihapus karena Bootstrap sudah menanganinya secara otomatis
+    // $(document).on('click', '.nav-link', function(e) { ... });
+    // Cukup dengan atribut data-bs-toggle="tab", Bootstrap akan mengurus sisanya.
+
+    // Event handler untuk tombol interpretasi AI
+    $(document).on('click', '.interpret-btn', async function() {
         const btn = $(this);
         const col = btn.data('col');
         const safeColId = col.replace(/[^a-zA-Z0-9]/g, '_');
@@ -293,19 +340,25 @@ $(document).ready(function() {
 **Tugas Anda:**
 Buat ringkasan naratif yang mudah dipahami. Bahas tendensi sentral (mean, median, modus) dan sebaran data (standar deviasi). Gunakan format HTML yang rapi dengan <h4>, <p>, dan <strong>. Jangan sertakan tag <html> atau <body>.`;
 
-        $.ajax({
-            url: "{{ url_for('interpret_analysis') }}",
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ stats: prompt }),
-            success: (res) => outputDiv.html(res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim()).slideDown(),
-            error: (err) => outputDiv.html(`<p class="text-red-400">Gagal: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).slideDown(),
-            complete: () => {
-                btnText.text(`Buat Interpretasi untuk Variabel '${col}'`);
-                spinner.addClass('hidden');
-                btn.prop('disabled', false);
-            }
-        });
+        try {
+            const response = await fetch("{{ url_for('interpret_analysis') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stats: prompt })
+            });
+            const res = await response.json();
+            if (!response.ok) throw new Error(res.error || 'Gagal mengambil interpretasi.');
+            
+            const cleanHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
+            outputDiv.html(cleanHtml).slideDown();
+
+        } catch (err) {
+            outputDiv.html(`<p class="text-red-400">Gagal: ${err.message}</p>`).slideDown();
+        } finally {
+            btnText.text(`Buat Interpretasi untuk Variabel '${col}'`);
+            spinner.addClass('hidden');
+            btn.prop('disabled', false);
+        }
     });
 });
 </script>
