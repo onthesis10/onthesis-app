@@ -33,7 +33,7 @@
         background-color: var(--bg-canvas);
         font-weight: bold;
         color: var(--text-primary);
-        width: 50%;
+        width: 40%;
     }
     .stat-table td {
         color: var(--text-secondary);
@@ -58,7 +58,7 @@
                 <!-- Input variabel dinamis akan ditambahkan di sini oleh JavaScript -->
             </div>
 
-            <div class="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border-panel">
+            <div class="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border-panel">
                 <button id="addVariable" class="btn-secondary flex-1">+ Tambah Variabel</button>
                 <button id="removeVariable" class="btn-secondary flex-1">- Hapus Variabel</button>
                 <button id="loadSample" class="btn-secondary flex-1">Muat Contoh</button>
@@ -91,65 +91,85 @@
 $(document).ready(function() {
     let analysisData = null;
 
+    /**
+     * Fungsi untuk membuat elemen input variabel baru
+     * @param {string} name - Nama awal untuk variabel
+     * @param {string} data - Data awal untuk variabel
+     */
     const createVariable = (name = '', data = '') => {
         const varCount = $('#variablesContainer').children().length + 1;
-        const varName = name || `Variabel ${varCount}`;
+        const varName = name || `Variabel_${varCount}`;
         const varHtml = `
             <div class="variable-group p-4 border border-border-panel rounded-lg bg-bg-canvas">
                 <div class="flex justify-between items-center mb-2">
                     <input type="text" class="bg-transparent font-semibold text-text-primary focus:outline-none w-full variable-name-input" value="${varName}" placeholder="Nama Variabel">
                     <button class="text-text-secondary hover:text-red-400 remove-variable-btn text-xl font-bold" title="Hapus Variabel Ini">&times;</button>
                 </div>
-                <textarea class="feedback-form-input data-input" placeholder="Masukkan data numerik, pisahkan dengan koma, spasi, atau baris baru...">${data}</textarea>
+                <textarea class="feedback-form-input data-input h-24" placeholder="Masukkan data numerik, pisahkan dengan koma, spasi, atau baris baru...">${data}</textarea>
             </div>
         `;
         $('#variablesContainer').append(varHtml);
     };
 
-    // Inisialisasi dengan satu variabel
+    // Inisialisasi halaman dengan satu variabel kosong
     createVariable();
 
-    $('#addVariable').click(() => createVariable());
+    // Event listener untuk tombol 'Tambah Variabel'
+    $('#addVariable').on('click', () => createVariable());
 
-    $('#removeVariable').click(function() {
-        if ($('#variablesContainer').children().length > 1) {
-            $('#variablesContainer').children().last().remove();
+    // Event listener untuk tombol 'Hapus Variabel' (yang terakhir)
+    $('#removeVariable').on('click', function() {
+        if ($('#variablesContainer > .variable-group').length > 1) {
+            $('#variablesContainer > .variable-group').last().remove();
         } else {
             alert('Minimal harus ada satu variabel.');
         }
     });
     
+    // Event listener untuk tombol 'x' di setiap kotak variabel
     $('#variablesContainer').on('click', '.remove-variable-btn', function() {
-        if ($('#variablesContainer').children().length > 1) {
+        if ($('#variablesContainer > .variable-group').length > 1) {
             $(this).closest('.variable-group').remove();
         } else {
             alert('Minimal harus ada satu variabel.');
         }
     });
 
-    $('#loadSample').click(() => {
+    // Event listener untuk tombol 'Muat Contoh'
+    $('#loadSample').on('click', () => {
         $('#variablesContainer').empty();
-        createVariable('Tinggi Badan (cm)', '165, 170, 155, 180, 168, 172, 160, 175, 166, 159');
-        createVariable('Berat Badan (kg)', '60, 72, 58, 85, 65, 70, 62, 78, 64, 55');
+        createVariable('Tinggi_Badan_cm', '165, 170, 155, 180, 168, 172, 160, 175, 166, 159');
+        createVariable('Berat_Badan_kg', '60, 72, 58, 85, 65, 70, 62, 78, 64, 55');
     });
 
-    $('#runAnalysis').click(async function() {
-        $('.data-input').removeClass('input-error');
+    // Event listener utama untuk tombol 'Jalankan Analisis'
+    $('#runAnalysis').on('click', async function() {
+        $('.input-error').removeClass('input-error');
         let hasError = false;
         const dataForAnalysis = {};
+        const variableNames = new Set();
 
+        // Validasi setiap input variabel
         $('.variable-group').each(function() {
             const groupEl = $(this);
             const nameInput = groupEl.find('.variable-name-input');
-            const name = nameInput.val().trim();
+            const name = nameInput.val().trim().replace(/\s+/g, '_'); // Ganti spasi dengan underscore
             const textarea = groupEl.find('.data-input');
             const rawData = textarea.val().trim();
             
             if (!name) {
                 hasError = true;
                 nameInput.addClass('input-error');
-                return; // Lanjut ke iterasi berikutnya
+                return;
             }
+            if (variableNames.has(name)) {
+                alert(`Nama variabel duplikat: "${name}". Harap gunakan nama yang unik.`);
+                hasError = true;
+                nameInput.addClass('input-error');
+                return;
+            }
+            variableNames.add(name);
+
             if (rawData === '') {
                 hasError = true;
                 textarea.addClass('input-error');
@@ -167,7 +187,7 @@ $(document).ready(function() {
         });
 
         if (hasError) {
-            alert('Setiap variabel harus memiliki nama dan minimal 2 data numerik. Kolom yang bermasalah telah ditandai.');
+            alert('Periksa kembali input Anda. Setiap variabel harus memiliki nama unik dan minimal 2 data numerik. Kolom yang bermasalah telah ditandai.');
             return;
         }
 
@@ -178,8 +198,7 @@ $(document).ready(function() {
 
         const button = $(this);
         button.prop('disabled', true).html('<div class="spinner w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto"></div>');
-        $('#output').hide();
-        $('#interpretationOutput').hide().empty();
+        $('#output').slideUp();
 
         try {
             const response = await fetch("{{ url_for('descriptive_analysis') }}", {
@@ -203,13 +222,14 @@ $(document).ready(function() {
     });
 
     function displayResults(data) {
-        $('#output').show();
-        $('html, body').animate({
-            scrollTop: $("#output").offset().top - 80
-        }, 500);
-
         const tabsNav = $('#results-tabs-nav').empty();
         const tabsContent = $('#results-tabs-content').empty();
+
+        if (!data.columns || data.columns.length === 0) {
+            tabsContent.html('<p class="text-text-secondary">Tidak ada hasil untuk ditampilkan.</p>');
+            $('#output').slideDown();
+            return;
+        }
 
         data.columns.forEach((col, index) => {
             const isActive = index === 0;
@@ -244,7 +264,6 @@ $(document).ready(function() {
                         </button>
                         <div id="interpretation-${safeColId}" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
                     </div>
-
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div class="space-y-6">
                             <div>
@@ -272,14 +291,13 @@ $(document).ready(function() {
                             ${freqTableHtml}
                         </div>
                     </div>
-                    
                     <div class="mt-8 border-t border-border-panel pt-8">
                         <h3 class="text-xl font-bold text-text-primary mb-4 text-center">Visualisasi Data</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             ${data.plots[col+'_histogram'] ? `<img src="${data.plots[col+'_histogram']}" class="w-full rounded-lg border border-border-panel">` : ''}
                             ${data.plots[col+'_boxplot'] ? `<img src="${data.plots[col+'_boxplot']}" class="w-full rounded-lg border border-border-panel">` : ''}
                             ${data.plots[col+'_barchart'] ? `<img src="${data.plots[col+'_barchart']}" class="w-full rounded-lg border border-border-panel">` : ''}
-                            ${data.plots[col+'_pie'] ? `<div class="md:col-span-2 flex justify-center"><img src="${data.plots[col+'_pie']}" class="w-full max-w-md mx-auto rounded-lg border border-border-panel"></div>` : ''}
+                            ${data.plots[col+'_pie'] ? `<div class="md:col-span-2 flex justify-center"><img src="${data.plots[col+'_pie']}" class="w-full max-w-sm mx-auto rounded-lg border border-border-panel"></div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -293,10 +311,14 @@ $(document).ready(function() {
             $(this).addClass('active');
             $($(this).data('bs-target')).addClass('show active');
         });
+
+        $('#output').slideDown();
+        $('html, body').animate({
+            scrollTop: $("#output").offset().top - 80
+        }, 500);
     }
 
     $(document).on('click', '.interpret-btn', function() {
-        // ... (Logika interpretasi AI sama seperti sebelumnya, tidak perlu diubah)
         const btn = $(this);
         const col = btn.data('col');
         const safeColId = col.replace(/[^a-zA-Z0-9]/g, '_');
@@ -332,10 +354,10 @@ Buat ringkasan naratif yang menjelaskan temuan utama dari data ini. Bahas tenden
             data: JSON.stringify({ stats: prompt }),
             success: function(res) {
                 const cleanedHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
-                $(`#interpretation-${safeColId}`).html(cleanedHtml).show();
+                $(`#interpretation-${safeColId}`).html(cleanedHtml).slideDown();
             },
             error: function(err) {
-                $(`#interpretation-${safeColId}`).html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show();
+                $(`#interpretation-${safeColId}`).html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).slideDown();
             },
             complete: function() {
                 btnText.text(`Buat Interpretasi untuk Variabel '${col}'`);
