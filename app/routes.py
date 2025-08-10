@@ -106,10 +106,10 @@ def create_plot_as_base64(fig):
 
 
 # =========================================================================
-# MODEL PENGGUNA & LOADER (DIPERBARUI DENGAN LOGIKA PRO)
+# MODEL PENGGUNA & LOADER (PERBAIKAN SINKRONISASI PRO)
 # =========================================================================
 class User(UserMixin):
-    def __init__(self, id, displayName, password_hash=None, email=None, picture=None, pro_expiry_date=None):
+    def __init__(self, id, displayName, password_hash=None, email=None, picture=None, pro_expiry_date=None, legacy_is_pro=False):
         self.id = id
         self.displayName = displayName
         self.username = displayName
@@ -117,12 +117,20 @@ class User(UserMixin):
         self.picture = picture
         self.password_hash = password_hash
         self.pro_expiry_date = pro_expiry_date
+        self.legacy_is_pro = legacy_is_pro # Menyimpan status pro lama
 
     @property
     def is_pro(self):
-        """Properti dinamis untuk mengecek status PRO berdasarkan tanggal kedaluwarsa."""
+        """
+        Properti dinamis yang mengecek status PRO.
+        Prioritas pertama adalah tanggal kedaluwarsa.
+        Jika tidak ada, ia akan memeriksa status pro lama (legacy).
+        """
         if self.pro_expiry_date and isinstance(self.pro_expiry_date, datetime):
             return self.pro_expiry_date > datetime.now()
+        # Fallback untuk pengguna PRO lama yang belum memiliki tanggal kedaluwarsa
+        if self.legacy_is_pro and self.pro_expiry_date is None:
+            return True
         return False
 
     def check_password(self, password):
@@ -142,7 +150,8 @@ def load_user(user_id):
                 email=user_data.get('email'), 
                 password_hash=user_data.get('password_hash'), 
                 picture=user_data.get('picture'),
-                pro_expiry_date=user_data.get('proExpiryDate') # Memuat tanggal kedaluwarsa
+                pro_expiry_date=user_data.get('proExpiryDate'), # Memuat tanggal kedaluwarsa baru
+                legacy_is_pro=user_data.get('isPro', False) # Memuat status pro lama
             )
         return None
     except Exception as e:
@@ -839,4 +848,4 @@ def payment_notification():
         return jsonify({'status': 'ok'}), 200
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
-        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 
