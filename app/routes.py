@@ -14,6 +14,8 @@ import midtransclient
 from datetime import date
 from werkzeug.utils import secure_filename
 import uuid
+import io
+import base64
 
 # --- Impor untuk Analisis Statistik ---
 from scipy import stats
@@ -95,50 +97,13 @@ def read_docx(file_stream):
     text = "\n".join([para.text for para in doc.paragraphs])
     return text
 
-def descriptive_stats(series: pd.Series):
-    s = series.dropna().astype(float)
-    n = int(s.count())
-    if n == 0: return { 'n': 0, 'raw_data': [] }
-    
-    mean = float(s.mean())
-    median = float(s.median())
-    mode_list = s.mode().tolist()
-    var = float(s.var(ddof=1)) if n > 1 else 0
-    sd = float(s.std(ddof=1)) if n > 1 else 0
-    minimum = float(s.min())
-    maximum = float(s.max())
-    rng = maximum - minimum
-    q1 = float(s.quantile(0.25))
-    q3 = float(s.quantile(0.75))
-    iqr = q3 - q1
-    skew = float(s.skew()) if n > 2 else 0
-    kurt = float(s.kurtosis()) if n > 3 else 0
-
-    shapiro_w, shapiro_p = (None, None)
-    if 3 <= n <= 5000:
-        try:
-            shapiro_w, shapiro_p = stats.shapiro(s)
-        except Exception:
-            pass
-
-    lower = q1 - 1.5 * iqr
-    upper = q3 + 1.5 * iqr
-    outliers = s[(s < lower) | (s > upper)].tolist()
-
-    return {
-        'n': n, 'mean': mean, 'median': median, 'mode': mode_list, 'variance': var,
-        'std': sd, 'min': minimum, 'max': maximum, 'range': rng, 'q1': q1,
-        'q3': q3, 'iqr': iqr, 'skewness': skew, 'kurtosis': kurt,
-        'shapiro_w': shapiro_w, 'shapiro_p': shapiro_p, 'outliers': outliers,
-        'raw_data': s.tolist()
-    }
-
-def save_figure(fig, prefix='plot'):
-    fname = f"{prefix}_{uuid.uuid4().hex[:8]}.png"
-    path = os.path.join(OUTPUT_DIR, fname)
-    fig.savefig(path, bbox_inches='tight', dpi=150)
+# FUNGSI HELPER BARU UNTUK PLOT STATISTIK DESKRIPTIF
+def create_plot_as_base64(fig):
+    """Mengubah figure Matplotlib menjadi string base64."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight')
     plt.close(fig)
-    return url_for('static', filename=f'outputs/{fname}')
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
 
 
 # =========================================================================
@@ -288,7 +253,7 @@ def normality_test(): return render_template('normality_test.html')
 @login_required
 def homogeneity_test(): return render_template('homogeneity_test.html')
 
-@app.route('/descriptive_statistics')
+@app.route('/descriptive-statistics')
 @login_required
 def descriptive_statistics():
     return render_template('descriptive_statistics.html')
@@ -615,69 +580,116 @@ def api_bartlett():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-        
-@app.route('/api/descriptive_analysis', methods=['POST'])
+
+# =========================================================================
+# FUNGSI STATISTIK DESKRIPTIF (VERSI BARU & DIPERBAIKI)
+# =========================================================================
+@app.route('/descriptive-analysis', methods=['POST'])
 @login_required
 def descriptive_analysis():
+    # Pembatasan Fitur PRO
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
         if not is_allowed:
             return jsonify({'error': message}), 429
-    try:
-        data = request.get_json()
-        variables = data.get('variables')
-        if not variables:
-            return jsonify({'error': 'Tidak ada data variabel yang diberikan.'}), 400
 
-        df = pd.DataFrame(variables)
+    df = None
+    try:
+        if not request.is_json:
+            return jsonify({'error': 'Format request tidak valid, harus JSON.'}), 400
+
+        data = request.get_json()
+        if not data or not any(data.values()):
+             return jsonify({'error': 'Tidak ada data yang dikirim untuk dianalisis.'}), 400
         
+        df = pd.DataFrame.from_dict(data, orient='index').transpose()
+        
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        if df.empty:
+            return jsonify({'error': 'Data kosong setelah diproses.'}), 400
+
+        all_cols = df.columns.tolist()
         results = {}
         plots = {}
-        columns = list(df.columns)
+        
+        for col in all_cols:
+            series = df[col].dropna()
+            if len(series) < 2:
+                continue
 
-        for col in columns:
-            stats_d = descriptive_stats(df[col])
-            results[col] = stats_d
-            s = df[col].dropna().astype(float)
-            if s.empty: continue
+            n = len(series)
+            mean = series.mean()
+            median = series.median()
+            mode = series.mode().tolist() if not series.mode().empty else ['N/A']
+            std = series.std()
+            variance = series.var()
+            range_val = series.max() - series.min()
+            min_val = series.min()
+            max_val = series.max()
+            q1 = series.quantile(0.25)
+            q3 = series.quantile(0.75)
+            iqr = q3 - q1
+            skewness = series.skew()
+            kurtosis = series.kurt()
+            shapiro_p = stats.shapiro(series).pvalue if n >= 3 else None
 
-            # Histogram
-            fig1, ax1 = plt.subplots()
-            sns.histplot(s, bins='auto', kde=True, ax=ax1, edgecolor='black')
-            ax1.set_title(f'Histogram - {col}')
-            plots[f'{col}_histogram'] = save_figure(fig1, prefix=f'hist_{col}')
+            results[col] = {
+                'n': n, 'mean': mean, 'median': median, 'mode': mode,
+                'std': std, 'variance': variance, 'range': range_val,
+                'min': min_val, 'max': max_val, 'q1': q1, 'q3': q3,
+                'iqr': iqr, 'skewness': skewness, 'kurtosis': kurtosis,
+                'shapiro_p': shapiro_p, 'raw_data': series.tolist()
+            }
 
-            # Boxplot
-            fig2, ax2 = plt.subplots(figsize=(8, 2))
-            sns.boxplot(x=s, ax=ax2)
-            ax2.set_title(f'Boxplot - {col}')
-            plots[f'{col}_boxplot'] = save_figure(fig2, prefix=f'box_{col}')
+            sns.set_style("whitegrid")
+            
+            fig, ax = plt.subplots()
+            sns.histplot(series, kde=True, ax=ax, color='#0284c7')
+            ax.set_title(f'Histogram & Distribusi: {col}')
+            ax.set_xlabel(col)
+            ax.set_ylabel('Frekuensi')
+            plots[f'{col}_histogram'] = create_plot_as_base64(fig)
 
-            # Bar Chart
-            vc = s.value_counts().sort_index()
-            if not vc.empty:
-                fig3, ax3 = plt.subplots()
-                vc.plot(kind='bar', ax=ax3, edgecolor='black')
-                ax3.set_title(f'Bar Chart Frekuensi - {col}')
-                plots[f'{col}_barchart'] = save_figure(fig3, prefix=f'bar_{col}')
+            fig, ax = plt.subplots()
+            sns.boxplot(x=series, ax=ax, color='#0284c7')
+            ax.set_title(f'Box Plot: {col}')
+            ax.set_xlabel(col)
+            plots[f'{col}_boxplot'] = create_plot_as_base64(fig)
+            
+            unique_values = series.nunique()
+            
+            if unique_values > 1 and unique_values <= 20:
+                value_counts = series.value_counts().sort_index()
+                fig, ax = plt.subplots()
+                sns.barplot(x=value_counts.index, y=value_counts.values, ax=ax, color='#0284c7')
+                ax.set_title(f'Bar Chart Frekuensi: {col}')
+                ax.set_xlabel(col)
+                ax.set_ylabel('Jumlah')
+                plt.xticks(rotation=45, ha='right')
+                plots[f'{col}_barchart'] = create_plot_as_base64(fig)
+            else:
+                plots[f'{col}_barchart'] = None
 
-            # Pie Chart
-            if len(vc) > 1 and len(vc) <= 10:
-                fig4, ax4 = plt.subplots(figsize=(5,5))
-                vc.plot(kind='pie', ax=ax4, autopct='%1.1f%%', startangle=90)
-                ax4.set_ylabel('')
-                ax4.set_title(f'Pie Chart - {col}')
-                plots[f'{col}_pie'] = save_figure(fig4, prefix=f'pie_{col}')
-
+            if 2 < unique_values <= 8:
+                fig, ax = plt.subplots()
+                series.value_counts().plot.pie(autopct='%1.1f%%', startangle=90, ax=ax, colormap='Blues_r')
+                ax.set_ylabel('')
+                ax.set_title(f'Proporsi: {col}')
+                plots[f'{col}_pie'] = create_plot_as_base64(fig)
+            else:
+                plots[f'{col}_pie'] = None
 
         return jsonify({
+            'columns': all_cols,
             'results': results,
-            'plots': plots,
-            'columns': columns
+            'plots': plots
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error in descriptive_analysis: {e}")
+        return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
 
 
 @app.route('/api/get-usage-status')
