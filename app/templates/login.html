@@ -28,108 +28,115 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Animasi untuk scroll down indicator */
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
+        .feature-item svg {
+            color: var(--accent-cyan);
         }
-        .animate-bounce-slow {
-            animation: bounce 2s infinite;
+        
+        .right-panel {
+            background-color: var(--bg-panel);
+        }
+        
+        @media (min-width: 1024px) {
+            .right-panel {
+                background-color: transparent;
+            }
         }
     </style>
 </head>
 <body class="bg-animated-grid">
 
-    <!-- SECTION 1: HERO & LOGIN -->
-    <section class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 relative">
-        <div class="text-center w-full max-w-4xl">
-            <header class="mb-10 animate-fade-in-up">
-                <img src="{{ url_for('static', filename='images/logo-onthesis.png') }}" alt="OnThesis Logo" class="h-16 mx-auto mb-6">
-                <h1 class="text-4xl md:text-6xl font-extrabold text-text-primary leading-tight">
-                    MASIH REVISI? SKRIPSI GAK KELAR-KELAR?
+    <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2">
+        
+        <!-- KOLOM KIRI: Branding & Fitur -->
+        <div class="hidden lg:flex flex-col justify-center p-12 xl:p-16">
+            <div class="max-w-md">
+                <img src="{{ url_for('static', filename='images/logo-onthesis.png') }}" alt="OnThesis Logo" class="h-20 mb-10">
+                
+                <h1 class="text-4xl xl:text-5xl font-extrabold text-text-primary leading-tight">
+                    Skripsi Itu Maraton, Bukan Sprint Sambil Nangis.
                 </h1>
-                <p class="text-text-secondary mt-4 max-w-2xl mx-auto text-lg">
-                    Dosenmu udah nungguin di ruang sidang, kamunya masih sibuk nyari referensi di situs bajakan. Sini, kita bantu.
+                <p class="text-text-secondary mt-4 text-lg">
+                    Berhentilah mengeluh di media sosial. OnThesis hadir untuk mengubah jam-jam begadangmu yang penuh derita menjadi lebih produktif (sedikit).
                 </p>
-            </header>
 
-            <div class="apex-card max-w-md mx-auto !p-8 animate-fade-in-up" style="animation-delay: 0.2s;">
-                <h3 class="text-2xl font-bold text-text-primary mb-2">Login Dulu, Lah.</h3>
-                <p class="text-text-secondary mb-6">Masa mau ngerjain skripsi gak login?</p>
-                <form id="login-form" method="POST" action="{{ url_for('login') }}">
-                    <div class="mb-4">
-                        <input type="text" id="username" name="username" required class="feedback-form-input w-full py-3 px-4" placeholder="Username">
+                <div class="mt-12 space-y-6">
+                    <!-- Fitur 1 -->
+                    <div class="flex items-start gap-4 feature-item">
+                        <div class="p-2 bg-accent-cyan/10 rounded-lg mt-1"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold text-text-primary">Analisis Data Cerdas</h4>
+                            <p class="text-sm text-text-secondary">Kamu masukkan angka, kami keluarkan tabel dan grafik. Kamu tinggal pura-pura paham saat presentasi di depan dosen.</p>
+                        </div>
                     </div>
-                    <div class="mb-4">
-                        <input type="password" id="password" name="password" required class="feedback-form-input w-full py-3 px-4" placeholder="Password">
+                    <!-- Fitur 2 -->
+                    <div class="flex items-start gap-4 feature-item">
+                        <div class="p-2 bg-accent-cyan/10 rounded-lg mt-1"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold text-text-primary">Parafrase Anti-Revisi</h4>
+                            <p class="text-sm text-text-secondary">Mengubah kalimat "menurut saya" menjadi "berdasarkan analisis diskursif", agar dosenmu terkesan.</p>
+                        </div>
                     </div>
+                    <!-- Fitur 3 -->
+                    <div class="flex items-start gap-4 feature-item">
+                        <div class="p-2 bg-accent-cyan/10 rounded-lg mt-1"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold text-text-primary">Manajemen Sitasi Otomatis</h4>
+                            <p class="text-sm text-text-secondary">Karena hidup terlalu singkat untuk mengatur daftar pustaka secara manual. Biarkan kami yang melakukannya.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                      {% if messages %}
-                        {% for category, message in messages %}
-                          <div class="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg relative mb-4 text-sm" role="alert">
-                            <span>{{ message }}</span>
-                          </div>
-                        {% endfor %}
-                      {% endif %}
-                    {% endwith %}
+        <!-- KOLOM KANAN: Form Login -->
+        <div class="right-panel flex flex-col items-center justify-center p-8">
+            <div class="w-full max-w-sm">
+                <!-- Header untuk mobile -->
+                <div class="text-center mb-10 lg:hidden">
+                    <img src="{{ url_for('static', filename='images/logo-onthesis.png') }}" alt="OnThesis Logo" class="h-16 mx-auto mb-6">
+                </div>
 
-                    <button id="login-btn" type="submit" class="btn-primary w-full flex items-center justify-center py-3 disabled:opacity-50">
-                        <span class="btn-text">Masuk</span>
-                        <div class="spinner hidden ml-2"></div>
+                <div class="apex-card w-full !p-8">
+                    <h3 class="text-2xl font-bold text-text-primary mb-2">Selamat Datang Bor!</h3>
+                    <p class="text-text-secondary mb-6">Login dan buktikan kalau kamu bisa lulus.</p>
+                    <form id="login-form" method="POST" action="{{ url_for('login') }}">
+                        <div class="mb-4">
+                            <input type="text" id="username" name="username" required class="feedback-form-input w-full py-3 px-4" placeholder="Username">
+                        </div>
+                        <div class="mb-4">
+                            <input type="password" id="password" name="password" required class="feedback-form-input w-full py-3 px-4" placeholder="Password">
+                        </div>
+
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                          {% if messages %}
+                            {% for category, message in messages %}
+                              <div class="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg relative mb-4 text-sm" role="alert">
+                                <span>{{ message }}</span>
+                              </div>
+                            {% endfor %}
+                          {% endif %}
+                        {% endwith %}
+
+                        <button id="login-btn" type="submit" class="btn-primary w-full flex items-center justify-center py-3 disabled:opacity-50">
+                            <span class="btn-text">Masuk</span>
+                            <div class="spinner hidden ml-2"></div>
+                        </button>
+                    </form>
+                    <div class="flex items-center my-6">
+                        <div class="flex-grow border-t border-border-panel"></div>
+                        <span class="flex-shrink mx-4 text-text-secondary text-sm">ATAU</span>
+                        <div class="flex-grow border-t border-border-panel"></div>
+                    </div>
+                    <button id="google-login-btn" class="btn-secondary w-full flex items-center justify-center !py-3 disabled:opacity-75">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="btn-icon w-5 h-5 mr-3">
+                        <span class="btn-text">Masuk dengan Google</span>
+                        <div class="spinner spinner-secondary hidden ml-3"></div>
                     </button>
-                </form>
-                <div class="flex items-center my-6">
-                    <div class="flex-grow border-t border-border-panel"></div>
-                    <span class="flex-shrink mx-4 text-text-secondary text-sm">ATAU</span>
-                    <div class="flex-grow border-t border-border-panel"></div>
-                </div>
-                <button id="google-login-btn" class="btn-secondary w-full flex items-center justify-center !py-3 disabled:opacity-75">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="btn-icon w-5 h-5 mr-3">
-                    <span class="btn-text">Masuk dengan Google</span>
-                    <div class="spinner spinner-secondary hidden ml-3"></div>
-                </button>
-                <div id="login-error" class="text-red-400 text-sm text-center mt-4"></div>
-            </div>
-        </div>
-
-        <div class="absolute bottom-10 text-center animate-fade-in-up" style="animation-delay: 0.5s;">
-            <p class="text-text-secondary text-sm mb-2">Scroll ke bawah untuk lihat keajaiban</p>
-            <svg class="w-6 h-6 text-text-secondary mx-auto animate-bounce-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
-        </div>
-    </section>
-
-    <!-- SECTION 2: FITUR -->
-    <section class="py-20 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-5xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-4xl font-extrabold text-text-primary">Kenapa Kamu Butuh OnThesis?</h2>
-                <p class="text-text-secondary mt-4 max-w-2xl mx-auto text-lg">(Selain Karena Malas, Tentunya)</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Card Fitur 1 -->
-                <div class="apex-card !p-8">
-                    <div class="p-3 inline-block bg-accent-cyan/10 rounded-lg mb-4"><svg class="w-7 h-7 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg></div>
-                    <h3 class="text-xl font-bold text-text-primary mb-2">Parafrase Anti Plagiat</h3>
-                    <p class="text-text-secondary">Ubah tulisanmu dari "kata dosen plagiat" jadi "wah, bahasanya akademis sekali". AI kami akan merombak kalimatmu tanpa mengubah maknanya.</p>
-                </div>
-                <!-- Card Fitur 2 -->
-                <div class="apex-card !p-8">
-                    <div class="p-3 inline-block bg-accent-cyan/10 rounded-lg mb-4"><svg class="w-7 h-7 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
-                    <h3 class="text-xl font-bold text-text-primary mb-2">Analisis Data AI</h3>
-                    <p class="text-text-secondary">Angka itu cuma angka sampai kamu harus jelasin artinya. Biar AI kami yang pusing, kamu tinggal salin hasilnya ke Bab 4.</p>
-                </div>
-                <!-- Card Fitur 3 -->
-                <div class="apex-card !p-8">
-                    <div class="p-3 inline-block bg-accent-cyan/10 rounded-lg mb-4"><svg class="w-7 h-7 text-accent-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
-                    <h3 class="text-xl font-bold text-text-primary mb-2">Manajemen Sitasi</h3>
-                    <p class="text-text-secondary">Karena daftar pustaka yang dibuat manual itu sumber dari segala revisi. Atur semua referensimu dengan rapi, tanpa air mata.</p>
+                    <div id="login-error" class="text-red-400 text-sm text-center mt-4"></div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- Data Firebase & Skrip Login -->
     <script id="firebase-config-data" type="application/json">
