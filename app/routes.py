@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 # --- Impor untuk Analisis Statistik ---
 from scipy import stats
 import numpy as np
+import pandas as pd  # Ditambahkan untuk pengolahan data
 
 # --- Impor dari __init__.py ---
 from app import app, db, login_manager
@@ -400,17 +401,18 @@ def api_normality():
         if not values or not isinstance(values, list):
             return jsonify({'error': 'Data angka diperlukan dalam array'}), 400
         
-        arr = np.array(values, dtype=float)
-        arr = arr[~np.isnan(arr)]
-        n = len(arr)
-        if n < 3:
+        # Menggunakan Pandas untuk membersihkan data dan kalkulasi
+        s = pd.Series(values, dtype=float).dropna()
+        
+        if len(s) < 3:
             return jsonify({'error': 'Minimal 3 data untuk uji normalitas'}), 400
         
-        mean = float(np.mean(arr))
-        sd = float(np.std(arr, ddof=1))
+        n = len(s)
+        mean = s.mean()
+        sd = s.std(ddof=1)
 
-        shapiro_stat, shapiro_p = stats.shapiro(arr)
-        ks_stat, ks_p = stats.kstest((arr - mean)/sd, 'norm')
+        shapiro_stat, shapiro_p = stats.shapiro(s)
+        ks_stat, ks_p = stats.kstest((s - mean) / sd, 'norm')
 
         shapiro_p_rounded = round(shapiro_p, 3)
         ks_p_rounded = round(ks_p, 3)
@@ -422,12 +424,22 @@ def api_normality():
         
         summary = f"Hasil uji Shapiro-Wilk menunjukkan nilai signifikansi p = {shapiro_p_rounded}. Karena nilai p > 0.05, dapat disimpulkan bahwa data {conclusion}."
 
-        table = [
-            {"test": "Shapiro-Wilk", "statistic": round(shapiro_stat, 3), "df": n, "p": shapiro_p_rounded},
-            {"test": "Kolmogorov-Smirnov", "statistic": round(ks_stat, 3), "df": n, "p": ks_p_rounded}
-        ]
+        # Membuat tabel hasil menggunakan Pandas DataFrame
+        df_table = pd.DataFrame({
+            "test": ["Shapiro-Wilk", "Kolmogorov-Smirnov"],
+            "statistic": [shapiro_stat, ks_stat],
+            "df": [n, n],
+            "p": [shapiro_p_rounded, ks_p_rounded]
+        })
+        table_json = df_table.to_dict(orient='records')
 
-        return jsonify({"summary": summary, "mean": round(mean, 3), "std_dev": round(sd, 3), "n": n, "table": table})
+        return jsonify({
+            "summary": summary, 
+            "mean": round(mean, 3), 
+            "std_dev": round(sd, 3), 
+            "n": n, 
+            "table": table_json
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -452,18 +464,22 @@ def api_levene():
         conclusion = "homogen" if p_value > 0.05 else "tidak homogen"
         summary = f"Hasil Levene’s Test menunjukkan nilai Sig. = {p_string} ({comparison}), sehingga dapat disimpulkan varians data antar kelompok adalah {conclusion}."
 
-        table = [{
-            "test": "Levene’s Test",
-            "statistic": round(stat, 4),
-            "df1": len(cleaned_groups) - 1,
-            "df2": sum(group_sizes) - len(cleaned_groups),
-            "p": round(p_value, 4)
-        }]
+        # Membuat tabel hasil menggunakan Pandas DataFrame
+        df_table = pd.DataFrame({
+            "test": ["Levene’s Test"],
+            "statistic": [stat],
+            "df1": [len(cleaned_groups) - 1],
+            "df2": [sum(group_sizes) - len(cleaned_groups)],
+            "p": [p_value]
+        })
+        df_table['statistic'] = df_table['statistic'].round(4)
+        df_table['p'] = df_table['p'].round(4)
+        table_json = df_table.to_dict(orient='records')
 
         return jsonify({
             "summary": summary,
             "n_per_group": group_sizes,
-            "table": table
+            "table": table_json
         })
 
     except Exception as e:
@@ -491,18 +507,22 @@ def api_bartlett():
         conclusion = "homogen" if p_value > 0.05 else "tidak homogen"
         summary = f"Hasil Bartlett's Test menunjukkan nilai Sig. = {p_string} ({comparison}), sehingga dapat disimpulkan varians data antar kelompok adalah {conclusion}."
 
-        table = [{
-            "test": "Bartlett’s Test",
-            "statistic": round(stat, 4),
-            "df1": len(cleaned_groups) - 1,
-            "df2": None,
-            "p": round(p_value, 4)
-        }]
+        # Membuat tabel hasil menggunakan Pandas DataFrame
+        df_table = pd.DataFrame({
+            "test": ["Bartlett’s Test"],
+            "statistic": [stat],
+            "df1": [len(cleaned_groups) - 1],
+            "df2": [None],
+            "p": [p_value]
+        })
+        df_table['statistic'] = df_table['statistic'].round(4)
+        df_table['p'] = df_table['p'].round(4)
+        table_json = df_table.to_dict(orient='records')
 
         return jsonify({
             "summary": summary,
             "n_per_group": group_sizes,
-            "table": table
+            "table": table_json
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
