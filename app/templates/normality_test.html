@@ -78,22 +78,16 @@
         <div class="apex-card p-6">
             <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Anda</h3>
             
-            <!-- Pilihan Metode Input -->
-            <div class="max-w-md mx-auto mb-4">
-                <div class="flex rounded-lg shadow-sm" id="input-method-selector">
-                    <button data-method="manual" class="btn-secondary flex-1 rounded-l-lg active">Manual</button>
-                    <button data-method="csv" class="btn-secondary flex-1">CSV</button>
-                    <button data-method="excel" class="btn-secondary flex-1 rounded-r-lg">Excel</button>
-                </div>
-            </div>
-
-            <!-- Area Input -->
-            <div id="manual-input-area" class="text-left">
-                <textarea id="manual-data" class="feedback-form-input h-32" placeholder="Masukkan data numerik di sini, dipisah dengan spasi, koma, atau baris baru..."></textarea>
-            </div>
-            <div id="file-input-area" class="text-left" style="display: none;">
-                <input type="file" id="file-input" class="w-full">
-                <div class="mt-4">
+            <!-- Area Input File yang Diperbarui -->
+            <div class="max-w-lg mx-auto text-left">
+                <label for="file-input" class="btn-secondary w-full flex items-center justify-center gap-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>Pilih File CSV atau Excel</span>
+                </label>
+                <input type="file" id="file-input" class="hidden" accept=".csv, .xlsx, .xls">
+                <p id="file-name-display" class="text-sm text-center text-text-secondary mt-2"></p>
+                
+                <div id="variable-selector-container" class="mt-4" style="display: none;">
                     <label for="variable-selector" class="block text-sm font-medium text-text-secondary">Pilih Variabel untuk Dianalisis:</label>
                     <select id="variable-selector" class="feedback-form-input mt-1"></select>
                 </div>
@@ -118,8 +112,8 @@
                 </div>
             </div>
 
-            <div class="mt-6">
-                <button id="btnBackend" class="btn-primary w-full md:w-1/2 mx-auto">Jalankan Analisis</button>
+            <div class="mt-6 flex justify-center">
+                <button id="btnBackend" class="btn-primary w-full md:w-1/2">Jalankan Analisis</button>
             </div>
         </div>
 
@@ -154,37 +148,18 @@
 <script>
 $(document).ready(function(){
     let analysisResult = null;
-    let currentInputMethod = 'manual';
     let fileData = [];
-
-    // --- LOGIKA INPUT ---
-    $('#input-method-selector button').on('click', function() {
-        currentInputMethod = $(this).data('method');
-        $('#input-method-selector button').removeClass('active');
-        $(this).addClass('active');
-
-        if (currentInputMethod === 'manual') {
-            $('#manual-input-area').show();
-            $('#file-input-area').hide();
-        } else {
-            $('#manual-input-area').hide();
-            $('#file-input-area').show();
-        }
-    });
 
     $('#file-input').on('change', function(event) {
         const file = event.target.files[0];
         if (!file) return;
 
+        $('#file-name-display').text(`File terpilih: ${file.name}`);
         const reader = new FileReader();
         reader.onload = (e) => {
             const data = e.target.result;
             try {
-                if (currentInputMethod === 'excel') {
-                    const workbook = XLSX.read(data, { type: 'binary' });
-                    const sheetName = workbook.SheetNames[0];
-                    fileData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                } else { // CSV
+                if (file.name.endsWith('.csv')) {
                     Papa.parse(file, {
                         header: true,
                         dynamicTyping: true,
@@ -194,7 +169,14 @@ $(document).ready(function(){
                             populateVariableSelector();
                         }
                     });
-                    return; // PapaParse is async
+                    return;
+                } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    fileData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                } else {
+                    alert("Format file tidak didukung. Harap unggah file CSV atau Excel.");
+                    return;
                 }
                 populateVariableSelector();
             } catch (error) {
@@ -202,7 +184,7 @@ $(document).ready(function(){
                 console.error(error);
             }
         };
-        if (currentInputMethod === 'excel') {
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
             reader.readAsBinaryString(file);
         } else {
             reader.readAsText(file);
@@ -215,23 +197,18 @@ $(document).ready(function(){
         if (fileData.length > 0) {
             const headers = Object.keys(fileData[0]);
             headers.forEach(header => {
-                // Hanya tambahkan kolom yang berisi data numerik
                 if (fileData.some(row => typeof row[header] === 'number')) {
                     selector.append(`<option value="${header}">${header}</option>`);
                 }
             });
+            $('#variable-selector-container').show();
         }
     }
 
     function getSelectedData() {
-        if (currentInputMethod === 'manual') {
-            const rawData = $('#manual-data').val();
-            return rawData.split(/[ ,\n\t]+/).map(Number).filter(x => !isNaN(x));
-        } else {
-            const selectedVar = $('#variable-selector').val();
-            if (!selectedVar) return [];
-            return fileData.map(row => row[selectedVar]).filter(val => typeof val === 'number');
-        }
+        const selectedVar = $('#variable-selector').val();
+        if (!selectedVar || fileData.length === 0) return [];
+        return fileData.map(row => row[selectedVar]).filter(val => typeof val === 'number');
     }
 
     const getPlotlyLayout = (title, forExport = false) => {
@@ -267,7 +244,7 @@ $(document).ready(function(){
     $('#btnBackend').on('click', async function() {
         const data = getSelectedData();
         if (data.length < 3) {
-            alert('Data tidak cukup untuk analisis (minimal 3 data poin numerik).');
+            alert('Data tidak cukup untuk analisis. Pastikan Anda telah memilih file dan variabel yang valid dengan minimal 3 data numerik.');
             return;
         }
 
@@ -387,7 +364,6 @@ $(document).ready(function(){
         btn.prop('disabled', true);
         spinner.removeClass('hidden');
 
-        // Pengecekan limit untuk DOC
         if (format === 'doc') {
             try {
                 const checkResponse = await fetch("{{ url_for('check_pro_trial_usage') }}", {

@@ -13,11 +13,16 @@ import time
 import midtransclient
 from datetime import date
 from werkzeug.utils import secure_filename
+import uuid
 
 # --- Impor untuk Analisis Statistik ---
 from scipy import stats
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')  # non-interactive backend
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # --- Impor dari __init__.py ---
 from app import app, db, login_manager
@@ -57,8 +62,24 @@ except Exception as e:
     print(f"Peringatan: Gagal mengkonfigurasi Midtrans. Error: {e}")
     midtrans_snap = None
 
+# Konfigurasi untuk output statistik deskriptif
+OUTPUT_DIR = os.path.join(app.static_folder, 'outputs')
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Konfigurasi gaya plot Matplotlib/Seaborn
+sns.set_style('whitegrid')
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans']
+plt.rcParams['axes.titleweight'] = 'bold'
+plt.rcParams['axes.titlesize'] = 14
+plt.rcParams['axes.labelsize'] = 12
+plt.rcParams['xtick.labelsize'] = 10
+plt.rcParams['ytick.labelsize'] = 10
+plt.rcParams['figure.figsize'] = (8,5)
+
+
 # =========================================================================
-# FUNGSI HELPER UNTUK MEMBACA FILE
+# FUNGSI HELPER
 # =========================================================================
 def read_pdf(file_stream):
     """Membaca teks dari file PDF."""
@@ -73,6 +94,51 @@ def read_docx(file_stream):
     doc = docx.Document(file_stream)
     text = "\n".join([para.text for para in doc.paragraphs])
     return text
+
+def descriptive_stats(series: pd.Series):
+    s = series.dropna().astype(float)
+    n = int(s.count())
+    if n == 0: return { 'n': 0 }
+    
+    mean = float(s.mean())
+    median = float(s.median())
+    mode_list = s.mode().tolist()
+    var = float(s.var(ddof=1)) if n > 1 else 0
+    sd = float(s.std(ddof=1)) if n > 1 else 0
+    minimum = float(s.min())
+    maximum = float(s.max())
+    rng = maximum - minimum
+    q1 = float(s.quantile(0.25))
+    q3 = float(s.quantile(0.75))
+    iqr = q3 - q1
+    skew = float(s.skew()) if n > 2 else 0
+    kurt = float(s.kurtosis()) if n > 3 else 0
+
+    shapiro_w, shapiro_p = (None, None)
+    if 3 <= n <= 5000:
+        try:
+            shapiro_w, shapiro_p = stats.shapiro(s)
+        except Exception:
+            pass
+
+    lower = q1 - 1.5 * iqr
+    upper = q3 + 1.5 * iqr
+    outliers = s[(s < lower) | (s > upper)].tolist()
+
+    return {
+        'n': n, 'mean': mean, 'median': median, 'mode': mode_list, 'variance': var,
+        'std': sd, 'min': minimum, 'max': maximum, 'range': rng, 'q1': q1,
+        'q3': q3, 'iqr': iqr, 'skewness': skew, 'kurtosis': kurt,
+        'shapiro_w': shapiro_w, 'shapiro_p': shapiro_p, 'outliers': outliers
+    }
+
+def save_figure(fig, prefix='plot'):
+    fname = f"{prefix}_{uuid.uuid4().hex[:8]}.png"
+    path = os.path.join(OUTPUT_DIR, fname)
+    fig.savefig(path, bbox_inches='tight', dpi=150)
+    plt.close(fig)
+    return url_for('static', filename=f'outputs/{fname}')
+
 
 # =========================================================================
 # MODEL PENGGUNA & LOADER
@@ -221,6 +287,11 @@ def normality_test(): return render_template('normality_test.html')
 @login_required
 def homogeneity_test(): return render_template('homogeneity_test.html')
 
+@app.route('/descriptive_statistics')
+@login_required
+def descriptive_statistics():
+    return render_template('descriptive_statistics.html')
+
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
@@ -256,7 +327,6 @@ def check_pro_trial_usage():
         if not feature_name:
             return jsonify({'error': 'Nama fitur diperlukan.'}), 400
         
-        # This function checks AND increments the count
         is_allowed, message = check_and_update_pro_trial(current_user.id, feature_name)
         
         if not is_allowed:
@@ -544,6 +614,63 @@ def api_bartlett():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+        
+@app.route('/api/descriptive_analysis', methods=['POST'])
+@login_required
+def descriptive_analysis():
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            return jsonify({'error': message}), 429
+    try:
+        uploaded = request.files.get('file')
+        raw_text = request.form.get('raw_csv')
+        df = None
+
+        if uploaded and uploaded.filename != '':
+            if uploaded.filename.lower().endswith('.csv'):
+                df = pd.read_csv(uploaded)
+            else:
+                return jsonify({'error': 'Format file tidak valid. Harap unggah file CSV.'}), 400
+        elif raw_text and raw_text.strip() != '':
+            from io import StringIO
+            df = pd.read_csv(StringIO(raw_text))
+        else:
+            return jsonify({'error': 'Tidak ada data yang diberikan.'}), 400
+
+        numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+        if not numeric_cols:
+            return jsonify({'error': 'Tidak ditemukan kolom numerik pada data.'}), 400
+
+        results = {}
+        plots = {}
+
+        for col in numeric_cols:
+            stats_d = descriptive_stats(df[col])
+            results[col] = stats_d
+            s = df[col].dropna().astype(float)
+
+            # Histogram
+            fig1, ax1 = plt.subplots()
+            sns.histplot(s, bins='auto', kde=True, ax=ax1, edgecolor='black')
+            ax1.set_title(f'Histogram - {col}')
+            plots[f'{col}_histogram'] = save_figure(fig1, prefix=f'hist_{col}')
+
+            # Boxplot
+            fig2, ax2 = plt.subplots(figsize=(8, 2))
+            sns.boxplot(x=s, ax=ax2)
+            ax2.set_title(f'Boxplot - {col}')
+            plots[f'{col}_boxplot'] = save_figure(fig2, prefix=f'box_{col}')
+
+        return jsonify({
+            'results': results,
+            'plots': plots,
+            'columns': numeric_cols
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/get-usage-status')
 @login_required

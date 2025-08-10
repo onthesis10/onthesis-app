@@ -10,6 +10,20 @@
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Card Statistik Deskriptif (BARU) -->
+        <a href="{{ url_for('descriptive_statistics') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
+                    <!-- Icon: Calculator -->
+                    <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="8" y1="14" x2="8" y2="18"></line><line x1="8" y1="10" x2="16" y2="10"></line></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-primary">Statistik Deskriptif</h3>
+                    <p class="text-sm text-text-secondary">Ringkas dan visualisasikan data Anda.</p>
+                </div>
+            </div>
+        </a>
+
         <!-- Card Uji Normalitas -->
         <a href="{{ url_for('normality_test') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
             <div class="flex items-center gap-4">
@@ -28,12 +42,12 @@
             </div>
         </a>
         
-        <!-- Card Uji Homogenitas (BARU) -->
+        <!-- Card Uji Homogenitas -->
         <a href="{{ url_for('homogeneity_test') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
                     <!-- Icon: Layers -->
-                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                     <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
                         <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                         <polyline points="2 17 12 22 22 17"></polyline>
                         <polyline points="2 12 12 17 22 12"></polyline>
@@ -45,14 +59,6 @@
                 </div>
             </div>
         </a>
-
-        <!-- Placeholder untuk alat analisis lainnya -->
-        <div class="apex-card p-6 bg-bg-canvas border-2 border-dashed border-border-panel flex items-center justify-center">
-            <div class="text-center">
-                <h3 class="font-bold text-text-secondary">Segera Hadir</h3>
-                <p class="text-sm text-text-secondary">Alat analisis lainnya sedang disiapkan.</p>
-            </div>
-        </div>
 
     </div>
 </div>
