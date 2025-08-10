@@ -76,23 +76,28 @@
     }
     
     /* --- PERBAIKAN: Gaya untuk Teks Interpretasi AI --- */
-    .prose h4 {
-        font-size: 1.05rem; /* Sedikit lebih besar dari teks biasa */
+    .interpretation-content h4 {
+        font-size: 1.1rem; /* Sedikit lebih besar dari teks biasa */
         font-weight: 600;
         color: var(--text-primary);
-        margin-bottom: 0.75rem;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
     }
-    .prose p {
+    .interpretation-content p {
         font-size: 0.95rem;
         line-height: 1.6;
         color: var(--text-secondary);
         margin-bottom: 1rem;
     }
-    .prose p:last-child {
+    .interpretation-content p:last-child {
         margin-bottom: 0;
     }
-    .prose strong {
+    .interpretation-content strong {
         color: var(--text-primary);
+    }
+    .interpretation-content em {
+        font-style: italic;
+        color: var(--text-secondary);
     }
 </style>
 {% endblock %}
@@ -246,7 +251,7 @@ $(document).ready(function() {
                             <span class="btn-text">Jelaskan Hasil Ini</span>
                             <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                         </button>
-                        <div id="interpretation-${safeColName}" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
+                        <div id="interpretation-${safeColName}" class="interpretation-content bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
                     </div>
                 </div>`;
             tabsContent.append(tabContentHtml);
@@ -364,21 +369,22 @@ $(document).ready(function() {
         const formatNum = (num) => parseFloat(Number(num).toFixed(2)).toLocaleString('id-ID');
 
         const prompt = `
-            Anda adalah seorang analis data ahli yang memberikan penjelasan ringkas dan lugas.
-            Berdasarkan data statistik untuk variabel **"${colName}"** berikut:
-            - **Mean:** ${formatNum(stats.mean)}
-            - **Median:** ${formatNum(stats.median)}
-            - **Standar Deviasi:** ${formatNum(stats.std)}
+            Anda adalah seorang analis data ahli. Buat laporan HTML singkat dan lugas untuk data statistik variabel **"${colName}"**.
+            Gunakan HANYA tag HTML: <h4> untuk subjudul, <p> untuk penjelasan, <strong> untuk penekanan, dan <em> untuk istilah statistik.
+            JANGAN GUNAKAN FORMAT MARKDOWN SAMA SEKALI.
 
-            Berikan interpretasi dalam format HTML dengan poin-poin berikut:
-            1.  <h4>Tendensi Sentral</h4>
-                <p>Jelaskan secara singkat apa arti perbandingan antara Mean dan Median. (Contoh: "Nilai Mean (rata-rata) dan Median (nilai tengah) hampir sama, menunjukkan sebaran data yang cenderung simetris.")</p>
-            2.  <h4>Sebaran Data</h4>
-                <p>Jelaskan apa arti nilai Standar Deviasi ini. (Contoh: "Standar deviasi sebesar ${formatNum(stats.std)} menunjukkan bahwa sebagian besar data cukup mengumpul di sekitar nilai rata-rata.")</p>
-            3.  <h4>Kesimpulan</h4>
-                <p>Berikan satu kalimat kesimpulan umum tentang karakteristik data ini.</p>
+            Data:
+            - Mean: ${formatNum(stats.mean)}
+            - Median: ${formatNum(stats.median)}
+            - Standar Deviasi: ${formatNum(stats.std)}
 
-            Pastikan jawaban Anda singkat, jelas, dan profesional. Jangan gunakan paragraf yang panjang. Jangan sertakan tag \`<html>\` atau \`<body>\`.
+            Struktur HTML WAJIB diikuti:
+            <h4>Tendensi Sentral</h4>
+            <p>Jelaskan secara singkat perbandingan antara <em>Mean</em> dan <em>Median</em> di sini. (Contoh: Nilai <em>Mean</em> dan <em>Median</em> hampir sama, menunjukkan sebaran data yang cenderung simetris.)</p>
+            <h4>Sebaran Data</h4>
+            <p>Jelaskan secara singkat arti dari nilai <em>Standar Deviasi</em>. (Contoh: Standar deviasi sebesar ${formatNum(stats.std)} menunjukkan data cukup mengumpul di sekitar rata-rata.)</p>
+            <h4>Kesimpulan</h4>
+            <p>Berikan satu kalimat kesimpulan umum tentang karakteristik data ini.</p>
         `;
         
         $.ajax({
@@ -388,7 +394,9 @@ $(document).ready(function() {
             data: JSON.stringify({ stats: prompt }),
             success: (res) => {
                 const safeColName = colName.replace(/[^a-zA-Z0-9]/g, '_');
-                const cleanedHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
+                // Membersihkan sisa markdown jika AI masih gagal patuh
+                let cleanedHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
+                cleanedHtml = cleanedHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
                 $(`#interpretation-${safeColName}`).html(cleanedHtml).slideDown();
             },
             error: (err) => {
