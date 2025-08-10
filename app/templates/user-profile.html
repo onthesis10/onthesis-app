@@ -2,6 +2,32 @@
 
 {% block title %}Profil Pengguna - OnThesis{% endblock %}
 
+{% block page_styles %}
+<!-- Pustaka Midtrans Snap (opsional di halaman ini, tapi baik untuk konsistensi) -->
+<script type="text/javascript"
+    src="https://app.sandbox.midtrans.com/snap/snap.js"
+    data-client-key="{{ client_key }}"></script>
+<style>
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .status-badge-pro {
+        background-color: rgba(52, 211, 153, 0.1);
+        color: #34d399;
+    }
+    .status-badge-free {
+        background-color: rgba(139, 148, 158, 0.1);
+        color: var(--text-secondary);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="animate-fade-in-up">
     <!-- Header Halaman -->
@@ -11,7 +37,7 @@
     </header>
 
     <!-- Kontainer utama yang ringkas dan terpusat -->
-    <div class="max-w-xl mx-auto space-y-8">
+    <div class="max-w-4xl mx-auto space-y-8">
         
         <!-- Blok untuk menampilkan notifikasi/flash message -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -36,57 +62,76 @@
           {% endif %}
         {% endwith %}
 
-        <!-- Kartu Informasi Akun -->
-        <div class="apex-card p-8">
-            <div class="flex flex-col items-center text-center">
-                <img class="w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-border-panel" 
-                     src="{{ current_user.picture or 'https://ui-avatars.com/api/?name=' + (current_user.username|urlencode) + '&background=161B22&color=E6EDF3' }}" 
-                     alt="Foto Profil">
-                <h2 class="text-2xl font-bold text-text-primary mt-4">{{ current_user.username }}</h2>
-                <p class="text-text-secondary">{{ current_user.email or 'Email tidak tersedia' }}</p>
-            </div>
-
-            <hr class="border-border-panel my-6">
-
-            <!-- Form Update Profil -->
-            <form method="POST" action="{{ url_for('user_profile') }}">
-                <h3 class="text-lg font-semibold text-text-primary mb-4">Ubah Informasi</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label for="profile-name" class="block text-sm font-medium text-text-secondary mb-2">Nama Tampilan</label>
-                        <input type="text" id="profile-name" name="name" value="{{ current_user.username }}" class="feedback-form-input">
-                    </div>
-                    <div class="pt-2">
-                        <button type="submit" class="btn-primary w-full">
-                            Simpan Perubahan
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Kartu Langganan & Tindakan -->
-        <div class="apex-card p-8">
-            <h3 class="text-lg font-semibold text-text-primary mb-4">Langganan & Tindakan</h3>
-            <div class="space-y-4">
-                <div class="p-4 rounded-lg border border-border-panel bg-bg-canvas">
-                    <p class="text-sm text-text-secondary">Status Langganan</p>
-                    {% if current_user.is_pro %}
-                        <p class="text-lg font-bold text-green-400">AKUN PRO</p>
-                    {% else %}
-                        <p class="text-lg font-bold text-text-primary">AKUN GRATIS</p>
-                    {% endif %}
-                </div>
+        <!-- Kartu Profil Utama dengan Layout Dua Kolom -->
+        <div class="apex-card p-8 md:p-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
                 
-                {% if not current_user.is_pro %}
-                <a href="https://app.midtrans.com/payment-links/1754017123715" target="_blank" class="block w-full text-center btn-primary !bg-green-500 hover:!bg-green-600 !text-white">
-                    Upgrade ke PRO
-                </a>
-                {% endif %}
+                <!-- Kolom Kiri: Informasi & Update Profil -->
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-6">
+                        <img class="w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-border-panel" 
+                             src="{{ current_user.picture or 'https://ui-avatars.com/api/?name=' + (current_user.username|urlencode) + '&background=161B22&color=E6EDF3' }}" 
+                             alt="Foto Profil">
+                        <div>
+                            <h2 class="text-2xl font-bold text-text-primary">{{ current_user.username }}</h2>
+                            <p class="text-text-secondary">{{ current_user.email or 'Email tidak tersedia' }}</p>
+                        </div>
+                    </div>
 
-                <a href="{{ url_for('logout') }}" class="block w-full text-center btn-secondary !text-red-400 hover:!bg-red-500/10 hover:!border-red-500/50">
-                    Logout
-                </a>
+                    <hr class="border-border-panel my-8">
+
+                    <!-- Form Update Profil -->
+                    <form method="POST" action="{{ url_for('user_profile') }}">
+                        <div class="flex items-center gap-3 mb-4">
+                            <svg class="w-6 h-6 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                            <h3 class="text-lg font-semibold text-text-primary">Ubah Informasi</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="profile-name" class="block text-sm font-medium text-text-secondary mb-2">Nama Tampilan</label>
+                                <input type="text" id="profile-name" name="name" value="{{ current_user.username }}" class="feedback-form-input">
+                            </div>
+                            <div class="pt-2">
+                                <button type="submit" class="btn-primary w-full">
+                                    Simpan Perubahan
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Kolom Kanan: Langganan & Tindakan -->
+                <div class="md:border-l md:border-border-panel md:pl-8">
+                    <div class="flex items-center gap-3 mb-4">
+                        <svg class="w-6 h-6 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                        <h3 class="text-lg font-semibold text-text-primary">Langganan & Tindakan</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="p-4 rounded-lg border border-border-panel bg-bg-canvas text-center">
+                            <p class="text-sm text-text-secondary mb-2">Status Langganan</p>
+                            {% if current_user.is_pro %}
+                                <span class="status-badge status-badge-pro">OnThesis PRO</span>
+                                {% if current_user.pro_expiry_date %}
+                                    <p class="text-xs text-text-secondary mt-2">Aktif hingga: {{ current_user.pro_expiry_date.strftime('%d %B %Y') }}</p>
+                                {% endif %}
+                            {% else %}
+                                <span class="status-badge status-badge-free">Gratisan Bro!</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if not current_user.is_pro %}
+                        <a href="{{ url_for('upgrade_page') }}" class="block w-full text-center btn-primary !bg-green-500 hover:!bg-green-600 !text-white">
+                            Upgrade ke PRO
+                        </a>
+                        {% endif %}
+
+                        <div class="pt-8">
+                             <a href="{{ url_for('logout') }}" class="block w-full text-center btn-secondary !text-red-400 hover:!bg-red-500/10 hover:!border-red-500/50">
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

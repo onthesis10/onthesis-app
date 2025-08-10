@@ -74,10 +74,8 @@
         border-radius: 0.5rem;
         border: 1px solid var(--border-panel);
     }
-    
-    /* --- PERBAIKAN: Gaya untuk Teks Interpretasi AI --- */
     .interpretation-content h4 {
-        font-size: 1.1rem; /* Sedikit lebih besar dari teks biasa */
+        font-size: 1.1rem;
         font-weight: 600;
         color: var(--text-primary);
         margin-top: 1rem;
@@ -89,16 +87,8 @@
         color: var(--text-secondary);
         margin-bottom: 1rem;
     }
-    .interpretation-content p:last-child {
-        margin-bottom: 0;
-    }
-    .interpretation-content strong {
-        color: var(--text-primary);
-    }
-    .interpretation-content em {
-        font-style: italic;
-        color: var(--text-secondary);
-    }
+    .interpretation-content strong { color: var(--text-primary); }
+    .interpretation-content em { font-style: italic; }
 </style>
 {% endblock %}
 
@@ -163,7 +153,7 @@
 {% block page_scripts %}
 <script>
 $(document).ready(function() {
-    let analysisData = null; // Simpan hasil lengkap dari server
+    let analysisData = null;
 
     const showError = (message) => {
         $('#error-container').text(message).slideDown();
@@ -186,25 +176,17 @@ $(document).ready(function() {
     };
 
     createVariable();
-
     $('#addVariable').click(() => createVariable());
-    
     $('#removeVariable').click(function() {
         if ($('#variablesContainer > .data-variable').length > 1) {
             $('#variablesContainer > .data-variable').last().remove();
-        } else {
-            showError('Minimal harus ada satu variabel.');
-        }
+        } else { showError('Minimal harus ada satu variabel.'); }
     });
-
     $('#variablesContainer').on('click', '.remove-variable-btn', function() {
         if ($('#variablesContainer > .data-variable').length > 1) {
             $(this).closest('.data-variable').remove();
-        } else {
-            showError('Minimal harus ada satu variabel.');
-        }
+        } else { showError('Minimal harus ada satu variabel.'); }
     });
-
     $('#loadSample').click(() => {
         $('#variablesContainer').empty();
         createVariable('Tinggi_Badan_cm', '165, 170, 155, 180, 168, 172, 160, 175, 166, 159');
@@ -214,22 +196,17 @@ $(document).ready(function() {
     const displayResults = (data) => {
         const tabsNav = $('#results-tabs-nav').empty();
         const tabsContent = $('#results-tabs-content').empty();
-
         data.columns.forEach((colName, index) => {
             const stats = data.results[colName];
             if (!stats) return;
-
             const safeColName = colName.replace(/[^a-zA-Z0-9]/g, '_');
             const isActive = index === 0;
-
             tabsNav.append(`<button class="nav-link ${isActive ? 'active' : ''}" data-bs-target="#tab-${safeColName}" type="button">${colName}</button>`);
-            
             const formatNum = (num) => {
                 if (num === null || num === undefined) return 'N/A';
                 let formatted = parseFloat(Number(num).toFixed(3));
                 return formatted.toLocaleString('id-ID', { maximumFractionDigits: 3 });
             };
-
             const tabContentHtml = `
                 <div class="tab-pane fade ${isActive ? 'show active' : ''}" id="tab-${safeColName}">
                     <div class="apex-card p-6 mb-8">
@@ -255,7 +232,6 @@ $(document).ready(function() {
                     </div>
                 </div>`;
             tabsContent.append(tabContentHtml);
-
             const table = $(`#table-${safeColName}`);
             table.html(`
                 <thead>
@@ -273,7 +249,6 @@ $(document).ready(function() {
                     <tr><td><strong>Maksimum</strong></td><td>${formatNum(stats.max)}</td></tr>
                 </tbody>`);
         });
-        
         $('#outputContainer').slideDown();
         $('html, body').animate({ scrollTop: $("#outputContainer").offset().top - 80 }, 500);
     };
@@ -284,59 +259,39 @@ $(document).ready(function() {
         let hasError = false;
         const dataForAnalysis = {};
         const variableNames = new Set();
-
         $('.data-variable').each(function() {
-            const varEl = $(this);
-            const nameInput = varEl.find('.variable-name-input');
+            const nameInput = $(this).find('.variable-name-input');
             const name = nameInput.val().trim();
-            const textarea = varEl.find('.data-input');
+            const textarea = $(this).find('.data-input');
             const rawDataStr = textarea.val().trim();
-            
             if (rawDataStr === '') return;
-
-            if (!name) {
-                hasError = true;
-                nameInput.addClass('input-error');
-            } else if (variableNames.has(name)) {
-                hasError = true;
-                nameInput.addClass('input-error');
-                showError(`Nama variabel duplikat: "${name}". Harap gunakan nama yang unik.`);
-                return false;
-            }
+            if (!name) { hasError = true; nameInput.addClass('input-error'); }
+            else if (variableNames.has(name)) { hasError = true; nameInput.addClass('input-error'); showError(`Nama variabel duplikat: "${name}".`); return false; }
             variableNames.add(name);
-
             const values = rawDataStr.split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
-            if (values.length < 2) {
-                hasError = true;
-                textarea.addClass('input-error');
-            } else {
-                dataForAnalysis[name] = values;
-            }
+            if (values.length < 2) { hasError = true; textarea.addClass('input-error'); }
+            else { dataForAnalysis[name] = values; }
         });
-
-        if (hasError) {
-            showError('Setiap variabel harus punya nama unik dan minimal 2 data numerik. Bagian yang bermasalah telah ditandai.');
-            return;
-        }
-        if (Object.keys(dataForAnalysis).length === 0) {
-            showError('Tidak ada data valid untuk dianalisis.');
-            return;
-        }
-
+        if (hasError) { showError('Setiap variabel harus punya nama unik dan minimal 2 data numerik.'); return; }
+        if (Object.keys(dataForAnalysis).length === 0) { showError('Tidak ada data valid untuk dianalisis.'); return; }
         const button = $(this);
         button.prop('disabled', true).text('Menganalisis...');
-
         try {
             const response = await fetch(`{{ url_for('api_descriptive_analysis') }}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dataForAnalysis)
             });
+            const result = await response.json();
             if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Terjadi kesalahan pada server');
+                if (result.redirect) {
+                    window.location.href = result.redirect;
+                } else {
+                    throw new Error(result.error || 'Terjadi kesalahan pada server');
+                }
+                return;
             }
-            analysisData = await response.json();
+            analysisData = result;
             displayResults(analysisData);
         } catch (e) {
             showError('Error: ' + e.message);
@@ -353,40 +308,29 @@ $(document).ready(function() {
         $($(this).data('bs-target')).addClass('show active');
     });
 
-    // --- PERBAIKAN: PROMPT INTERPRETASI AI ---
     $('#results-tabs-content').on('click', '.interpret-btn', function() {
         const colName = $(this).data('col-name');
         const stats = analysisData.results[colName];
         if (!stats) return;
-
         const btn = $(this);
         const btnText = btn.find('.btn-text');
         const spinner = btn.find('.spinner');
         btnText.text('Menganalisis...');
         spinner.removeClass('hidden');
         btn.prop('disabled', true);
-
         const formatNum = (num) => parseFloat(Number(num).toFixed(2)).toLocaleString('id-ID');
-
         const prompt = `
             Anda adalah seorang analis data ahli. Buat laporan HTML singkat dan lugas untuk data statistik variabel **"${colName}"**.
             Gunakan HANYA tag HTML: <h4> untuk subjudul, <p> untuk penjelasan, <strong> untuk penekanan, dan <em> untuk istilah statistik.
             JANGAN GUNAKAN FORMAT MARKDOWN SAMA SEKALI.
-
-            Data:
-            - Mean: ${formatNum(stats.mean)}
-            - Median: ${formatNum(stats.median)}
-            - Standar Deviasi: ${formatNum(stats.std)}
-
             Struktur HTML WAJIB diikuti:
             <h4>Tendensi Sentral</h4>
-            <p>Jelaskan secara singkat perbandingan antara <em>Mean</em> dan <em>Median</em> di sini. (Contoh: Nilai <em>Mean</em> dan <em>Median</em> hampir sama, menunjukkan sebaran data yang cenderung simetris.)</p>
+            <p>Jelaskan secara singkat perbandingan antara <em>Mean</em> (${formatNum(stats.mean)}) dan <em>Median</em> (${formatNum(stats.median)}).</p>
             <h4>Sebaran Data</h4>
-            <p>Jelaskan secara singkat arti dari nilai <em>Standar Deviasi</em>. (Contoh: Standar deviasi sebesar ${formatNum(stats.std)} menunjukkan data cukup mengumpul di sekitar rata-rata.)</p>
+            <p>Jelaskan secara singkat arti dari nilai <em>Standar Deviasi</em> (${formatNum(stats.std)}).</p>
             <h4>Kesimpulan</h4>
             <p>Berikan satu kalimat kesimpulan umum tentang karakteristik data ini.</p>
         `;
-        
         $.ajax({
             url: "{{ url_for('interpret_analysis') }}",
             method: 'POST',
@@ -394,14 +338,18 @@ $(document).ready(function() {
             data: JSON.stringify({ stats: prompt }),
             success: (res) => {
                 const safeColName = colName.replace(/[^a-zA-Z0-9]/g, '_');
-                // Membersihkan sisa markdown jika AI masih gagal patuh
                 let cleanedHtml = res.interpretation.replace(/^```html\s*|```\s*$/g, '').trim();
                 cleanedHtml = cleanedHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
                 $(`#interpretation-${safeColName}`).html(cleanedHtml).slideDown();
             },
             error: (err) => {
-                const safeColName = colName.replace(/[^a-zA-Z0-9]/g, '_');
-                $(`#interpretation-${safeColName}`).html(`<p class="text-red-400">Gagal: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).slideDown();
+                if (err.responseJSON && err.responseJSON.redirect) {
+                    window.location.href = err.responseJSON.redirect;
+                } else {
+                    const safeColName = colName.replace(/[^a-zA-Z0-9]/g, '_');
+                    const errorMessage = err.responseJSON ? err.responseJSON.error : 'Terjadi kesalahan';
+                    $(`#interpretation-${safeColName}`).html(`<p class="text-red-400">Gagal: ${errorMessage}</p>`).slideDown();
+                }
             },
             complete: () => {
                 btnText.text('Jelaskan Hasil Ini');
@@ -411,19 +359,14 @@ $(document).ready(function() {
         });
     });
 
-    // --- Export Logic ---
     const loadImageAsBase64 = (url) => {
         return new Promise((resolve, reject) => {
-            if (!url) {
-                resolve(null);
-                return;
-            }
+            if (!url) { resolve(null); return; }
             const img = new Image();
             img.crossOrigin = 'Anonymous';
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
+                canvas.width = img.width; canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
                 resolve(canvas.toDataURL('image/png'));
@@ -434,16 +377,11 @@ $(document).ready(function() {
     };
 
     const exportHandler = async (format) => {
-        if (!analysisData) {
-            showError("Lakukan analisis terlebih dahulu sebelum mengekspor.");
-            return;
-        }
-        
+        if (!analysisData) { showError("Lakukan analisis terlebih dahulu sebelum mengekspor."); return; }
         const btn = $(`#export-${format}-btn`);
         const spinner = btn.siblings('.spinner').first();
         btn.prop('disabled', true);
         spinner.removeClass('hidden');
-
         if (format === 'doc') {
             try {
                 const checkResponse = await fetch("{{ url_for('check_pro_trial_usage') }}", {
@@ -453,7 +391,11 @@ $(document).ready(function() {
                 });
                 const checkData = await checkResponse.json();
                 if (!checkData.allowed) {
-                    showError(checkData.message);
+                    if (checkData.redirect) {
+                        window.location.href = checkData.redirect;
+                    } else {
+                        showError(checkData.message || "Batas penggunaan tercapai.");
+                    }
                     btn.prop('disabled', false); spinner.addClass('hidden');
                     return;
                 }
@@ -463,34 +405,27 @@ $(document).ready(function() {
                 return;
             }
         }
-
         try {
             const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
             const logoData = await loadImageAsBase64(logoUrl);
             const activeTabId = $('#results-tabs-content .tab-pane.active').attr('id');
             const safeColName = activeTabId.replace('tab-', '');
             const colName = $('#results-tabs-nav .nav-link.active').text();
-
             if (format === 'pdf') {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 const addHeader = (docInstance) => docInstance.addImage(logoData, 'PNG', docInstance.internal.pageSize.width - 45, 10, 30, 8);
-                
                 addHeader(doc);
                 doc.setFontSize(18);
                 doc.text(`Laporan Statistik Deskriptif: ${colName}`, 105, 25, { align: 'center' });
-                
                 doc.autoTable({ html: `#table-${safeColName}`, startY: 35, theme: 'grid', headStyles: { fillColor: [2, 132, 199] } });
                 let yPos = doc.autoTable.previous.finalY + 15;
-                
                 const histImgSrc = $(`#hist-${safeColName}`).attr('src');
                 const boxplotImgSrc = $(`#boxplot-${safeColName}`).attr('src');
                 const pieImgSrc = $(`#pie-${safeColName}`).attr('src');
-
                 const histImgData = await loadImageAsBase64(histImgSrc);
                 const boxplotImgData = await loadImageAsBase64(boxplotImgSrc);
                 const pieImgData = pieImgSrc ? await loadImageAsBase64(pieImgSrc) : null;
-                
                 if (yPos > 200) { doc.addPage(); addHeader(doc); yPos = 25; }
                 doc.setFontSize(14);
                 doc.text("Visualisasi Data", 15, yPos);
@@ -498,13 +433,8 @@ $(document).ready(function() {
                 doc.addImage(histImgData, 'PNG', 15, yPos, 90, 68);
                 doc.addImage(boxplotImgData, 'PNG', 110, yPos, 90, 68);
                 yPos += 75;
-
-                if(pieImgData){
-                    doc.addImage(pieImgData, 'PNG', 60, yPos, 90, 68); // Centered pie chart
-                }
-
+                if(pieImgData){ doc.addImage(pieImgData, 'PNG', 60, yPos, 90, 68); }
                 doc.save(`hasil-deskriptif-${safeColName}.pdf`);
-
             } else if (format === 'doc') {
                 let content = `
                     <style>
@@ -519,21 +449,15 @@ $(document).ready(function() {
                     ${$(`#table-${safeColName}`)[0].outerHTML}
                     <h3>Visualisasi Data</h3>
                 `;
-                
                 const histImgSrc = $(`#hist-${safeColName}`).attr('src');
                 const boxplotImgSrc = $(`#boxplot-${safeColName}`).attr('src');
                 const pieImgSrc = $(`#pie-${safeColName}`).attr('src');
-
                 const histImgData = await loadImageAsBase64(histImgSrc);
                 const boxplotImgData = await loadImageAsBase64(boxplotImgSrc);
                 const pieImgData = pieImgSrc ? await loadImageAsBase64(pieImgSrc) : null;
-
                 content += `<h4>Histogram</h4><p><img src="${histImgData}" style="width:450px; height:auto;" /></p>`;
                 content += `<h4>Box Plot</h4><p><img src="${boxplotImgData}" style="width:450px; height:auto;" /></p>`;
-                if(pieImgData){
-                    content += `<h4>Pie Chart</h4><p><img src="${pieImgData}" style="width:450px; height:auto;" /></p>`;
-                }
-
+                if(pieImgData){ content += `<h4>Pie Chart</h4><p><img src="${pieImgData}" style="width:450px; height:auto;" /></p>`; }
                 var converted = htmlDocx.asBlob(content);
                 saveAs(converted, `hasil-deskriptif-${safeColName}.doc`);
             }
@@ -545,7 +469,6 @@ $(document).ready(function() {
             spinner.addClass('hidden');
         }
     };
-
     $('#outputContainer').on('click', '#export-pdf-btn', () => exportHandler('pdf'));
     $('#outputContainer').on('click', '#export-doc-btn', () => exportHandler('doc'));
 });
