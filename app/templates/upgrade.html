@@ -3,7 +3,7 @@
 {% block title %}Upgrade ke OnThesis PRO{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka Midtrans Snap -->
+<!-- PERBAIKAN: Memuat Pustaka Midtrans Snap -->
 <script type="text/javascript"
     src="https://app.sandbox.midtrans.com/snap/snap.js"
     data-client-key="{{ client_key }}"></script>
@@ -74,12 +74,12 @@
         <h3 class="text-2xl font-bold text-text-primary mb-8">Semua Paket PRO Mendapatkan:</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
             <ul class="feature-list">
-                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Akses **tanpa batas** ke semua fitur AI (Parafrase, Analisis Data, dll).</span></li>
-                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Ekspor hasil analisis ke PDF dan DOCX tanpa watermark.</span></li>
+                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Akses tanpa batas ke semua fitur AI (Parafrase, Analisis Data, dll).</span></li>
+                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Ekspor hasil analisis ke PDF dan DOCX tanpa Limit.</span></li>
             </ul>
             <ul class="feature-list">
                 <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Prioritas dukungan pelanggan jika kamu menemukan masalah.</span></li>
-                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Dukungan langsung untuk perkembangan OnThesis di masa depan.</span></li>
+                <li><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Konsultasi langsung Skripsimu.</span></li>
             </ul>
         </div>
     </div>
@@ -87,6 +87,8 @@
 {% endblock %}
 
 {% block page_scripts %}
+<!-- PERBAIKAN: Menambahkan jQuery dan logika untuk memanggil Midtrans -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
     $('.select-plan-btn').on('click', function() {
@@ -97,6 +99,7 @@ $(document).ready(function() {
         const plan = $(this).data('plan');
         const amount = $(this).data('amount');
 
+        // 1. Meminta token pembayaran ke backend
         $.ajax({
             url: "{{ url_for('create_transaction') }}",
             method: 'POST',
@@ -104,29 +107,37 @@ $(document).ready(function() {
             data: JSON.stringify({ plan: plan, amount: amount }),
             success: function(res) {
                 if (res.token) {
-                    snap.pay(res.token, {
+                    // 2. Jika token berhasil didapat, buka popup Midtrans
+                    window.snap.pay(res.token, {
                         onSuccess: function(result){
-                            alert("Pembayaran berhasil!"); console.log(result);
-                            window.location.href = "{{ url_for('dashboard') }}";
+                            /* Anda bisa menambahkan notifikasi sukses di sini */
+                            console.log(result);
+                            window.location.href = "{{ url_for('dashboard') }}?status=payment-success";
                         },
                         onPending: function(result){
-                            alert("Menunggu pembayaran Anda!"); console.log(result);
+                            /* Anda bisa menambahkan notifikasi pending di sini */
+                            console.log(result);
+                            alert("Menunggu pembayaran Anda!");
                         },
                         onError: function(result){
-                            alert("Pembayaran gagal!"); console.log(result);
+                            /* Anda bisa menambahkan notifikasi error di sini */
+                            console.log(result);
+                            alert("Pembayaran gagal!");
                         },
                         onClose: function(){
-                            alert('Anda menutup popup tanpa menyelesaikan pembayaran');
+                            /* Pengguna menutup popup sebelum bayar */
+                            console.log('customer closed the popup without finishing the payment');
                         }
                     });
                 } else {
-                    alert('Gagal mendapatkan token pembayaran.');
+                    alert('Gagal mendapatkan token pembayaran dari server.');
                 }
             },
             error: function(err) {
                 alert('Terjadi kesalahan: ' + (err.responseJSON ? err.responseJSON.message : 'Tidak dapat terhubung ke server.'));
             },
             complete: function() {
+                // Kembalikan tombol ke keadaan semula
                 button.prop('disabled', false).text(originalText);
             }
         });
