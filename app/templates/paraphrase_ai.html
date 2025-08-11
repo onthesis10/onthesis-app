@@ -4,6 +4,8 @@
 
 {% block page_styles %}
 <!-- Pustaka untuk Ekspor -->
+<!-- PERBAIKAN: Menambahkan pustaka jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
@@ -19,7 +21,6 @@
     }
     /* Custom slider style */
     input[type=range] {
-        /* PERBAIKAN: Menambahkan properti standar 'appearance' */
         -webkit-appearance: none; /* Untuk browser lama */
         appearance: none; /* Standar, untuk browser modern */
         background: transparent;
