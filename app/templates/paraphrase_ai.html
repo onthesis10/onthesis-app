@@ -3,11 +3,9 @@
 {% block title %}Parafrase AI - OnThesis{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka untuk Ekspor -->
-<!-- PERBAIKAN: Menambahkan pustaka jQuery -->
+<!-- Pustaka JavaScript yang Diperlukan -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
@@ -21,8 +19,8 @@
     }
     /* Custom slider style */
     input[type=range] {
-        -webkit-appearance: none; /* Untuk browser lama */
-        appearance: none; /* Standar, untuk browser modern */
+        -webkit-appearance: none;
+        appearance: none;
         background: transparent;
         cursor: pointer;
         width: 100%;
@@ -142,8 +140,20 @@ $(document).ready(function() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text, intensity: intensity })
             });
-            const data = await response.json();
+
+            // --- PERBAIKAN UTAMA: Penanganan Respons ---
             if (!response.ok) {
+                // Cek jika respons adalah HTML (indikasi redirect ke login)
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("text/html") !== -1) {
+                    // Sesi habis, arahkan ke halaman login
+                    alert("Sesi Anda telah habis. Harap login kembali.");
+                    window.location.href = "{{ url_for('login') }}";
+                    return;
+                }
+                
+                // Jika bukan HTML, coba baca sebagai JSON
+                const data = await response.json();
                 if(data.redirect) {
                     window.location.href = data.redirect;
                 } else {
@@ -151,8 +161,12 @@ $(document).ready(function() {
                 }
                 return;
             }
+            
+            const data = await response.json();
             paraphraseOutput.html(converter.makeHtml(data.paraphrased_text));
+
         } catch (error) {
+            // Error ini sekarang akan menangani masalah jaringan atau error server yang sebenarnya
             paraphraseOutput.html(`<p class="text-red-400 font-semibold">${error.message}</p>`);
         } finally {
             setLoadingState(false);
@@ -160,8 +174,10 @@ $(document).ready(function() {
     });
 
     const exportHandler = async (format) => {
-        const content = paraphraseOutput.html();
-        const plainText = paraphraseOutput.text();
+        const contentHtml = paraphraseOutput.html();
+        const plainText = paraphraseOutput.text().trim();
+        
+        // Periksa jika output masih placeholder atau kosong
         if (!plainText || plainText === 'Hasil akan muncul di sini...') {
             alert('Tidak ada hasil untuk diekspor.');
             return;
@@ -175,17 +191,19 @@ $(document).ready(function() {
             if (format === 'pdf') {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-                doc.html(content, {
+                
+                // Menggunakan metode .html() dari jsPDF untuk merender HTML
+                doc.html(contentHtml, {
                     callback: function(doc) {
                         doc.save('hasil-parafrase-onthesis.pdf');
                     },
-                    x: 15,
-                    y: 15,
-                    width: 170,
-                    windowWidth: 650
+                    margin: [40, 40, 40, 40],
+                    autoPaging: 'text',
+                    width: 515 // Lebar konten di dalam A4 (595pt - 2*40pt margin)
                 });
+
             } else if (format === 'doc') {
-                const contentBlob = htmlDocx.asBlob(content);
+                const contentBlob = htmlDocx.asBlob(contentHtml);
                 saveAs(contentBlob, 'hasil-parafrase-onthesis.doc');
             }
         } catch (e) {
