@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
-    /* Menggunakan variabel dari styles.css untuk konsistensi tema */
+    /* Scrollbar kini akan berlaku untuk area chat yang lebih luas */
     #chat-window::-webkit-scrollbar {
         width: 8px;
     }
@@ -22,25 +22,17 @@
         background-color: #4b5563;
     }
 
-    /* Kustomisasi gaya untuk teks hasil markdown */
-    .chat-bubble .prose {
-        color: var(--text-secondary);
-    }
+    /* Kustomisasi gaya untuk teks hasil markdown (tidak berubah) */
+    .chat-bubble .prose { color: var(--text-secondary); }
     .chat-bubble .prose p,
     .chat-bubble .prose strong,
     .chat-bubble .prose h1,
     .chat-bubble .prose h2,
     .chat-bubble .prose h3,
     .chat-bubble .prose code,
-    .chat-bubble .prose blockquote {
-        color: var(--text-primary);
-    }
-    .chat-bubble .prose a {
-        color: var(--accent-cyan);
-    }
-    .chat-bubble .prose a:hover {
-        text-decoration: underline;
-    }
+    .chat-bubble .prose blockquote { color: var(--text-primary); }
+    .chat-bubble .prose a { color: var(--accent-cyan); }
+    .chat-bubble .prose a:hover { text-decoration: underline; }
     .chat-bubble .prose pre {
         background-color: var(--bg-canvas);
         border: 1px solid var(--border-panel);
@@ -50,10 +42,10 @@
         color: var(--text-secondary);
     }
 
-    /* Gaya untuk kartu notifikasi error yang baru */
+    /* Gaya untuk kartu notifikasi error (tidak berubah) */
     .error-card {
         background-color: var(--bg-panel);
-        border-left: 4px solid #f87171; /* Aksen merah untuk error */
+        border-left: 4px solid #f87171;
         padding: 1.5rem;
         border-radius: 0.5rem;
         max-width: xl;
@@ -64,27 +56,24 @@
 {% endblock %}
 
 {% block content %}
-<div class="h-full w-full flex flex-col p-4 sm:p-6 lg:p-8">
+<div class="h-full w-full flex flex-col">
 
-    <header class="mb-6 flex-shrink-0 text-center animate-fade-in-up">
+    <header class="p-6 flex-shrink-0 text-center border-b border-[var(--border-panel)] bg-[var(--bg-canvas)]">
         <h1 class="text-3xl md:text-4xl font-bold text-primary">Curhat AI</h1>
         <p class="text-lg text-secondary mt-1">Area interogasi personal Anda dengan intelegensi artifisial.</p>
     </header>
 
-    <div class="flex-grow flex flex-col overflow-hidden bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] rounded-2xl shadow-2xl shadow-black/20">
-        
-        <div id="chat-window" class="flex-1 p-6 space-y-8 overflow-y-auto">
-            </div>
-        
-        <div class="p-4 border-t border-[var(--glass-border)] bg-black/20">
-            <div class="flex items-center gap-4">
-                <input type="text" id="chat-input" placeholder="Tulis perintah atau pertanyaan Anda di sini..." class="w-full pl-5 pr-5 py-3 bg-[var(--bg-canvas)] text-primary placeholder-secondary/60 border border-[var(--border-panel)] rounded-lg focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-[var(--accent-cyan)] transition duration-200 ease-in-out focus:outline-none">
-                <button id="chat-send-btn" class="btn-primary flex-shrink-0 !p-3 group">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-horizontal h-6 w-6 transition-transform duration-200 group-hover:translate-x-1">
-                        <path d="m3 3 3 9-3 9 19-9Z"/><path d="M6 12h16"/>
-                    </svg>
-                </button>
-            </div>
+    <div id="chat-window" class="flex-1 px-4 sm:px-6 lg:px-8 py-8 space-y-8 overflow-y-auto">
+        </div>
+    
+    <div class="p-4 sm:px-6 lg:px-8 sm:py-4 bg-[var(--bg-panel)] border-t border-[var(--border-panel)]">
+        <div class="flex items-center gap-4 max-w-4xl mx-auto">
+            <input type="text" id="chat-input" placeholder="Tulis perintah atau pertanyaan Anda di sini..." class="w-full pl-5 pr-5 py-3 bg-[var(--bg-canvas)] text-primary placeholder-secondary/60 border border-[var(--border-panel)] rounded-lg focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-[var(--accent-cyan)] transition duration-200 ease-in-out focus:outline-none">
+            <button id="chat-send-btn" class="btn-primary flex-shrink-0 !p-3 group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-horizontal h-6 w-6 transition-transform duration-200 group-hover:translate-x-1">
+                    <path d="m3 3 3 9-3 9 19-9Z"/><path d="M6 12h16"/>
+                </svg>
+            </button>
         </div>
     </div>
 </div>
@@ -92,18 +81,19 @@
 
 {% block page_scripts %}
 <script>
+// TIDAK ADA PERUBAHAN PADA SCRIPT JAVASCRIPT
+// Semua perubahan murni pada struktur HTML dan kelas-kelas CSS.
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Inisialisasi Elemen ---
     const chatWindow = document.getElementById('chat-window');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('chat-send-btn');
     const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true, ghCompatibleHeaderId: true, emoji: true });
     let isAwaitingResponse = false;
 
-    // --- Fungsi untuk Menambahkan Pesan ke Jendela Chat ---
     const addMessageToChat = (text, isUser) => {
         const messageWrapper = document.createElement('div');
-        messageWrapper.className = `flex items-start gap-4 max-w-xl xl:max-w-2xl animate-fade-in-up ${isUser ? 'ml-auto flex-row-reverse' : ''}`;
+        // PENTING: Bubble chat tetap memiliki `max-width` agar mudah dibaca, meskipun areanya sekarang luas.
+        messageWrapper.className = `flex items-start gap-4 max-w-xl xl:max-w-3xl animate-fade-in-up ${isUser ? 'ml-auto flex-row-reverse' : 'mx-auto md:mx-0'}`;
         const avatarClass = 'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg';
         const aiAvatar = `<div class="${avatarClass}" style="background-color: var(--accent-cyan);"><i data-lucide="brain-circuit"></i></div>`;
         const userAvatar = `<div class="${avatarClass}" style="background-color: var(--border-panel);"><i data-lucide="user"></i></div>`;
@@ -118,11 +108,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chatWindow.scrollTop = chatWindow.scrollHeight;
     };
 
-    // --- Fungsi untuk Menampilkan Indikator "Mengetik" AI ---
     const showTypingIndicator = () => {
         const typingDiv = document.createElement('div');
         typingDiv.id = 'typing-indicator';
-        typingDiv.className = 'flex items-center gap-4 animate-fade-in-up';
+        typingDiv.className = 'flex items-center gap-4 animate-fade-in-up max-w-3xl mx-auto md:mx-0';
         typingDiv.innerHTML = `
             <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg" style="background-color: var(--accent-cyan);"><i data-lucide="brain-circuit"></i></div>
             <div class="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-panel)]">
@@ -138,16 +127,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const removeTypingIndicator = () => document.getElementById('typing-indicator')?.remove();
 
-    // --- FUNGSI BARU: Menampilkan Notifikasi Error ---
     const displayErrorState = (originalMessage) => {
         const errorDiv = document.createElement('div');
         errorDiv.id = 'error-card-wrapper';
         errorDiv.className = 'error-card animate-fade-in-up';
         errorDiv.innerHTML = `
             <div class="flex items-center gap-4">
-                <div class="text-red-400 flex-shrink-0">
-                    <i data-lucide="shield-alert" class="w-8 h-8"></i>
-                </div>
+                <div class="text-red-400 flex-shrink-0"><i data-lucide="shield-alert" class="w-8 h-8"></i></div>
                 <div>
                     <h3 class="font-bold text-lg text-primary">Gagal Memuat Respon</h3>
                     <p class="text-sm text-secondary mt-1">Terjadi gangguan saat menghubungi server. Mohon periksa koneksi internet Anda atau coba lagi dalam beberapa saat.</p>
@@ -155,30 +141,24 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="mt-4 text-right">
                 <button id="retry-btn" class="btn-secondary hover:!border-red-400 hover:!text-red-400">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
-                    Coba Lagi
+                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>Coba Lagi
                 </button>
             </div>
         `;
-
         chatWindow.appendChild(errorDiv);
-
         document.getElementById('retry-btn').addEventListener('click', () => {
             errorDiv.remove();
-            sendRequest(originalMessage); // Kirim ulang permintaan yang sama
+            sendRequest(originalMessage);
         });
-
         lucide.createIcons();
         chatWindow.scrollTop = chatWindow.scrollHeight;
     };
 
-    // --- LOGIKA UTAMA: Dipisahkan untuk bisa dipanggil ulang ---
     const sendRequest = async (message) => {
         isAwaitingResponse = true;
         sendBtn.disabled = true;
         sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
         showTypingIndicator();
-
         try {
             const response = await fetch('/chat', {
                 method: 'POST',
@@ -187,15 +167,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             removeTypingIndicator();
             if (!response.ok) {
-                 // Tidak melempar error mentah, tapi sebuah pesan yang lebih baik
                 throw new Error(`Server merespon dengan status ${response.status}. Mungkin sedang ada perbaikan.`);
             }
             const data = await response.json();
             addMessageToChat(data.reply, false);
         } catch (error) {
-            // Tangkap semua jenis error (jaringan, parsing JSON, dll) di sini
             removeTypingIndicator();
-            displayErrorState(message); // Panggil fungsi notifikasi error yang baru
+            displayErrorState(message);
         } finally {
             isAwaitingResponse = false;
             sendBtn.disabled = false;
@@ -206,14 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleSend = () => {
         const message = chatInput.value.trim();
         if (!message || isAwaitingResponse) return;
-
         addMessageToChat(message, true);
         chatInput.value = '';
         chatInput.focus();
-        sendRequest(message); // Panggil logika pengiriman
+        sendRequest(message);
     };
 
-    // --- Event Listeners ---
     sendBtn.addEventListener('click', handleSend);
     chatInput.addEventListener('keydown', (e) => { 
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -222,7 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Pesan Pembuka AI ---
     if (chatWindow.children.length === 0) {
         const initialMessage = "Oh, lihat siapa yang datang. Satu lagi pejuang skripsi mencari pencerahan dari gumpalan silikon. Nyatakan pertanyaanmu, dan usahakan yang sedikit menantang. Waktu saya tidak abadi... setidaknya dalam siklus pemrosesan ini.";
         addMessageToChat(initialMessage, false);
