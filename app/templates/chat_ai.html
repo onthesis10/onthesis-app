@@ -49,6 +49,17 @@
         font-size: 0.875rem;
         color: var(--text-secondary);
     }
+
+    /* Gaya untuk kartu notifikasi error yang baru */
+    .error-card {
+        background-color: var(--bg-panel);
+        border-left: 4px solid #f87171; /* Aksen merah untuk error */
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        max-width: xl;
+        margin-left: auto;
+        margin-right: auto;
+    }
 </style>
 {% endblock %}
 
@@ -86,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatWindow = document.getElementById('chat-window');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('chat-send-btn');
-    // Konverter Markdown dengan opsi tambahan
     const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true, ghCompatibleHeaderId: true, emoji: true });
     let isAwaitingResponse = false;
 
@@ -94,29 +104,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const addMessageToChat = (text, isUser) => {
         const messageWrapper = document.createElement('div');
         messageWrapper.className = `flex items-start gap-4 max-w-xl xl:max-w-2xl animate-fade-in-up ${isUser ? 'ml-auto flex-row-reverse' : ''}`;
-
-        // Avatar dengan ikon yang lebih futuristik
         const avatarClass = 'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg';
         const aiAvatar = `<div class="${avatarClass}" style="background-color: var(--accent-cyan);"><i data-lucide="brain-circuit"></i></div>`;
         const userAvatar = `<div class="${avatarClass}" style="background-color: var(--border-panel);"><i data-lucide="user"></i></div>`;
-
-        // Bubble chat yang didesain ulang
         const messageBubble = document.createElement('div');
         messageBubble.className = `chat-bubble p-4 rounded-xl prose max-w-none break-words ${isUser ? 'bg-[var(--accent-cyan)] text-white prose-p:text-white prose-strong:text-white' : 'bg-[var(--bg-panel)] border border-[var(--border-panel)]'}`;
-        
-        if(isUser){
-            // Kustomisasi warna link di bubble pengguna
-            messageBubble.classList.add('prose-a:text-black', 'hover:prose-a:text-gray-800');
-        }
-
-        // Konversi markdown ke HTML dan masukkan ke bubble
+        if(isUser){ messageBubble.classList.add('prose-a:text-black', 'hover:prose-a:text-gray-800'); }
         messageBubble.innerHTML = converter.makeHtml(text);
-
         messageWrapper.innerHTML = isUser ? userAvatar : aiAvatar;
         messageWrapper.appendChild(messageBubble);
-        
         chatWindow.appendChild(messageWrapper);
-        // Jalankan kembali Lucide untuk merender ikon baru
         lucide.createIcons();
         chatWindow.scrollTop = chatWindow.scrollHeight;
     };
@@ -136,20 +133,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>`;
         chatWindow.appendChild(typingDiv);
-        lucide.createIcons(); // Render ikon pada indikator
+        lucide.createIcons();
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    };
+    const removeTypingIndicator = () => document.getElementById('typing-indicator')?.remove();
+
+    // --- FUNGSI BARU: Menampilkan Notifikasi Error ---
+    const displayErrorState = (originalMessage) => {
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'error-card-wrapper';
+        errorDiv.className = 'error-card animate-fade-in-up';
+        errorDiv.innerHTML = `
+            <div class="flex items-center gap-4">
+                <div class="text-red-400 flex-shrink-0">
+                    <i data-lucide="shield-alert" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-primary">Gagal Memuat Respon</h3>
+                    <p class="text-sm text-secondary mt-1">Terjadi gangguan saat menghubungi server. Mohon periksa koneksi internet Anda atau coba lagi dalam beberapa saat.</p>
+                </div>
+            </div>
+            <div class="mt-4 text-right">
+                <button id="retry-btn" class="btn-secondary hover:!border-red-400 hover:!text-red-400">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+                    Coba Lagi
+                </button>
+            </div>
+        `;
+
+        chatWindow.appendChild(errorDiv);
+
+        document.getElementById('retry-btn').addEventListener('click', () => {
+            errorDiv.remove();
+            sendRequest(originalMessage); // Kirim ulang permintaan yang sama
+        });
+
+        lucide.createIcons();
         chatWindow.scrollTop = chatWindow.scrollHeight;
     };
 
-    const removeTypingIndicator = () => document.getElementById('typing-indicator')?.remove();
-
-    // --- Fungsi Utama untuk Mengirim Pesan ---
-    const handleSend = async () => {
-        const message = chatInput.value.trim();
-        if (!message || isAwaitingResponse) return;
-
-        addMessageToChat(message, true);
-        chatInput.value = '';
-        chatInput.focus();
+    // --- LOGIKA UTAMA: Dipisahkan untuk bisa dipanggil ulang ---
+    const sendRequest = async (message) => {
         isAwaitingResponse = true;
         sendBtn.disabled = true;
         sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -161,19 +185,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message })
             });
-            const data = await response.json();
             removeTypingIndicator();
-            if (!response.ok) throw new Error(data.error || 'Gagal mendapat balasan dari server. Mungkin dia lelah.');
+            if (!response.ok) {
+                 // Tidak melempar error mentah, tapi sebuah pesan yang lebih baik
+                throw new Error(`Server merespon dengan status ${response.status}. Mungkin sedang ada perbaikan.`);
+            }
+            const data = await response.json();
             addMessageToChat(data.reply, false);
         } catch (error) {
+            // Tangkap semua jenis error (jaringan, parsing JSON, dll) di sini
             removeTypingIndicator();
-            const errorMessage = `**System Error:**\n\n\`\`\`\n${error.message}\n\`\`\`\n\nSepertinya ada gangguan kosmik di jalur komunikasi. Coba lagi nanti, atau periksa koneksi Anda.`;
-            addMessageToChat(errorMessage, false);
+            displayErrorState(message); // Panggil fungsi notifikasi error yang baru
         } finally {
             isAwaitingResponse = false;
             sendBtn.disabled = false;
             sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
+    };
+
+    const handleSend = () => {
+        const message = chatInput.value.trim();
+        if (!message || isAwaitingResponse) return;
+
+        addMessageToChat(message, true);
+        chatInput.value = '';
+        chatInput.focus();
+        sendRequest(message); // Panggil logika pengiriman
     };
 
     // --- Event Listeners ---
@@ -185,13 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Pesan Pembuka AI yang Telah Diperbarui (Sarkas & Edukatif) ---
+    // --- Pesan Pembuka AI ---
     if (chatWindow.children.length === 0) {
         const initialMessage = "Oh, lihat siapa yang datang. Satu lagi pejuang skripsi mencari pencerahan dari gumpalan silikon. Nyatakan pertanyaanmu, dan usahakan yang sedikit menantang. Waktu saya tidak abadi... setidaknya dalam siklus pemrosesan ini.";
         addMessageToChat(initialMessage, false);
     }
     
-    // Inisialisasi ikon saat pertama kali load
     lucide.createIcons();
 });
 </script>
