@@ -52,20 +52,25 @@
         <p class="text-lg text-text-secondary mt-1">Ubah tulisanmu agar tidak terdeteksi sebagai hasil copy-paste.</p>
     </header>
 
-    <div class="max-w-6xl mx-auto space-y-8">
+    <div class="max-w-4xl mx-auto space-y-8">
         <div class="apex-card p-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Kolom Input -->
+            <!-- PERBAIKAN: Mengubah layout grid dari kiri-kanan menjadi atas-bawah -->
+            <div class="grid grid-cols-1 gap-8">
+                
+                <!-- Bagian Input (Atas) -->
                 <div>
                     <h3 class="text-xl font-bold text-text-primary mb-2">Teks Asli</h3>
                     <p class="text-sm text-text-secondary mb-4">Tempel teks yang ingin Anda ubah di sini.</p>
-                    <textarea id="paraphrase-input" class="feedback-form-input h-80" placeholder="Contoh: Menurut penelitian, mahasiswa seringkali menunda pekerjaan skripsi mereka..."></textarea>
+                    <!-- Mengurangi tinggi agar lebih proporsional -->
+                    <textarea id="paraphrase-input" class="feedback-form-input h-64" placeholder="Contoh: Menurut penelitian, mahasiswa seringkali menunda pekerjaan skripsi mereka..."></textarea>
                 </div>
-                <!-- Kolom Output -->
+                
+                <!-- Bagian Output (Bawah) -->
                 <div>
                     <h3 class="text-xl font-bold text-text-primary mb-2">Hasil Parafrase</h3>
                     <p class="text-sm text-text-secondary mb-4">AI akan menulis ulang teks Anda di sini.</p>
-                    <div id="paraphrase-output" class="w-full h-80 p-4 bg-bg-canvas border border-border-panel rounded-lg overflow-y-auto prose max-w-none">
+                    <!-- Mengurangi tinggi agar lebih proporsional -->
+                    <div id="paraphrase-output" class="w-full h-64 p-4 bg-bg-canvas border border-border-panel rounded-lg overflow-y-auto prose max-w-none">
                         <p class="italic text-text-secondary">Hasil akan muncul di sini...</p>
                     </div>
                 </div>
@@ -141,19 +146,15 @@ $(document).ready(function() {
                 body: JSON.stringify({ text: text, intensity: intensity })
             });
 
-            // --- PERBAIKAN UTAMA: Penanganan Respons ---
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("text/html") !== -1) {
+                alert("Sesi Anda telah habis. Harap login kembali.");
+                window.location.href = "{{ url_for('login') }}";
+                return;
+            }
+
+            const data = await response.json();
             if (!response.ok) {
-                // Cek jika respons adalah HTML (indikasi redirect ke login)
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("text/html") !== -1) {
-                    // Sesi habis, arahkan ke halaman login
-                    alert("Sesi Anda telah habis. Harap login kembali.");
-                    window.location.href = "{{ url_for('login') }}";
-                    return;
-                }
-                
-                // Jika bukan HTML, coba baca sebagai JSON
-                const data = await response.json();
                 if(data.redirect) {
                     window.location.href = data.redirect;
                 } else {
@@ -161,12 +162,9 @@ $(document).ready(function() {
                 }
                 return;
             }
-            
-            const data = await response.json();
             paraphraseOutput.html(converter.makeHtml(data.paraphrased_text));
 
         } catch (error) {
-            // Error ini sekarang akan menangani masalah jaringan atau error server yang sebenarnya
             paraphraseOutput.html(`<p class="text-red-400 font-semibold">${error.message}</p>`);
         } finally {
             setLoadingState(false);
@@ -177,7 +175,6 @@ $(document).ready(function() {
         const contentHtml = paraphraseOutput.html();
         const plainText = paraphraseOutput.text().trim();
         
-        // Periksa jika output masih placeholder atau kosong
         if (!plainText || plainText === 'Hasil akan muncul di sini...') {
             alert('Tidak ada hasil untuk diekspor.');
             return;
@@ -192,18 +189,20 @@ $(document).ready(function() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF({ unit: 'pt', format: 'a4' });
                 
-                // Menggunakan metode .html() dari jsPDF untuk merender HTML
                 doc.html(contentHtml, {
                     callback: function(doc) {
                         doc.save('hasil-parafrase-onthesis.pdf');
                     },
                     margin: [40, 40, 40, 40],
                     autoPaging: 'text',
-                    width: 515 // Lebar konten di dalam A4 (595pt - 2*40pt margin)
+                    width: 515
                 });
 
             } else if (format === 'doc') {
-                const contentBlob = htmlDocx.asBlob(contentHtml);
+                const contentBlob = htmlDocx.asBlob(contentHtml, {
+                    orientation: 'portrait',
+                    margins: { top: 720 } // 1 inch
+                });
                 saveAs(contentBlob, 'hasil-parafrase-onthesis.doc');
             }
         } catch (e) {

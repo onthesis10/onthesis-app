@@ -11,7 +11,7 @@ import requests
 import google.generativeai as genai
 import time
 import midtransclient
-from datetime import date, datetime, timedelta # Ditambahkan untuk tanggal kedaluwarsa
+from datetime import date, datetime, timedelta
 from werkzeug.utils import secure_filename
 import uuid
 import io
@@ -117,7 +117,7 @@ class User(UserMixin):
         self.picture = picture
         self.password_hash = password_hash
         self.pro_expiry_date = pro_expiry_date
-        self.legacy_is_pro = legacy_is_pro # Menyimpan status pro lama
+        self.legacy_is_pro = legacy_is_pro
 
     @property
     def is_pro(self):
@@ -128,7 +128,6 @@ class User(UserMixin):
         """
         if self.pro_expiry_date and isinstance(self.pro_expiry_date, datetime):
             return self.pro_expiry_date > datetime.now()
-        # Fallback untuk pengguna PRO lama yang belum memiliki tanggal kedaluwarsa
         if self.legacy_is_pro and self.pro_expiry_date is None:
             return True
         return False
@@ -150,8 +149,8 @@ def load_user(user_id):
                 email=user_data.get('email'), 
                 password_hash=user_data.get('password_hash'), 
                 picture=user_data.get('picture'),
-                pro_expiry_date=user_data.get('proExpiryDate'), # Memuat tanggal kedaluwarsa baru
-                legacy_is_pro=user_data.get('isPro', False) # Memuat status pro lama
+                pro_expiry_date=user_data.get('proExpiryDate'),
+                legacy_is_pro=user_data.get('isPro', False)
             )
         return None
     except Exception as e:
@@ -201,7 +200,7 @@ def check_and_update_pro_trial(user_id, feature_name):
     count_key = f"{feature_name}_count"
     current_count = usage_data.get(count_key, 0)
     if current_count >= limit:
-        return False, "UPGRADE_REQUIRED" # Diubah untuk mengirim sinyal redirect
+        return False, "UPGRADE_REQUIRED"
     user_ref.update({f'usage_limits.{count_key}': firestore.Increment(1)})
     return True, "OK"
 
@@ -385,8 +384,11 @@ def interpret_analysis():
 @app.route('/api/search-references', methods=['POST'])
 @login_required
 def api_search_references():
-    is_allowed, message = check_and_update_usage(current_user.id, 'search')
-    if not is_allowed: return jsonify({'error': message}), 429
+    # --- PERBAIKAN LOGIKA PRO ---
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_usage(current_user.id, 'search')
+        if not is_allowed: return jsonify({'error': message}), 429
+    
     data = request.get_json()
     source = data.get('source')
     query = data.get('query')
@@ -421,31 +423,26 @@ def api_search_references():
 @app.route('/paraphrase', methods=['POST'])
 @login_required
 def paraphrase_text():
-    # Pengecekan kuota gratis tetap ada
-    is_allowed, message = check_and_update_usage(current_user.id, 'paraphrase')
-    if not is_allowed:
-        return jsonify({'error': message}), 429
-
+    # --- PERBAIKAN LOGIKA PRO ---
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_usage(current_user.id, 'paraphrase')
+        if not is_allowed: return jsonify({'error': message}), 429
+    
     try:
         data = request.get_json()
         text = data.get('text')
-        intensity_level = data.get('intensity', '2') # Default ke 'Standar' jika tidak ada
+        intensity_level = data.get('intensity', '2')
 
-        if not text:
-            return jsonify({'error': 'Teks tidak boleh kosong.'}), 400
-
-        # Menentukan instruksi untuk AI berdasarkan level intensitas
+        if not text: return jsonify({'error': 'Teks tidak boleh kosong.'}), 400
+        
         intensity_map = {
             '1': 'sedikit mengubah struktur kalimat dan beberapa kata kunci',
             '2': 'mengubah struktur kalimat secara signifikan dan mengganti banyak sinonim',
             '3': 'menulis ulang sepenuhnya dengan gaya yang sangat berbeda namun tetap mempertahankan ide inti'
         }
-        
         instruction = intensity_map.get(intensity_level, intensity_map['2'])
-
-        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # Prompt yang lebih detail untuk hasil yang lebih baik
+        model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
         Anda adalah seorang ahli parafrase untuk tulisan akademis.
         Tugas Anda adalah memparafrasekan teks berikut dengan gaya penulisan untuk skripsi.
@@ -459,14 +456,28 @@ def paraphrase_text():
 
         Hasil Parafrase:
         """
-        
         response = model.generate_content(prompt)
         return jsonify({'paraphrased_text': response.text})
-        
     except Exception as e:
-        print(f"Error di API Parafrase: {e}")
-        return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
+@app.route('/chat', methods=['POST'])
+@login_required
+def chat_with_ai():
+    # --- PERBAIKAN LOGIKA PRO ---
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_usage(current_user.id, 'chat')
+        if not is_allowed: return jsonify({'error': message}), 429
+
+    try:
+        message = request.get_json().get('message')
+        if not message: return jsonify({'error': 'Pesan tidak boleh kosong.'}), 400
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"Anda adalah asisten AI bernama OnThesis. Jawab pertanyaan mahasiswa ini seputar skripsi dengan ramah dan membantu: {message}"
+        response = model.generate_content(prompt)
+        return jsonify({'reply': response.text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analyze-document', methods=['POST'])
 @login_required
@@ -868,4 +879,4 @@ def payment_notification():
         return jsonify({'status': 'ok'}), 200
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
-        return jsonify({'status': 'error', 'message': 'Internal server error'}), 
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
