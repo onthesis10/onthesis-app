@@ -421,32 +421,52 @@ def api_search_references():
 @app.route('/paraphrase', methods=['POST'])
 @login_required
 def paraphrase_text():
+    # Pengecekan kuota gratis tetap ada
     is_allowed, message = check_and_update_usage(current_user.id, 'paraphrase')
-    if not is_allowed: return jsonify({'error': message}), 429
+    if not is_allowed:
+        return jsonify({'error': message}), 429
+
     try:
-        text = request.get_json().get('text')
-        if not text: return jsonify({'error': 'Teks tidak boleh kosong.'}), 400
+        data = request.get_json()
+        text = data.get('text')
+        intensity_level = data.get('intensity', '2') # Default ke 'Standar' jika tidak ada
+
+        if not text:
+            return jsonify({'error': 'Teks tidak boleh kosong.'}), 400
+
+        # Menentukan instruksi untuk AI berdasarkan level intensitas
+        intensity_map = {
+            '1': 'sedikit mengubah struktur kalimat dan beberapa kata kunci',
+            '2': 'mengubah struktur kalimat secara signifikan dan mengganti banyak sinonim',
+            '3': 'menulis ulang sepenuhnya dengan gaya yang sangat berbeda namun tetap mempertahankan ide inti'
+        }
+        
+        instruction = intensity_map.get(intensity_level, intensity_map['2'])
+
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = f"Parafrasekan teks ini ke gaya akademis untuk skripsi, pertahankan maknanya:\n\n{text}"
+        
+        # Prompt yang lebih detail untuk hasil yang lebih baik
+        prompt = f"""
+        Anda adalah seorang ahli parafrase untuk tulisan akademis.
+        Tugas Anda adalah memparafrasekan teks berikut dengan gaya penulisan untuk skripsi.
+        Instruksi spesifik: {instruction}.
+        Pastikan makna asli tetap terjaga.
+
+        Teks Asli:
+        ---
+        {text}
+        ---
+
+        Hasil Parafrase:
+        """
+        
         response = model.generate_content(prompt)
         return jsonify({'paraphrased_text': response.text})
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error di API Parafrase: {e}")
+        return jsonify({'error': f'Terjadi kesalahan internal: {str(e)}'}), 500
 
-@app.route('/chat', methods=['POST'])
-@login_required
-def chat_with_ai():
-    is_allowed, message = check_and_update_usage(current_user.id, 'chat')
-    if not is_allowed: return jsonify({'error': message}), 429
-    try:
-        message = request.get_json().get('message')
-        if not message: return jsonify({'error': 'Pesan tidak boleh kosong.'}), 400
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = f"Anda adalah asisten AI bernama OnThesis. Jawab pertanyaan mahasiswa ini seputar skripsi dengan ramah dan membantu: {message}"
-        response = model.generate_content(prompt)
-        return jsonify({'reply': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analyze-document', methods=['POST'])
 @login_required
