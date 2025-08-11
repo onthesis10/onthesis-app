@@ -1,12 +1,13 @@
 {% extends "layout.html" %}
 
-{% block title %}Curhat AI - OnThesis{% endblock %}
+{% block title %}Curhat AI - Apex Command Center{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka untuk mengubah Markdown ke HTML -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
 <style>
-    /* Custom scrollbar styling */
+    /* Menggunakan variabel dari styles.css untuk konsistensi tema */
     #chat-window::-webkit-scrollbar {
         width: 8px;
     }
@@ -14,41 +15,62 @@
         background: transparent;
     }
     #chat-window::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.2);
+        background-color: var(--border-panel);
         border-radius: 10px;
-        border: 2px solid transparent;
-        background-clip: content-box;
     }
     #chat-window::-webkit-scrollbar-thumb:hover {
-        background-color: rgba(255, 255, 255, 0.3);
+        background-color: #4b5563;
+    }
+
+    /* Kustomisasi gaya untuk teks hasil markdown */
+    .chat-bubble .prose {
+        color: var(--text-secondary);
+    }
+    .chat-bubble .prose p,
+    .chat-bubble .prose strong,
+    .chat-bubble .prose h1,
+    .chat-bubble .prose h2,
+    .chat-bubble .prose h3,
+    .chat-bubble .prose code,
+    .chat-bubble .prose blockquote {
+        color: var(--text-primary);
+    }
+    .chat-bubble .prose a {
+        color: var(--accent-cyan);
+    }
+    .chat-bubble .prose a:hover {
+        text-decoration: underline;
+    }
+    .chat-bubble .prose pre {
+        background-color: var(--bg-canvas);
+        border: 1px solid var(--border-panel);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Kontainer utama dengan tema oranye cerah dan layout "fit" -->
-<div class="h-full w-full bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col">
+<div class="h-full w-full flex flex-col p-4 sm:p-6 lg:p-8">
 
-    <!-- Header Halaman -->
-    <header class="mb-8 flex-shrink-0 text-center">
-        <h1 class="text-3xl md:text-4xl font-bold text-orange-900">Curhat AI</h1>
-        <p class="text-lg text-orange-800/80 mt-1">Tanyakan apa saja seputar penelitian dan skripsi Anda.</p>
+    <header class="mb-6 flex-shrink-0 text-center animate-fade-in-up">
+        <h1 class="text-3xl md:text-4xl font-bold text-primary">Curhat AI</h1>
+        <p class="text-lg text-secondary mt-1">Area interogasi personal Anda dengan intelegensi artifisial.</p>
     </header>
 
-    <!-- Kontainer Chat dengan latar belakang hijau toska -->
-    <div class="flex-grow flex flex-col overflow-hidden bg-teal-700/90 backdrop-blur-sm border border-teal-600/60 rounded-2xl shadow-inner">
-        <!-- Jendela Chat (scrollable) -->
-        <div id="chat-window" class="flex-1 p-6 space-y-6 overflow-y-auto">
-            <!-- Pesan-pesan chat akan dirender di sini oleh JavaScript -->
-        </div>
+    <div class="flex-grow flex flex-col overflow-hidden bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] rounded-2xl shadow-2xl shadow-black/20">
         
-        <!-- Area Input Pesan -->
-        <div class="p-4 border-t border-teal-600/80 bg-teal-800/50">
-            <div class="flex items-center gap-3">
-                <input type="text" id="chat-input" placeholder="Ketik pertanyaan Anda di sini..." class="w-full pl-4 pr-4 py-2 bg-teal-900/70 text-white placeholder-teal-300 border border-teal-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 ease-in-out">
-                <button id="chat-send-btn" class="bg-gradient-to-br from-orange-500 to-amber-700 text-white rounded-lg hover:from-orange-600 hover:to-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300 shadow-md hover:shadow-lg flex-shrink-0 !p-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        <div id="chat-window" class="flex-1 p-6 space-y-8 overflow-y-auto">
+            </div>
+        
+        <div class="p-4 border-t border-[var(--glass-border)] bg-black/20">
+            <div class="flex items-center gap-4">
+                <input type="text" id="chat-input" placeholder="Tulis perintah atau pertanyaan Anda di sini..." class="w-full pl-5 pr-5 py-3 bg-[var(--bg-canvas)] text-primary placeholder-secondary/60 border border-[var(--border-panel)] rounded-lg focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-[var(--accent-cyan)] transition duration-200 ease-in-out focus:outline-none">
+                <button id="chat-send-btn" class="btn-primary flex-shrink-0 !p-3 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-horizontal h-6 w-6 transition-transform duration-200 group-hover:translate-x-1">
+                        <path d="m3 3 3 9-3 9 19-9Z"/><path d="M6 12h16"/>
                     </svg>
                 </button>
             </div>
@@ -64,59 +86,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatWindow = document.getElementById('chat-window');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('chat-send-btn');
-    const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true });
+    // Konverter Markdown dengan opsi tambahan
+    const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true, ghCompatibleHeaderId: true, emoji: true });
     let isAwaitingResponse = false;
 
     // --- Fungsi untuk Menambahkan Pesan ke Jendela Chat ---
     const addMessageToChat = (text, isUser) => {
         const messageWrapper = document.createElement('div');
-        messageWrapper.className = `flex items-start gap-3 max-w-lg ${isUser ? 'ml-auto flex-row-reverse' : ''}`;
+        messageWrapper.className = `flex items-start gap-4 max-w-xl xl:max-w-2xl animate-fade-in-up ${isUser ? 'ml-auto flex-row-reverse' : ''}`;
 
-        const avatarClass = 'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md';
-        
-        const userInitial = 'U'; 
+        // Avatar dengan ikon yang lebih futuristik
+        const avatarClass = 'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg';
+        const aiAvatar = `<div class="${avatarClass}" style="background-color: var(--accent-cyan);"><i data-lucide="brain-circuit"></i></div>`;
+        const userAvatar = `<div class="${avatarClass}" style="background-color: var(--border-panel);"><i data-lucide="user"></i></div>`;
 
-        const aiAvatar = `<div class="${avatarClass} bg-white/20">AI</div>`;
-        const userAvatar = `<div class="${avatarClass} bg-orange-500">${userInitial}</div>`;
-
+        // Bubble chat yang didesain ulang
         const messageBubble = document.createElement('div');
-        // Mengubah warna bubble chat AI dan Pengguna
-        messageBubble.className = `p-4 rounded-2xl prose prose-sm max-w-none prose-p:text-white prose-strong:text-white ${isUser ? 'bg-orange-500 text-white' : 'bg-teal-600/80 text-white'}`;
+        messageBubble.className = `chat-bubble p-4 rounded-xl prose max-w-none break-words ${isUser ? 'bg-[var(--accent-cyan)] text-white prose-p:text-white prose-strong:text-white' : 'bg-[var(--bg-panel)] border border-[var(--border-panel)]'}`;
         
-        // Menyesuaikan warna link untuk bubble AI
-        if (!isUser) {
-            messageBubble.classList.add('prose-a:text-orange-200', 'hover:prose-a:text-orange-100');
+        if(isUser){
+            // Kustomisasi warna link di bubble pengguna
+            messageBubble.classList.add('prose-a:text-black', 'hover:prose-a:text-gray-800');
         }
 
+        // Konversi markdown ke HTML dan masukkan ke bubble
         messageBubble.innerHTML = converter.makeHtml(text);
 
-        if (isUser) {
-            messageWrapper.appendChild(messageBubble);
-            messageWrapper.innerHTML += userAvatar;
-        } else {
-            messageWrapper.innerHTML += aiAvatar;
-            messageWrapper.appendChild(messageBubble);
-        }
-
+        messageWrapper.innerHTML = isUser ? userAvatar : aiAvatar;
+        messageWrapper.appendChild(messageBubble);
+        
         chatWindow.appendChild(messageWrapper);
+        // Jalankan kembali Lucide untuk merender ikon baru
+        lucide.createIcons();
         chatWindow.scrollTop = chatWindow.scrollHeight;
     };
 
-    // --- Fungsi untuk Menampilkan Indikator "Mengetik" ---
+    // --- Fungsi untuk Menampilkan Indikator "Mengetik" AI ---
     const showTypingIndicator = () => {
         const typingDiv = document.createElement('div');
         typingDiv.id = 'typing-indicator';
-        typingDiv.className = 'flex items-start gap-3';
+        typingDiv.className = 'flex items-center gap-4 animate-fade-in-up';
         typingDiv.innerHTML = `
-            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white bg-white/20 shadow-md">AI</div>
-            <div class="p-4 rounded-2xl bg-teal-600/80">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg" style="background-color: var(--accent-cyan);"><i data-lucide="brain-circuit"></i></div>
+            <div class="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-panel)]">
                 <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 bg-teal-200 rounded-full animate-pulse"></span>
-                    <span class="w-2 h-2 bg-teal-200 rounded-full animate-pulse" style="animation-delay: 0.2s;"></span>
-                    <span class="w-2 h-2 bg-teal-200 rounded-full animate-pulse" style="animation-delay: 0.4s;"></span>
+                    <span class="w-2.5 h-2.5 bg-[var(--accent-cyan)] rounded-full animate-pulse"></span>
+                    <span class="w-2.5 h-2.5 bg-[var(--accent-cyan)] rounded-full animate-pulse" style="animation-delay: 0.2s;"></span>
+                    <span class="w-2.5 h-2.5 bg-[var(--accent-cyan)] rounded-full animate-pulse" style="animation-delay: 0.4s;"></span>
                 </div>
             </div>`;
         chatWindow.appendChild(typingDiv);
+        lucide.createIcons(); // Render ikon pada indikator
         chatWindow.scrollTop = chatWindow.scrollHeight;
     };
 
@@ -129,8 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addMessageToChat(message, true);
         chatInput.value = '';
+        chatInput.focus();
         isAwaitingResponse = true;
         sendBtn.disabled = true;
+        sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
         showTypingIndicator();
 
         try {
@@ -141,14 +163,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             removeTypingIndicator();
-            if (!response.ok) throw new Error(data.error || 'Gagal mendapat balasan dari AI.');
+            if (!response.ok) throw new Error(data.error || 'Gagal mendapat balasan dari server. Mungkin dia lelah.');
             addMessageToChat(data.reply, false);
         } catch (error) {
             removeTypingIndicator();
-            addMessageToChat(`Maaf, terjadi kesalahan: ${error.message}`, false);
+            const errorMessage = `**System Error:**\n\n\`\`\`\n${error.message}\n\`\`\`\n\nSepertinya ada gangguan kosmik di jalur komunikasi. Coba lagi nanti, atau periksa koneksi Anda.`;
+            addMessageToChat(errorMessage, false);
         } finally {
             isAwaitingResponse = false;
             sendBtn.disabled = false;
+            sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
     };
 
@@ -161,10 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Pesan Pembuka ---
+    // --- Pesan Pembuka AI yang Telah Diperbarui (Sarkas & Edukatif) ---
     if (chatWindow.children.length === 0) {
-        addMessageToChat("Halo! Saya Curhat AI. Ada yang bisa saya bantu seputar skripsi Anda?", false);
+        const initialMessage = "Oh, lihat siapa yang datang. Satu lagi pejuang skripsi mencari pencerahan dari gumpalan silikon. Nyatakan pertanyaanmu, dan usahakan yang sedikit menantang. Waktu saya tidak abadi... setidaknya dalam siklus pemrosesan ini.";
+        addMessageToChat(initialMessage, false);
     }
+    
+    // Inisialisasi ikon saat pertama kali load
+    lucide.createIcons();
 });
 </script>
 {% endblock %}
