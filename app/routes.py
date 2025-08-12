@@ -391,6 +391,54 @@ def api_writing_assistant():
             citation_style = context.get('citationStyle', 'APA 7')
             paragraph_count = context.get('paragraphCount', '4')
 
+            # --- PERBAIKAN: Mencari referensi nyata ---
+            references_text = ""
+            try:
+                # 1. Cari di Crossref
+                crossref_url = 'https://api.crossref.org/works'
+                crossref_params = {'query.bibliographic': topic, 'rows': 3, 'sort': 'relevance'}
+                headers = {'User-Agent': 'OnThesisApp/1.0 (mailto:contact@onthesis.app)'}
+                crossref_response = requests.get(crossref_url, params=crossref_params, headers=headers, timeout=15)
+                
+                found_references = []
+                if crossref_response.ok:
+                    items = crossref_response.json().get('message', {}).get('items', [])
+                    for item in items:
+                        # Ekstrak info dasar untuk prompt
+                        title = item.get('title', [''])[0]
+                        authors_list = item.get('author', [])
+                        authors = ", ".join([f"{author.get('family', '')}, {author.get('given', '')[0]}." for author in authors_list if author.get('family') and author.get('given')])
+                        year = item.get('issued', {}).get('date-parts', [[None]])[0][0]
+                        journal = item.get('container-title', [''])[0]
+                        doi = item.get('DOI', '')
+                        
+                        if title and authors and year:
+                            # Membuat string mentah untuk diformat oleh AI
+                            ref_info = f"Judul: {title}, Penulis: {authors}, Tahun: {year}"
+                            if journal: ref_info += f", Jurnal: {journal}"
+                            if doi: ref_info += f", DOI: {doi}"
+                            found_references.append(ref_info)
+
+                # 2. Format referensi menggunakan AI jika ditemukan
+                if found_references:
+                    formatting_prompt = f"""
+                    Berdasarkan daftar informasi referensi berikut, format masing-masing ke dalam gaya sitasi {citation_style}.
+                    Sajikan hasilnya sebagai daftar (misalnya, menggunakan bullet points atau nomor). Pastikan formatnya benar dan konsisten.
+
+                    Informasi Referensi:
+                    {chr(10).join(f'- {ref}' for ref in found_references)}
+                    """
+                    formatting_response = model.generate_content(formatting_prompt)
+                    references_text = formatting_response.text
+                else:
+                    # Fallback jika tidak ada referensi ditemukan
+                    references_text = "Tidak ada referensi relevan yang ditemukan secara otomatis. Silakan tambahkan secara manual."
+
+            except Exception as e:
+                print(f"Gagal mencari referensi nyata: {e}")
+                references_text = "Terjadi kesalahan saat mencari referensi. Bagian ini bisa diisi manual."
+            # --- AKHIR PERBAIKAN ---
+
             prompt = f"""
                 Anda adalah seorang asisten penulis skripsi ahli dengan gaya penulisan yang profesional dan akademis. Tugas Anda adalah membuat draf Latar Belakang Masalah untuk sebuah skripsi berdasarkan informasi berikut:
 
@@ -401,14 +449,13 @@ def api_writing_assistant():
 
                 Instruksi Penulisan:
                 * **Mode Penulisan:** {writing_mode}.
-                * **Gaya Sitasi:** {citation_style}.
                 * **Jumlah Paragraf:** Tulis draf Latar Belakang Masalah dalam {paragraph_count} paragraf yang terstruktur.
                 * **Struktur Output:** Hasilkan teks dalam format Markdown dengan struktur berikut:
                     * `### 1. Pendahuluan`: Pengenalan topik secara umum.
-                    * `### 2. Masalah Aktual dan Data Pendukung`: Jelaskan masalah dengan mengintegrasikan data atau fakta relevan. Jika memungkinkan, cari dan sertakan data statistik pendukung (misalnya dari BPS, lembaga survei, atau jurnal) dan berikan sitasi palsu sesuai gaya yang diminta, contoh: (Nama Lembaga, 2024).
-                    * `### 3. Relevansi dan Kesenjangan Penelitian`: Jelaskan mengapa topik ini penting dan apa yang belum banyak dibahas oleh penelitian sebelumnya.
+                    * `### 2. Masalah Aktual dan Data Pendukung`: Jelaskan masalah dengan mengintegrasikan data atau fakta relevan. Jika memungkinkan, sitasi beberapa sumber dari daftar pustaka yang disediakan.
+                    * `### 3. Relevansi dan Kesenjangan Penelitian`: Jelaskan mengapa topik ini penting dan apa yang belum banyak dibahas.
                     * `### 4. Transisi ke Rumusan Masalah`: Tutup latar belakang dengan kalimat yang mengarah ke rumusan masalah.
-                * **Daftar Pustaka:** Setelah semua paragraf, buat bagian baru dengan judul `### Daftar Pustaka`. Di bawah judul ini, sertakan 3-5 referensi fiktif yang relevan dengan topik, diformat dengan benar sesuai gaya sitasi {citation_style}.
+                * **Daftar Pustaka:** Setelah semua paragraf, buat bagian baru dengan judul `### Daftar Pustaka`. Gunakan daftar referensi yang sudah diformat berikut ini:\n{references_text}
 
                 Tulis draf Latar Belakang Masalah dan Daftar Pustaka sekarang.
             """
