@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Generator Latar Belakang - Asisten AI{% endblock %}
+{% block title %}Generator Latar Belakang Terverifikasi - Asisten AI{% endblock %}
 
 {% block page_styles %}
 <!-- Pustaka Ikon -->
@@ -27,13 +27,12 @@
         resize: vertical;
         transition: all 0.2s ease;
     }
-    .io-textarea:focus {
+    .io-textarea:focus, .control-input:focus, .control-select:focus {
         outline: none;
         border-color: var(--accent-cyan);
         box-shadow: 0 0 0 3px var(--accent-cyan-glow);
     }
     
-    /* PERBAIKAN: Mengembalikan warna kartu hasil sesuai mode tema */
     #output-panel {
         background-color: var(--bg-panel);
     }
@@ -51,49 +50,29 @@
     .io-output .prose a { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dashed var(--accent-cyan); }
     .io-output .prose pre { background-color: var(--bg-canvas); border: 1px solid var(--border-panel); border-radius: 0.5rem; padding: 1rem; }
     
-    .wizard-step { display: none; }
-    .wizard-step.active { display: block; animation: fade-in-up 0.4s; }
-    @keyframes fade-in-up {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .step-indicator-container {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 2rem;
-    }
-    .step-indicator {
-        height: 0.5rem;
-        flex-grow: 1;
-        background-color: var(--border-panel);
-        border-radius: 999px;
-        transition: all 0.4s ease;
-    }
-    .step-indicator.active {
-        background-color: var(--accent-cyan);
-    }
-
-    .wizard-step label, .control-group label {
+    .form-step label, .control-group label {
         display: block;
         font-size: 1rem;
         font-weight: 600;
         color: var(--text-primary);
         margin-bottom: 0.75rem;
     }
-    .wizard-step p {
+    .form-step p {
         font-size: 0.875rem;
         color: var(--text-secondary);
         margin-bottom: 0.75rem;
         margin-top: -0.5rem;
     }
-    .control-select {
+    .control-input, .control-select {
         width: 100%;
         background-color: var(--bg-canvas);
         border: 1px solid var(--border-panel);
         color: var(--text-primary);
         border-radius: 0.5rem;
         padding: 0.75rem 1rem;
+        transition: all 0.2s ease;
+    }
+    .control-select {
         -webkit-appearance: none;
         appearance: none;
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238B949E' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -101,13 +80,8 @@
         background-repeat: no-repeat;
         background-size: 1.5em 1.5em;
     }
-    .control-select:focus {
-        outline: none;
-        border-color: var(--accent-cyan);
-        box-shadow: 0 0 0 3px var(--accent-cyan-glow);
-    }
     
-    .btn-nav {
+    #generate-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -118,34 +92,12 @@
         border: 1px solid transparent;
         transition: all 0.2s ease-in-out;
         cursor: pointer;
-    }
-    .btn-nav.primary {
         background-color: var(--accent-cyan);
         color: var(--bg-panel);
     }
-     html.light .btn-nav.primary {
-        color: #fff;
-    }
-    .btn-nav.primary:hover {
-        filter: brightness(1.1);
-    }
-    .btn-nav.secondary {
-        background-color: transparent;
-        border-color: var(--border-panel);
-        color: var(--text-secondary);
-    }
-    .btn-nav.secondary:hover {
-        background-color: var(--border-panel);
-        color: var(--text-primary);
-    }
-    .btn-nav:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        filter: none;
-        background-color: var(--border-panel);
-        border-color: var(--border-panel);
-        color: var(--text-secondary);
-    }
+    html.light #generate-btn { color: #fff; }
+    #generate-btn:hover { filter: brightness(1.1); }
+    #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 
     #loading-overlay {
         position: fixed;
@@ -187,9 +139,7 @@
         border-radius: 50%;
         animation: spin 1.5s linear infinite reverse;
     }
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     #notification-container {
         position: fixed;
@@ -230,75 +180,64 @@
             </a>
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Latar Belakang</h1>
-                <p class="text-md text-secondary mt-1">Buat draf latar belakang masalah yang terstruktur dalam beberapa langkah.</p>
+                <p class="text-md text-secondary mt-1">Buat draf latar belakang masalah berbasis data dari sumber terverifikasi.</p>
             </div>
         </div>
     </header>
 
     <div class="w-full flex flex-col items-center gap-8">
         <div class="io-panel w-full max-w-4xl">
-            <div class="step-indicator-container">
-                <div class="step-indicator"></div>
-                <div class="step-indicator"></div>
-                <div class="step-indicator"></div>
-                <div class="step-indicator"></div>
-                <div class="step-indicator"></div>
+            <div class="form-step mb-8">
+                <label for="input-topic">1. Topik Utama Penelitian</label>
+                <p>Masukkan kata kunci utama atau judul penelitian Anda.</p>
+                <textarea id="input-topic" class="io-textarea" placeholder="Contoh: Pengaruh media sosial terhadap prestasi belajar mahasiswa"></textarea>
             </div>
 
-            <div id="wizard-container" class="mb-8 min-h-[220px]">
-                <div class="wizard-step active">
-                    <label for="input-topic">Langkah 1: Topik Utama Penelitian</label>
-                    <p>Masukkan beberapa kata kunci utama (3-5 kata).</p>
-                    <textarea id="input-topic" class="io-textarea" placeholder="Contoh: pengaruh media sosial, kesehatan mental, mahasiswa"></textarea>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="control-group">
+                    <label for="input-major">2. Bidang / Jurusan</label>
+                    <select id="input-major" class="control-select">
+                        <option value="Ilmu Komputer">Ilmu Komputer</option>
+                        <option value="Psikologi">Psikologi</option>
+                        <option value="Ekonomi">Ekonomi</option>
+                        <option value="Kesehatan Masyarakat">Kesehatan Masyarakat</option>
+                        <option value="Pendidikan">Pendidikan</option>
+                        <option value="Umum">Lainnya / Umum</option>
+                    </select>
                 </div>
-                <div class="wizard-step">
-                    <label for="input-problem">Langkah 2: Masalah yang Diangkat</label>
-                    <p>Jelaskan secara singkat masalah yang Anda amati terkait topik.</p>
-                    <textarea id="input-problem" class="io-textarea" placeholder="Contoh: Peningkatan kecemasan dan depresi di kalangan mahasiswa..."></textarea>
-                </div>
-                <div class="wizard-step">
-                    <label for="input-goal">Langkah 3: Tujuan Penelitian</label>
-                    <p>Sebutkan apa yang ingin Anda capai atau buktikan.</p>
-                    <textarea id="input-goal" class="io-textarea" placeholder="Contoh: Menganalisis hubungan antara intensitas penggunaan Instagram..."></textarea>
-                </div>
-                <div class="wizard-step">
-                    <label for="input-location">Langkah 4: Lokasi Penelitian (Opsional)</label>
-                    <p>Spesifikkan lokasi jika ada.</p>
-                    <textarea id="input-location" class="io-textarea" placeholder="Contoh: Universitas Gadjah Mada, Yogyakarta"></textarea>
-                </div>
-                <div class="wizard-step">
-                    <h3 class="text-xl font-bold text-primary mb-4">Langkah 5: Pengaturan Penulisan</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="control-group">
-                            <label for="writing-mode">Mode Penulisan</label>
-                            <select id="writing-mode" class="control-select">
-                                <option>Akademik Formal</option>
-                                <option>Semi-Formal</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="citation-style">Gaya Sitasi</label>
-                            <select id="citation-style" class="control-select">
-                                <option>APA 7</option>
-                                <option>IEEE</option>
-                                <option>MLA</option>
-                            </select>
-                        </div>
-                        <div class="control-group md:col-span-2">
-                             <label for="paragraph-count">Jumlah Paragraf Latar Belakang</label>
-                            <select id="paragraph-count" class="control-select">
-                                <option value="4">4 Paragraf (Direkomendasikan)</option>
-                                <option value="3">3 Paragraf (Ringkas)</option>
-                                <option value="5">5 Paragraf (Detail)</option>
-                            </select>
-                        </div>
-                    </div>
+                <div class="control-group">
+                    <label for="input-year">3. Rentang Tahun Data (Opsional)</label>
+                    <input id="input-year" type="number" class="control-input" placeholder="Contoh: 2020">
                 </div>
             </div>
             
-            <div class="flex justify-between items-center border-t border-border-panel pt-6">
-                <button id="prev-btn" class="btn-nav secondary">Sebelumnya</button>
-                <button id="next-btn" class="btn-nav primary">Selanjutnya</button>
+            <div class="border-t border-border-panel pt-8">
+                <h3 class="text-xl font-bold text-primary mb-4">Pengaturan Output</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="control-group">
+                        <label for="citation-style">Gaya Sitasi</label>
+                        <select id="citation-style" class="control-select">
+                            <option>APA 7</option>
+                            <option>IEEE</option>
+                            <option>MLA</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                         <label for="paragraph-count">Jumlah Paragraf</label>
+                        <select id="paragraph-count" class="control-select">
+                            <option value="4">4 Paragraf (Direkomendasikan)</option>
+                            <option value="3">3 Paragraf (Ringkas)</option>
+                            <option value="5">5 Paragraf (Detail)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <button id="generate-btn" class="btn-primary">
+                    <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i>
+                    Cari Sumber & Generate
+                </button>
             </div>
         </div>
 
@@ -306,7 +245,6 @@
             <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
                 <h2 class="text-xl font-bold text-primary">Hasil Draf Latar Belakang</h2>
                 <div class="flex items-center gap-2">
-                    <!-- PENAMBAHAN: Tombol Ekspor Baru -->
                     <button id="export-pdf-btn" class="btn-secondary !p-2" title="Ekspor ke PDF">
                         <i data-lucide="file-type-2"></i>
                     </button>
@@ -324,62 +262,25 @@
 
 <div id="loading-overlay" style="display: none;">
     <div class="futuristic-spinner"></div>
-    <h3 class="text-xl font-semibold">AI sedang menganalisis...</h3>
-    <p class="text-secondary">Mohon tunggu sebentar.</p>
+    <h3 class="text-xl font-semibold">Mencari & Menganalisis Sumber...</h3>
+    <p class="text-secondary">Proses ini mungkin memakan waktu lebih lama.</p>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const wizardSteps = document.querySelectorAll('.wizard-step');
-    const stepIndicators = document.querySelectorAll('.step-indicator');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
+    const generateBtn = document.getElementById('generate-btn');
     const outputPanel = document.getElementById('output-panel');
     const outputContent = document.getElementById('output-content');
     const loadingOverlay = document.getElementById('loading-overlay');
     const exportPdfBtn = document.getElementById('export-pdf-btn');
     const exportWordBtn = document.getElementById('export-word-btn');
     
-    let currentStep = 0;
-
     const renderIcons = () => {
         if (window.lucide) window.lucide.createIcons();
     };
 
-    const updateWizard = () => {
-        wizardSteps.forEach((step, index) => {
-            step.classList.toggle('active', index === currentStep);
-        });
-        stepIndicators.forEach((indicator, index) => {
-            indicator.classList.toggle('active', index === currentStep);
-        });
-        prevBtn.disabled = currentStep === 0;
-        if (currentStep === wizardSteps.length - 1) {
-            nextBtn.innerHTML = `<i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Generate`;
-        } else {
-            nextBtn.innerHTML = `Selanjutnya`;
-        }
-        renderIcons();
-    };
-
-    nextBtn.addEventListener('click', () => {
-        if (currentStep < wizardSteps.length - 1) {
-            currentStep++;
-            updateWizard();
-        } else {
-            handleGeneration();
-        }
-    });
-
-    prevBtn.addEventListener('click', () => {
-        if (currentStep > 0) {
-            currentStep--;
-            updateWizard();
-        }
-    });
-    
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         const notif = document.createElement('div');
@@ -394,28 +295,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleGeneration = async () => {
         const contextData = {
             topic: document.getElementById('input-topic').value.trim(),
-            problem: document.getElementById('input-problem').value.trim(),
-            goal: document.getElementById('input-goal').value.trim(),
-            location: document.getElementById('input-location').value.trim(),
-            writingMode: document.getElementById('writing-mode').value,
+            major: document.getElementById('input-major').value,
+            year: document.getElementById('input-year').value,
             citationStyle: document.getElementById('citation-style').value,
             paragraphCount: document.getElementById('paragraph-count').value
         };
 
         if (!contextData.topic) {
-            showNotification('Langkah 1 (Topik) tidak boleh kosong.', 'error');
+            showNotification('Topik penelitian tidak boleh kosong.', 'error');
             return;
         }
 
         loadingOverlay.style.display = 'flex';
-        nextBtn.disabled = true;
-        prevBtn.disabled = true;
+        generateBtn.disabled = true;
 
         try {
             const response = await fetch('/api/writing-assistant', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task: 'generate_background', context: contextData })
+                body: JSON.stringify({ task: 'generate_verified_background', context: contextData })
             });
             const result = await response.json();
             if (!response.ok) {
@@ -436,21 +334,17 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification(error.message, 'error');
         } finally {
             loadingOverlay.style.display = 'none';
-            nextBtn.disabled = false;
-            prevBtn.disabled = false;
+            generateBtn.disabled = false;
         }
     };
 
-    // --- PENAMBAHAN: Logika Ekspor ---
     const handleExport = async (format) => {
         const content = outputContent.innerHTML;
         if (!content) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
-
         showNotification(`Mempersiapkan file ${format.toUpperCase()}...`, 'success');
-
         try {
             const response = await fetch('/api/export-document', {
                 method: 'POST',
@@ -461,7 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: `Latar Belakang - ${document.getElementById('input-topic').value.trim()}`
                 })
             });
-
             if (!response.ok) {
                 const result = await response.json();
                  if (result.redirect) {
@@ -472,7 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return;
             }
-
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -483,16 +375,15 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             window.URL.revokeObjectURL(url);
             a.remove();
-
         } catch (error) {
             showNotification(error.message, 'error');
         }
     };
 
+    generateBtn.addEventListener('click', handleGeneration);
     exportPdfBtn.addEventListener('click', () => handleExport('pdf'));
     exportWordBtn.addEventListener('click', () => handleExport('word'));
 
-    updateWizard();
     renderIcons();
 });
 </script>
