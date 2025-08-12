@@ -16,6 +16,7 @@ from werkzeug.utils import secure_filename
 import uuid
 import io
 import base64
+from concurrent.futures import ThreadPoolExecutor
 
 # --- Impor untuk Analisis Statistik ---
 from scipy import stats
@@ -47,7 +48,6 @@ import PyPDF2
 import docx
 
 # --- PENAMBAHAN: Impor untuk Ekspor Dokumen ---
-# Pastikan library ini terinstal: pip install reportlab python-docx
 try:
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
@@ -121,17 +121,16 @@ def create_plot_as_base64(fig):
     plt.close(fig)
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
 
-# --- FUNGSI BARU: Untuk menangani API call dengan retry ---
-def make_api_request_with_retry(url, headers, timeout=25, retries=3, backoff_factor=2):
+def make_api_request_with_retry(url, headers, params=None, timeout=25, retries=3, backoff_factor=2):
     """
-    Membuat permintaan API dengan logika coba lagi jika terjadi error 429 (Too Many Requests).
+    Membuat permintaan API dengan logika coba lagi jika terjadi error 429 atau 404.
     """
     for attempt in range(retries):
         try:
-            response = requests.get(url, headers=headers, timeout=timeout)
+            response = requests.get(url, headers=headers, params=params, timeout=timeout)
             if response.status_code == 404:
                 print(f"Sumber tidak ditemukan (404) di URL: {url}. Melewati.")
-                return None # Kembalikan None jika 404, agar bisa dilewati
+                return None
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:
@@ -152,10 +151,10 @@ def make_api_request_with_retry(url, headers, timeout=25, retries=3, backoff_fac
                 time.sleep(delay)
             else:
                 raise
-    return None # Kembalikan None jika semua percobaan gagal
+    return None
 
 # =========================================================================
-# MODEL PENGGUNA & LOADER (PERBAIKAN SINKRONISASI PRO)
+# MODEL PENGGUNA & LOADER
 # =========================================================================
 class User(UserMixin):
     def __init__(self, id, displayName, password_hash=None, email=None, picture=None, pro_expiry_date=None, legacy_is_pro=False):
@@ -170,11 +169,6 @@ class User(UserMixin):
 
     @property
     def is_pro(self):
-        """
-        Properti dinamis yang mengecek status PRO.
-        Prioritas pertama adalah tanggal kedaluwarsa.
-        Jika tidak ada, ia akan memeriksa status pro lama (legacy).
-        """
         if self.pro_expiry_date and isinstance(self.pro_expiry_date, datetime):
             return self.pro_expiry_date > datetime.now()
         if self.legacy_is_pro and self.pro_expiry_date is None:
@@ -207,7 +201,7 @@ def load_user(user_id):
         return None
 
 # =========================================================================
-# FUNGSI HELPER UNTUK PEMBATASAN FITUR (DIPERBARUI)
+# FUNGSI HELPER UNTUK PEMBATASAN FITUR
 # =========================================================================
 def check_and_update_usage(user_id, feature_name):
     FEATURE_LIMITS = {
@@ -367,7 +361,6 @@ def user_profile():
 @app.route('/upgrade')
 @login_required
 def upgrade_page():
-    """Rute baru untuk halaman upgrade."""
     client_key = os.getenv('MIDTRANS_CLIENT_KEY')
     return render_template('upgrade.html', client_key=client_key)
 
@@ -523,10 +516,176 @@ def api_writing_assistant():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# --- FUNGSI-FUNGSI PENCARIAN BARU ---
+def search_core(keywords):
+    print(f"Mencari di CORE dengan keywords: {keywords}")
+    core_api_key = os.getenv('CORE_API_KEY')
+    if not core_api_key: return []
+
+    keyword_list = [keyword.strip() for keyword in keywords.split(',')]
+    core_query = " AND ".join(keyword_list)
+    
+    core_url = f"https://api.core.ac.uk/v3/search/works?q={core_query}&limit=15"
+    core_headers = {"Authorization": f"Bearer {core_api_key}"}
+    
+    core_response = make_api_request_with_retry(core_url, headers=core_headers)
+    if not core_response: return []
+    
+    core_results = core_response.json().get('results', [])
+    if not core_results: return []
+
+    processed_references = []
+    crossref_headers = {'User-Agent': 'OnThesisApp/1.0 (mailto:dev@onthesis.app)'}
+    
+    for item in core_results:
+        doi = item.get('doi')
+        if not doi: continue
+
+        crossref_url = f"https://api.crossref.org/works/{doi}"
+        crossref_response = make_api_request_with_retry(crossref_url, headers=crossref_headers, timeout=10)
+        
+        if crossref_response and crossref_response.status_code == 200:
+            crossref_data = crossref_response.json().get('message', {})
+            if crossref_data.get('abstract'):
+                authors = crossref_data.get('author', [])
+                if not authors: continue
+
+                authors_str_list = [a.get('family', '') for a in authors if a.get('family')]
+                if not authors_str_list: continue
+                
+                authors_str = " & ".join(authors_str_list[:2])
+                if len(authors_str_list) > 2: authors_str += ", et al."
+                
+                year_parts = crossref_data.get('issued', {}).get('date-parts', [[None]])[0]
+                year = year_parts[0] if year_parts and year_parts[0] else "n.d."
+
+                processed_references.append({
+                    "title": crossref_data.get('title', ['N/A'])[0],
+                    "authors_str": authors_str,
+                    "year": year,
+                    "abstract": re.sub('<[^<]+?>', '', crossref_data.get('abstract')),
+                    "doi": doi
+                })
+    return processed_references
+
+def search_openalex(keywords):
+    print(f"Mencari di OpenAlex dengan keywords: {keywords}")
+    base_url = "https://api.openalex.org/works"
+    search_query = keywords.replace(",", " ")
+    params = {'search': search_query, 'per-page': 10}
+    response = make_api_request_with_retry(base_url, headers={}, params=params)
+    if not response: return []
+    
+    results = []
+    for item in response.json().get('results', []):
+        if not item.get('abstract_inverted_index'): continue
+        
+        authors = [author['author']['display_name'] for author in item.get('authorships', [])]
+        year = item.get('publication_year')
+        
+        abstract = ""
+        if item.get('abstract_inverted_index'):
+            abstract_dict = item['abstract_inverted_index']
+            sorted_words = sorted(abstract_dict.items(), key=lambda item: item[1][0])
+            abstract = ' '.join(word for word, pos in sorted_words)
+
+        results.append({
+            "title": item.get('display_name', 'N/A'),
+            "authors_str": ", ".join(authors[:2]) + (", et al." if len(authors) > 2 else ""),
+            "year": year,
+            "abstract": abstract,
+            "doi": item.get('doi', '').replace('https://doi.org/', '')
+        })
+    return results
+
+def search_doaj(keywords):
+    print(f"Mencari di DOAJ dengan keywords: {keywords}")
+    search_query = keywords.replace(",", "+")
+    base_url = f"https://doaj.org/api/v2/search/articles/{search_query}"
+    params = {'pageSize': 10}
+    response = make_api_request_with_retry(base_url, headers={}, params=params)
+    if not response: return []
+
+    results = []
+    for item in response.json().get('results', []):
+        bibjson = item.get('bibjson', {})
+        if not bibjson.get('abstract'): continue
+        
+        authors = [author['name'] for author in bibjson.get('author', [])]
+        year = bibjson.get('year')
+        doi = next((identifier['id'] for identifier in bibjson.get('identifier', []) if identifier.get('type') == 'doi'), None)
+
+        results.append({
+            "title": bibjson.get('title', 'N/A'),
+            "authors_str": ", ".join(authors[:2]) + (", et al." if len(authors) > 2 else ""),
+            "year": year,
+            "abstract": bibjson.get('abstract'),
+            "doi": doi
+        })
+    return results
+
+def search_eric(keywords):
+    print(f"Mencari di ERIC dengan keywords: {keywords}")
+    base_url = "https://api.ies.ed.gov/eric/"
+    params = {'search': keywords, 'rows': 10, 'format': 'json'}
+    response = make_api_request_with_retry(base_url, headers={}, params=params)
+    if not response: return []
+
+    results = []
+    for item in response.json().get('response', {}).get('docs', []):
+        if not item.get('description'): continue
+        
+        authors = item.get('author', [])
+        year = item.get('publicationdateyear')
+
+        results.append({
+            "title": item.get('title', 'N/A'),
+            "authors_str": ", ".join(authors[:2]) + (", et al." if len(authors) > 2 else ""),
+            "year": year,
+            "abstract": item.get('description'),
+            "doi": None
+        })
+    return results
+
+def search_pubmed(keywords):
+    print(f"Mencari di PubMed dengan keywords: {keywords}")
+    api_key = os.getenv("PUBMED_API_KEY")
+    if not api_key: return []
+    
+    base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+    search_url = f"{base_url}esearch.fcgi"
+    params = {'db': 'pubmed', 'term': keywords, 'retmax': 10, 'retmode': 'json', 'api_key': api_key}
+    search_response = make_api_request_with_retry(search_url, headers={}, params=params)
+    if not search_response: return []
+    
+    ids = search_response.json().get('esearchresult', {}).get('idlist', [])
+    if not ids: return []
+
+    summary_url = f"{base_url}esummary.fcgi"
+    params = {'db': 'pubmed', 'id': ",".join(ids), 'retmode': 'json', 'api_key': api_key}
+    summary_response = make_api_request_with_retry(summary_url, headers={}, params=params)
+    if not summary_response: return []
+
+    results = []
+    for uid, data in summary_response.json().get('result', {}).items():
+        if uid == 'uids': continue
+        
+        authors = [author['name'] for author in data.get('authors', [])]
+        year = data.get('pubdate', '').split(' ')[0]
+        doi = next((articleid['value'] for articleid in data.get('articleids', []) if articleid.get('idtype') == 'doi'), None)
+
+        results.append({
+            "title": data.get('title', 'N/A'),
+            "authors_str": ", ".join(authors[:2]) + (", et al." if len(authors) > 2 else ""),
+            "year": year,
+            "abstract": f"Abstrak tidak tersedia langsung dari PubMed summary. Artikel membahas tentang {data.get('title', '')}.",
+            "doi": doi
+        })
+    return results
+
 @app.route('/api/generate-theory', methods=['POST'])
 @login_required
 def api_generate_theory():
-    # 1. Integrasi dengan sistem limitasi PRO/Trial
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'generate_theory')
         if not is_allowed:
@@ -535,131 +694,92 @@ def api_generate_theory():
             return jsonify({'error': message}), 429
 
     data = request.get_json()
-    if not data or not data.get('keywords'):
-        return jsonify({"error": "Kata kunci tidak boleh kosong."}), 400
-
-    # 2. Ambil semua input dari frontend
-    research_title = data.get('title', '')
     keywords = data.get('keywords', '')
+    sources_to_search = data.get('sources', ['core'])
+    research_title = data.get('title', '')
     style = data.get('style', 'Akademik')
     length = data.get('length', '1.000 - 1.500')
-    source_types = data.get('source_types', [])
     
-    try:
-        # 3. Cari literatur di CORE
-        core_api_key = os.getenv('CORE_API_KEY')
-        if not core_api_key: return jsonify({'error': 'Kunci API CORE tidak dikonfigurasi di server.'}), 500
+    if not keywords:
+        return jsonify({"error": "Kata kunci tidak boleh kosong."}), 400
+
+    all_references = []
+    
+    with ThreadPoolExecutor() as executor:
+        future_to_source = {
+            'core': executor.submit(search_core, keywords) if 'core' in sources_to_search else None,
+            'openalex': executor.submit(search_openalex, keywords) if 'openalex' in sources_to_search else None,
+            'doaj': executor.submit(search_doaj, keywords) if 'doaj' in sources_to_search else None,
+            'eric': executor.submit(search_eric, keywords) if 'eric' in sources_to_search else None,
+            'pubmed': executor.submit(search_pubmed, keywords) if 'pubmed' in sources_to_search else None,
+        }
         
-        keyword_list = [keyword.strip() for keyword in keywords.split(',')]
-        core_query = " AND ".join(keyword_list)
-        
-        core_url = f"https://api.core.ac.uk/v3/search/works?q={core_query}&limit=25"
-        core_headers = {"Authorization": f"Bearer {core_api_key}"}
-        
-        core_response = make_api_request_with_retry(core_url, headers=core_headers)
-        core_results = core_response.json().get('results', [])
+        for source, future in future_to_source.items():
+            if future:
+                try:
+                    all_references.extend(future.result())
+                except Exception as e:
+                    print(f"Gagal mencari dari sumber {source}: {e}")
 
-        if not core_results:
-            return jsonify({"error": "Tidak ada literatur yang ditemukan di CORE untuk kata kunci tersebut."}), 404
+    unique_references = []
+    seen_titles = set()
+    for ref in all_references:
+        if ref['title'].lower() not in seen_titles:
+            ref['citation_apa'] = f"{ref['authors_str']} ({ref['year']}). {ref['title']}."
+            ref['citation_placeholder'] = f"[{ref['authors_str'].split(' ')[0]}, {ref['year']}]"
+            unique_references.append(ref)
+            seen_titles.add(ref['title'].lower())
 
-        # 4. Proses hasil & ambil metadata dari CrossRef
-        processed_references = []
-        crossref_headers = {'User-Agent': 'OnThesisApp/1.0 (mailto:dev@onthesis.app)'}
-        
-        for item in core_results:
-            doi = item.get('doi')
-            if not doi: continue
+    if len(unique_references) < 3:
+        return jsonify({"error": "Referensi yang ditemukan tidak cukup (kurang dari 3) untuk menghasilkan kajian teori yang baik."}), 404
+    
+    processed_references = unique_references[:7]
+    
+    sources_text = ""
+    for i, ref in enumerate(processed_references):
+        sources_text += f"{i+1}. Judul: {ref.get('title')}\n   Penulis: {ref.get('authors_str')}\n   Tahun: {ref.get('year')}\n   Abstrak: {ref.get('abstract')}\n\n"
 
-            crossref_url = f"https://api.crossref.org/works/{doi}"
-            crossref_response = make_api_request_with_retry(crossref_url, headers=crossref_headers, timeout=10)
-            
-            if crossref_response and crossref_response.status_code == 200:
-                crossref_data = crossref_response.json().get('message', {})
-                if crossref_data.get('abstract'):
-                    authors = crossref_data.get('author', [])
-                    if not authors: continue
+    prompt = f"""Peran: Anda adalah seorang asisten peneliti akademik ahli.
+    Konteks:
+    - Judul Penelitian: "{research_title}"
+    - Kata Kunci: "{keywords}"
+    - Gaya: "{style}"
+    - Panjang: "{length}"
+    Tugas: Tulis draf Bab 2 Kajian Teori dalam Bahasa Indonesia dengan struktur heading markdown `###`. Berdasarkan HANYA pada sumber yang diberikan.
+    Struktur:
+    ### 2.1 Landasan Teori
+    Jelaskan teori utama yang relevan.
+    ### 2.2 Penelitian Terdahulu
+    Rangkum temuan kunci dari sumber. Sisipkan sitasi dalam teks dengan format [NamaBelakangPenulis, Tahun], contoh: [{processed_references[0]['authors_str'].split(' ')[0]}, {processed_references[0]['year']}].
+    ### 2.3 Kerangka Teori
+    Jelaskan secara singkat hubungan antar variabel.
+    SUMBER RUJUKAN:
+    {sources_text}
+    Aturan: Jangan berspekulasi. Sitasi setiap klaim.
+    """
+    
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    response = model.generate_content(prompt)
+    generated_text = response.text
 
-                    authors_str_list = [a.get('family', '') for a in authors if a.get('family')]
-                    if not authors_str_list: continue
-                    
-                    authors_str = " & ".join(authors_str_list[:2])
-                    if len(authors_str_list) > 2: authors_str += ", et al."
-                    
-                    year_parts = crossref_data.get('issued', {}).get('date-parts', [[None]])[0]
-                    year = year_parts[0] if year_parts and year_parts[0] else "n.d."
+    final_text = generated_text
+    used_citations = set()
+    
+    placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
+    temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
 
-                    first_author_lastname = authors_str_list[0]
-                    citation_apa = f"{authors_str} ({year}). {crossref_data.get('title', [''])[0]}."
-                    
-                    processed_references.append({
-                        "title": crossref_data.get('title', [''])[0],
-                        "authors_str": authors_str,
-                        "year": year,
-                        "abstract": re.sub('<[^<]+?>', '', crossref_data.get('abstract')),
-                        "citation_apa": citation_apa,
-                        "citation_placeholder": f"[{first_author_lastname}, {year}]"
-                    })
-            if len(processed_references) >= 7:
-                break
-        
-        if len(processed_references) < 3:
-             return jsonify({"error": "Referensi yang ditemukan tidak cukup (kurang dari 3) untuk menghasilkan kajian teori yang baik."}), 404
+    for author_match, year_match in placeholders_in_text:
+        placeholder = f"[{author_match}, {year_match}]"
+        matched_ref = temp_ref_map.get(placeholder.lower())
+        if matched_ref:
+            in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
+            final_text = final_text.replace(placeholder, in_text_citation)
+            used_citations.add(matched_ref['citation_apa'])
+    
+    bibliography = "\n\n".join(sorted(list(used_citations)))
+    final_output = final_text + f"\n\n### Daftar Pustaka\n{bibliography}"
 
-        # 5. Susun Prompt untuk LLM (Gemini)
-        sources_text = ""
-        for i, ref in enumerate(processed_references):
-            sources_text += f"{i+1}. Judul: {ref.get('title')}\n   Penulis: {ref.get('authors_str')}\n   Tahun: {ref.get('year')}\n   Abstrak: {ref.get('abstract')}\n\n"
-
-        prompt = f"""Peran: Anda adalah seorang asisten peneliti akademik ahli.
-        Konteks:
-        - Judul Penelitian: "{research_title}"
-        - Kata Kunci: "{keywords}"
-        - Gaya: "{style}"
-        - Panjang: "{length}"
-        Tugas: Tulis draf Bab 2 Kajian Teori dalam Bahasa Indonesia dengan struktur heading markdown `###`. Berdasarkan HANYA pada sumber yang diberikan.
-        Struktur:
-        ### 2.1 Landasan Teori
-        Jelaskan teori utama yang relevan.
-        ### 2.2 Penelitian Terdahulu
-        Rangkum temuan kunci dari sumber. Sisipkan sitasi dalam teks dengan format [NamaBelakangPenulis, Tahun], contoh: [{processed_references[0]['authors_str'].split(' ')[0]}, {processed_references[0]['year']}].
-        ### 2.3 Kerangka Teori
-        Jelaskan secara singkat hubungan antar variabel.
-        SUMBER RUJUKAN:
-        {sources_text}
-        Aturan: Jangan berspekulasi. Sitasi setiap klaim.
-        """
-        
-        # 6. Panggil Model Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        generated_text = response.text
-
-        # 7. Post-processing untuk mengganti placeholder sitasi
-        final_text = generated_text
-        used_citations = set()
-        
-        placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
-        temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
-
-        for author_match, year_match in placeholders_in_text:
-            placeholder = f"[{author_match}, {year_match}]"
-            matched_ref = temp_ref_map.get(placeholder.lower())
-            if matched_ref:
-                in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
-                final_text = final_text.replace(placeholder, in_text_citation)
-                used_citations.add(matched_ref['citation_apa'])
-        
-        bibliography = "\n\n".join(sorted(list(used_citations)))
-        final_output = final_text + f"\n\n### Daftar Pustaka\n{bibliography}"
-
-        return jsonify({"generated_text": final_output})
-
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Gagal menghubungi API eksternal (CORE/CrossRef). Coba lagi nanti. Detail: {e}"}), 503
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"Terjadi kesalahan internal yang tidak terduga: {str(e)}"}), 500
+    return jsonify({"generated_text": final_output})
 
 @app.route('/api/export-document', methods=['POST'])
 @login_required
