@@ -285,6 +285,11 @@ def writing_assistant():
 def generator_latar_belakang():
     return render_template('generator_latar_belakang.html')
 
+@app.route('/generator-rumusan-masalah')
+@login_required
+def generator_rumusan_masalah():
+    return render_template('generator_rumusan_masalah.html')
+
 @app.route('/data-analysis')
 @login_required
 def data_analysis(): return render_template('data_analysis.html')
@@ -450,6 +455,26 @@ def api_writing_assistant():
                 * **Daftar Pustaka:** Setelah semua paragraf, buat bagian baru dengan judul `### Daftar Pustaka`. Gunakan daftar referensi yang sudah diformat berikut ini:\n{references_text}
 
                 Tulis draf Latar Belakang Masalah dan Daftar Pustaka sekarang dalam format Markdown.
+            """
+        elif task == 'generate_problem_statement':
+            if not isinstance(context, dict):
+                return jsonify({'error': 'Context harus berupa objek.'}), 400
+            
+            topic = context.get('topic', '')
+            background = context.get('background', '')
+            point_count = context.get('pointCount', '3')
+
+            prompt = f"""
+            Anda adalah seorang metodolog penelitian ahli. Tugas Anda adalah merumuskan pertanyaan penelitian (rumusan masalah) yang tajam dan relevan berdasarkan informasi berikut:
+
+            1.  **Judul/Topik Penelitian:** {topic}
+            2.  **Konteks Latar Belakang (jika ada):** {background}
+
+            **Instruksi:**
+            - Identifikasi variabel-variabel kunci, populasi, dan konteks dari informasi yang diberikan.
+            - Buatlah {point_count} poin pertanyaan penelitian yang spesifik, terukur, dapat dicapai, relevan, dan terikat waktu (SMART), jika memungkinkan.
+            - Fokus pada pertanyaan "Bagaimana", "Apakah ada hubungan/pengaruh", "Seberapa besar", atau "Faktor-faktor apa saja".
+            - Sajikan hasilnya sebagai daftar bernomor dalam format Markdown.
             """
         else:
             return jsonify({'error': 'Task tidak valid.'}), 400

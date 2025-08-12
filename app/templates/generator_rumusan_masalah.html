@@ -1,0 +1,366 @@
+{% extends "layout.html" %}
+
+{% block title %}Generator Rumusan Masalah - Asisten AI{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka Ikon -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Pustaka untuk konversi Markdown ke HTML -->
+<script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
+<!-- Pustaka untuk Ekspor Profesional -->
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<style>
+    .io-panel {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-panel);
+        border-radius: 1rem;
+        padding: 2rem;
+        transition: all 0.3s ease-in-out;
+    }
+    .io-textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 1rem;
+        background-color: var(--bg-canvas);
+        border: 1px solid var(--border-panel);
+        color: var(--text-primary);
+        border-radius: 0.75rem;
+        resize: vertical;
+        transition: all 0.2s ease;
+    }
+    .io-textarea:focus, .control-select:focus {
+        outline: none;
+        border-color: var(--accent-cyan);
+        box-shadow: 0 0 0 3px var(--accent-cyan-glow);
+    }
+    
+    #output-panel {
+        background-color: var(--bg-panel);
+    }
+    #output-panel h2 {
+        color: var(--text-primary);
+    }
+    .io-output {
+        width: 100%;
+        min-height: 200px;
+        overflow-y: auto;
+        color: var(--text-secondary);
+    }
+    .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
+    .io-output .prose strong, .io-output .prose h2, .io-output .prose code { color: var(--text-primary); }
+    
+    .control-group label {
+        display: block;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+    }
+    .control-group p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+        margin-top: -0.5rem;
+    }
+    .control-select {
+        width: 100%;
+        background-color: var(--bg-canvas);
+        border: 1px solid var(--border-panel);
+        color: var(--text-primary);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s ease;
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238B949E' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.75rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+    }
+    
+    #generate-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1rem;
+        border-radius: 0.5rem;
+        padding: 0.75rem 2rem;
+        border: 1px solid transparent;
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+        background-color: var(--accent-cyan);
+        color: var(--bg-panel);
+    }
+    html.light #generate-btn { color: #fff; }
+    #generate-btn:hover { filter: brightness(1.1); }
+    #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--glass-bg, rgba(13, 17, 23, 0.8));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 100;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        color: var(--text-primary);
+        transition: opacity 0.3s ease;
+    }
+    
+    .futuristic-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid var(--border-panel);
+        border-top-color: var(--accent-cyan);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .futuristic-spinner::before {
+        content: '';
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
+        border: 4px solid transparent;
+        border-top-color: var(--accent-cyan);
+        border-radius: 50%;
+        animation: spin 1.5s linear infinite reverse;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #notification-container {
+        position: fixed;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .toast-notification {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-radius: 0.75rem;
+        color: white;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        animation: toast-in-out 4s ease-in-out forwards;
+    }
+    .toast-notification.success { background-color: #22c55e; }
+    .toast-notification.error { background-color: #ef4444; }
+    @keyframes toast-in-out {
+        0% { opacity: 0; transform: translateY(20px); }
+        10% { opacity: 1; transform: translateY(0); }
+        90% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(20px); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="h-full w-full p-4 sm:p-6 lg:p-8 overflow-y-auto">
+    <header class="w-full max-w-4xl mx-auto mb-8">
+        <div class="flex items-center gap-4">
+            <a href="{{ url_for('writing_assistant') }}" class="btn-secondary !p-2" title="Kembali ke Menu">
+                <i data-lucide="arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Rumusan Masalah</h1>
+                <p class="text-md text-secondary mt-1">Buat pertanyaan penelitian yang spesifik dan relevan dari topik Anda.</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="w-full flex flex-col items-center gap-8">
+        <div class="io-panel w-full max-w-4xl">
+            <div class="control-group mb-8">
+                <label for="input-topic">1. Judul / Topik Penelitian (Wajib)</label>
+                <p>Masukkan judul atau kata kunci utama penelitian Anda.</p>
+                <textarea id="input-topic" class="io-textarea !min-h-[80px]" placeholder="Contoh: Pengaruh Penggunaan Gadget terhadap Pola Tidur Remaja di Era Digital"></textarea>
+            </div>
+
+            <div class="control-group mb-8">
+                <label for="input-background">2. Deskripsi Latar Belakang (Opsional)</label>
+                <p>Berikan ringkasan singkat latar belakang untuk hasil yang lebih akurat.</p>
+                <textarea id="input-background" class="io-textarea" placeholder="Contoh: Banyak remaja saat ini menghabiskan waktu berjam-jam dengan gadget sebelum tidur, yang diduga berdampak pada kualitas dan kuantitas tidur mereka. Penelitian ini bertujuan untuk..."></textarea>
+            </div>
+            
+            <div class="border-t border-border-panel pt-8">
+                <div class="control-group">
+                    <label for="point-count">3. Jumlah Poin Rumusan Masalah</label>
+                    <select id="point-count" class="control-select">
+                        <option value="3">3 Poin (Fokus)</option>
+                        <option value="4">4 Poin (Standar)</option>
+                        <option value="5">5 Poin (Mendalam)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <button id="generate-btn" class="btn-primary">
+                    <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i>
+                    Generate Rumusan Masalah
+                </button>
+            </div>
+        </div>
+
+        <div id="output-panel" class="io-panel w-full max-w-4xl hidden flex-col gap-4">
+            <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
+                <h2 class="text-xl font-bold text-primary">Hasil Rumusan Masalah</h2>
+                <div class="flex items-center gap-2">
+                    <button id="copy-btn" class="btn-secondary !p-2" title="Salin Teks">
+                        <i data-lucide="copy"></i>
+                    </button>
+                    <button id="export-word-btn" class="btn-secondary !p-2" title="Ekspor ke Word">
+                        <i data-lucide="file-text"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="output-content" class="io-output prose max-w-none"></div>
+        </div>
+    </div>
+</div>
+
+<div id="notification-container"></div>
+
+<div id="loading-overlay" style="display: none;">
+    <div class="futuristic-spinner"></div>
+    <h3 class="text-xl font-semibold">AI sedang menganalisis...</h3>
+    <p class="text-secondary">Mohon tunggu sebentar.</p>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const generateBtn = document.getElementById('generate-btn');
+    const outputPanel = document.getElementById('output-panel');
+    const outputContent = document.getElementById('output-content');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const copyBtn = document.getElementById('copy-btn');
+    const exportWordBtn = document.getElementById('export-word-btn');
+    
+    const renderIcons = () => {
+        if (window.lucide) window.lucide.createIcons();
+    };
+
+    const showNotification = (message, type = 'success') => {
+        const container = document.getElementById('notification-container');
+        const notif = document.createElement('div');
+        notif.className = `toast-notification ${type}`;
+        const icon = type === 'success' ? 'check-circle' : 'x-circle';
+        notif.innerHTML = `<i data-lucide="${icon}"></i><span>${message}</span>`;
+        container.appendChild(notif);
+        renderIcons();
+        setTimeout(() => { notif.remove(); }, 4000);
+    };
+
+    const handleGeneration = async () => {
+        const contextData = {
+            topic: document.getElementById('input-topic').value.trim(),
+            background: document.getElementById('input-background').value.trim(),
+            pointCount: document.getElementById('point-count').value
+        };
+
+        if (!contextData.topic) {
+            showNotification('Judul / Topik Penelitian tidak boleh kosong.', 'error');
+            return;
+        }
+
+        loadingOverlay.style.display = 'flex';
+        generateBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/writing-assistant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task: 'generate_problem_statement', context: contextData })
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                if (result.redirect) {
+                    showNotification('Batas penggunaan tercapai. Anda akan dialihkan.', 'error');
+                    setTimeout(() => { window.location.href = result.redirect; }, 2000);
+                } else {
+                    throw new Error(result.error || 'Gagal mendapat respon dari server.');
+                }
+                return;
+            }
+            const converter = new showdown.Converter({noHeaderId: true});
+            outputContent.innerHTML = converter.makeHtml(result.generated_text);
+            outputPanel.classList.remove('hidden');
+            outputPanel.classList.add('flex');
+            showNotification('Rumusan masalah berhasil dibuat!', 'success');
+        } catch (error) {
+            showNotification(error.message, 'error');
+        } finally {
+            loadingOverlay.style.display = 'none';
+            generateBtn.disabled = false;
+        }
+    };
+
+    const handleExport = async (format) => {
+        const content = outputContent.innerHTML;
+        if (!content) {
+            showNotification('Tidak ada konten untuk diekspor.', 'error');
+            return;
+        }
+        showNotification(`Mempersiapkan file DOCX...`, 'success');
+        try {
+            const title = `Rumusan Masalah - ${document.getElementById('input-topic').value.trim()}`;
+            // Membuat header dengan logo
+            const headerHtml = `
+                <div style="text-align: right;">
+                    <img src="{{ url_for('static', filename='images/onthesis-logo-black.png') }}" width="150">
+                </div>
+                <h1>${title}</h1>
+            `;
+            const fullHtml = headerHtml + content;
+            const converted = htmlDocx.asBlob(fullHtml);
+            saveAs(converted, `${title}.docx`);
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    };
+
+    const handleCopy = () => {
+        const textToCopy = outputContent.innerText || outputContent.textContent;
+        if (!textToCopy) {
+            showNotification('Tidak ada teks untuk disalin.', 'error');
+            return;
+        }
+        
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showNotification('Teks berhasil disalin!', 'success');
+        } catch (err) {
+            showNotification('Gagal menyalin teks.', 'error');
+        }
+        document.body.removeChild(textArea);
+    };
+
+    generateBtn.addEventListener('click', handleGeneration);
+    copyBtn.addEventListener('click', handleCopy);
+    exportWordBtn.addEventListener('click', () => handleExport('word'));
+
+    renderIcons();
+});
+</script>
+{% endblock %}
