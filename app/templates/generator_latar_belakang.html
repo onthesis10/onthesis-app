@@ -13,7 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 
 <style>
-    /* ... (Tidak ada perubahan pada CSS, semua gaya tetap sama) ... */
+    /* ... (CSS tidak berubah) ... */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -396,13 +396,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. RENDER JUDUL
-            doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor('#181C32');
+            doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor('#000000'); // PERBAIKAN: Warna judul hitam
             doc.text("Draf Latar Belakang Masalah", margin, y);
             y += 8;
 
             const researchTitle = document.getElementById('input-topic').value.trim();
             if (researchTitle) {
-                doc.setFontSize(11).setFont('helvetica', 'italic').setTextColor('#5E6278');
+                doc.setFontSize(11).setFont('helvetica', 'italic').setTextColor('#444444'); // Warna abu-abu gelap untuk subjudul
                 const splitTitle = doc.splitTextToSize(`Topik: ${researchTitle}`, maxWidth);
                 doc.text(splitTitle, margin, y);
                 y += (splitTitle.length * 5) + 5;
@@ -410,6 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             doc.setLineWidth(0.5).line(margin, y, doc.internal.pageSize.width - margin, y);
             y += 8;
+            
+            // PERBAIKAN: Set warna font default menjadi hitam untuk seluruh konten
+            doc.setTextColor('#000000');
 
             // 3. RENDER KONTEN UTAMA
             const sourceElement = document.getElementById('output-content');
@@ -420,24 +423,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const tagName = node.tagName.toUpperCase();
                 
-                if (tagName === 'H3') { // Untuk sub-judul seperti "Latar Belakang Masalah"
+                if (tagName === 'H3') {
                     doc.setFontSize(12).setFont('helvetica', 'bold');
                     const lines = doc.splitTextToSize(node.textContent, maxWidth);
                     const elementHeight = lines.length * 6;
                     y = checkPageBreak(y, elementHeight);
                     doc.text(lines, margin, y);
                     y += elementHeight + 3;
-                } else if (tagName === 'P') { // Untuk paragraf
+                } else if (tagName === 'P') {
                     doc.setFontSize(11).setFont('helvetica', 'normal');
-                    // Ganti &nbsp; dengan spasi biasa dan rapikan spasi berlebih
                     const cleanText = node.textContent.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ');
                     const lines = doc.splitTextToSize(cleanText, maxWidth);
                     const elementHeight = lines.length * 5;
                     y = checkPageBreak(y, elementHeight);
-                    doc.text(lines, margin, y, { align: 'justify' }); // Gunakan perataan justifikasi
+                    // PERBAIKAN: Hapus opsi 'justify' untuk perataan kiri yang rapi
+                    doc.text(lines, margin, y); 
                     y += elementHeight + 4;
-                } else if (tagName === 'BLOCKQUOTE') { // Untuk daftar pustaka
-                    doc.setFontSize(11).setFont('helvetica', 'bold');
+                } else if (tagName === 'BLOCKQUOTE') {
+                    y += 5; // Beri spasi sebelum daftar pustaka
+                    doc.setFontSize(12).setFont('helvetica', 'bold');
                     let text = 'Daftar Pustaka';
                     y = checkPageBreak(y, text.length);
                     doc.text(text, margin, y);
@@ -482,11 +486,9 @@ document.addEventListener('DOMContentLoaded', () => {
         exportWordBtn.disabled = true;
 
         try {
-            // Membuat salinan dari konten untuk dimanipulasi
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = contentHtml;
 
-            // Hapus link dari sitasi agar tidak biru/bergaris bawah di Word
             tempDiv.querySelectorAll('a').forEach(a => {
                 const span = document.createElement('span');
                 span.textContent = a.textContent;
