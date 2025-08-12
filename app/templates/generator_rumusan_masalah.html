@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return;
             }
-            const converter = new showdown.Converter({noHeaderId: true});
+            const converter = new showdown.Converter({noHeaderId: true, simpleLineBreaks: true});
             outputContent.innerHTML = converter.makeHtml(result.generated_text);
             outputPanel.classList.remove('hidden');
             outputPanel.classList.add('flex');
@@ -312,27 +312,67 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const handleExport = async (format) => {
+    // --- PERBAIKAN: Logika Ekspor Profesional ---
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    };
+
+    const handleExport = async () => {
         const content = outputContent.innerHTML;
         if (!content) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
         showNotification(`Mempersiapkan file DOCX...`, 'success');
+        
         try {
+            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
+            const logoBase64 = await loadImageAsBase64(logoUrl);
             const title = `Rumusan Masalah - ${document.getElementById('input-topic').value.trim()}`;
-            // Membuat header dengan logo
-            const headerHtml = `
-                <div style="text-align: right;">
-                    <img src="{{ url_for('static', filename='images/onthesis-logo-black.png') }}" width="150">
-                </div>
-                <h1>${title}</h1>
+            
+            // Membuat HTML lengkap dengan gaya dan header
+            const fullHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; }
+                        p, li { line-height: 1.5; }
+                        h1 { text-align: center; }
+                        .header { text-align: right; margin-bottom: 20px; }
+                        .header img { width: 150px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <img src="${logoBase64}" alt="Logo">
+                    </div>
+                    <h1>${title}</h1>
+                    ${content}
+                </body>
+                </html>
             `;
-            const fullHtml = headerHtml + content;
+            
             const converted = htmlDocx.asBlob(fullHtml);
             saveAs(converted, `${title}.docx`);
+
         } catch (error) {
-            showNotification(error.message, 'error');
+            console.error("Export error:", error);
+            showNotification("Gagal memuat logo untuk ekspor.", 'error');
         }
     };
 
@@ -358,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateBtn.addEventListener('click', handleGeneration);
     copyBtn.addEventListener('click', handleCopy);
-    exportWordBtn.addEventListener('click', () => handleExport('word'));
+    exportWordBtn.addEventListener('click', handleExport);
 
     renderIcons();
 });
