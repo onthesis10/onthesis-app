@@ -47,7 +47,6 @@ import PyPDF2
 import docx
 
 # --- PENAMBAHAN: Impor untuk Ekspor Dokumen ---
-# Pastikan library ini terinstal: pip install reportlab python-docx
 try:
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
@@ -379,51 +378,53 @@ def api_writing_assistant():
         elif task == 'generate_abstract':
             prompt = f"Buatkan draf abstrak yang ringkas dan padat (sekitar 200-250 kata) berdasarkan isi skripsi berikut:\n\n{context}"
         
-        elif task == 'generate_background':
+        # --- PERBAIKAN: Mengganti nama task dan menambahkan alur verifikasi ---
+        elif task == 'generate_verified_background':
             if not isinstance(context, dict):
                 return jsonify({'error': 'Context untuk generate_background harus berupa objek.'}), 400
             
             topic = context.get('topic', '')
-            problem = context.get('problem', 'Belum ditentukan secara spesifik, jelaskan masalah umum terkait topik.')
-            goal = context.get('goal', 'Belum ditentukan, jelaskan tujuan umum penelitian pada topik ini.')
-            location = context.get('location', 'Umum/Tidak spesifik.')
-            writing_mode = context.get('writingMode', 'Akademik Formal')
+            major = context.get('major', '')
+            year = context.get('year', '')
             citation_style = context.get('citationStyle', 'APA 7')
             paragraph_count = context.get('paragraphCount', '4')
 
-            # --- PERBAIKAN: Mencari referensi nyata ---
+            # --- Langkah 2: Pencarian Data Real-time ---
             references_text = ""
             try:
-                # 1. Cari di Crossref
+                search_query = f"{topic} in {major}"
                 crossref_url = 'https://api.crossref.org/works'
-                crossref_params = {'query.bibliographic': topic, 'rows': 3, 'sort': 'relevance'}
+                params = {'query.bibliographic': search_query, 'rows': 5, 'sort': 'relevance'}
+                if year:
+                    params['filter'] = f'from-pub-date:{year}-01-01,until-pub-date:{year}-12-31'
+                
                 headers = {'User-Agent': 'OnThesisApp/1.0 (mailto:contact@onthesis.app)'}
-                crossref_response = requests.get(crossref_url, params=crossref_params, headers=headers, timeout=15)
+                crossref_response = requests.get(crossref_url, params=params, headers=headers, timeout=20)
                 
                 found_references = []
                 if crossref_response.ok:
                     items = crossref_response.json().get('message', {}).get('items', [])
                     for item in items:
-                        # Ekstrak info dasar untuk prompt
+                        # --- Langkah 3: Ekstraksi & Analisis Sumber ---
                         title = item.get('title', [''])[0]
                         authors_list = item.get('author', [])
                         authors = ", ".join([f"{author.get('family', '')}, {author.get('given', '')[0]}." for author in authors_list if author.get('family') and author.get('given')])
-                        year = item.get('issued', {}).get('date-parts', [[None]])[0][0]
+                        pub_year = item.get('issued', {}).get('date-parts', [[None]])[0][0]
                         journal = item.get('container-title', [''])[0]
                         doi = item.get('DOI', '')
                         
-                        if title and authors and year:
+                        if title and authors and pub_year:
                             # Membuat string mentah untuk diformat oleh AI
-                            ref_info = f"Judul: {title}, Penulis: {authors}, Tahun: {year}"
+                            ref_info = f"Judul: {title}, Penulis: {authors}, Tahun: {pub_year}"
                             if journal: ref_info += f", Jurnal: {journal}"
-                            if doi: ref_info += f", DOI: {doi}"
+                            if doi: ref_info += f", DOI: {doi} (Link: https://doi.org/{doi})"
                             found_references.append(ref_info)
 
-                # 2. Format referensi menggunakan AI jika ditemukan
                 if found_references:
+                    # --- Langkah 5: Penambahan Sitasi (Formatting) ---
                     formatting_prompt = f"""
                     Berdasarkan daftar informasi referensi berikut, format masing-masing ke dalam gaya sitasi {citation_style}.
-                    Sajikan hasilnya sebagai daftar (misalnya, menggunakan bullet points atau nomor). Pastikan formatnya benar dan konsisten.
+                    Sajikan hasilnya sebagai daftar bernomor. Pastikan formatnya benar dan konsisten.
 
                     Informasi Referensi:
                     {chr(10).join(f'- {ref}' for ref in found_references)}
@@ -431,33 +432,26 @@ def api_writing_assistant():
                     formatting_response = model.generate_content(formatting_prompt)
                     references_text = formatting_response.text
                 else:
-                    # Fallback jika tidak ada referensi ditemukan
-                    references_text = "Tidak ada referensi relevan yang ditemukan secara otomatis. Silakan tambahkan secara manual."
+                    references_text = "Tidak ada referensi relevan yang ditemukan secara otomatis. Bagian ini bisa diisi manual."
 
             except Exception as e:
                 print(f"Gagal mencari referensi nyata: {e}")
                 references_text = "Terjadi kesalahan saat mencari referensi. Bagian ini bisa diisi manual."
-            # --- AKHIR PERBAIKAN ---
-
+            
+            # --- Langkah 4: Penyusunan Draft Latar Belakang ---
             prompt = f"""
-                Anda adalah seorang asisten penulis skripsi ahli dengan gaya penulisan yang profesional dan akademis. Tugas Anda adalah membuat draf Latar Belakang Masalah untuk sebuah skripsi berdasarkan informasi berikut:
+                Anda adalah seorang asisten penulis skripsi ahli. Tugas Anda adalah membuat draf Latar Belakang Masalah berdasarkan informasi berikut:
 
                 1.  **Topik Utama:** {topic}
-                2.  **Masalah yang Diamati:** {problem}
-                3.  **Tujuan Penelitian:** {goal}
-                4.  **Konteks/Lokasi (jika ada):** {location}
+                2.  **Bidang/Jurusan:** {major}
 
                 Instruksi Penulisan:
-                * **Mode Penulisan:** {writing_mode}.
-                * **Jumlah Paragraf:** Tulis draf Latar Belakang Masalah dalam {paragraph_count} paragraf yang terstruktur.
-                * **Struktur Output:** Hasilkan teks dalam format Markdown dengan struktur berikut:
-                    * `### 1. Pendahuluan`: Pengenalan topik secara umum.
-                    * `### 2. Masalah Aktual dan Data Pendukung`: Jelaskan masalah dengan mengintegrasikan data atau fakta relevan. Jika memungkinkan, sitasi beberapa sumber dari daftar pustaka yang disediakan.
-                    * `### 3. Relevansi dan Kesenjangan Penelitian`: Jelaskan mengapa topik ini penting dan apa yang belum banyak dibahas.
-                    * `### 4. Transisi ke Rumusan Masalah`: Tutup latar belakang dengan kalimat yang mengarah ke rumusan masalah.
+                * **Jumlah Paragraf:** Tulis draf dalam {paragraph_count} paragraf yang terstruktur.
+                * **Struktur:** Gunakan struktur berikut: Pengenalan topik, Masalah aktual (didukung data), Relevansi dan gap penelitian, dan Penutup menuju rumusan masalah.
+                * **Sitasi:** Sitasi beberapa sumber dari daftar pustaka yang disediakan di dalam teks jika relevan, contoh: (Nama Penulis, Tahun).
                 * **Daftar Pustaka:** Setelah semua paragraf, buat bagian baru dengan judul `### Daftar Pustaka`. Gunakan daftar referensi yang sudah diformat berikut ini:\n{references_text}
 
-                Tulis draf Latar Belakang Masalah dan Daftar Pustaka sekarang.
+                Tulis draf Latar Belakang Masalah dan Daftar Pustaka sekarang dalam format Markdown.
             """
         else:
             return jsonify({'error': 'Task tidak valid.'}), 400
