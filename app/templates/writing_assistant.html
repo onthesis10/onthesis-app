@@ -3,69 +3,17 @@
 {% block title %}Asisten AI (PRO) - OnThesis{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka yang dibutuhkan -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- Pustaka Ikon -->
 <script src="https://unpkg.com/lucide@latest"></script>
 
-<script>
-    // Inisialisasi worker untuk PDF.js
-    if (window.pdfjsLib) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js`;
-    }
-</script>
 <style>
-    /* Menggunakan variabel tema dari styles.css */
-    .generator-view {
-        display: none; /* Semua tampilan generator disembunyikan secara default */
-    }
+    /*
+      STYLESHEET YANG DISIMPLIFIKASI
+      Hanya gaya yang relevan untuk halaman menu yang disimpan.
+      Gaya untuk .io-panel, .io-textarea, dll. telah dihapus karena tidak lagi digunakan di halaman ini.
+    */
 
-    /* Gaya untuk area input/output yang konsisten */
-    .io-panel {
-        background-color: var(--bg-panel);
-        border: 1px solid var(--border-panel);
-        border-radius: 1rem;
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-    }
-
-    .io-textarea {
-        width: 100%;
-        height: 100%;
-        flex-grow: 1;
-        padding: 1rem;
-        background-color: var(--bg-canvas);
-        border: 1px solid var(--border-panel);
-        color: var(--text-primary);
-        border-radius: 0.75rem;
-        resize: none;
-        transition: all 0.2s ease;
-    }
-    .io-textarea:focus {
-        outline: none;
-        border-color: var(--accent-cyan);
-        box-shadow: 0 0 0 3px var(--accent-cyan-glow);
-    }
-
-    .io-output {
-        width: 100%;
-        height: 100%;
-        flex-grow: 1;
-        padding: 1rem;
-        overflow-y: auto;
-        color: var(--text-secondary);
-    }
-    
-    /* Kustomisasi gaya untuk hasil markdown di output */
-    .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
-    .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
-    .io-output .prose a { color: var(--accent-cyan); }
-    .io-output .prose pre { background-color: var(--bg-canvas); border: 1px solid var(--border-panel); border-radius: 0.5rem; padding: 1rem; }
-
-    /* Animasi notifikasi */
+    /* Animasi notifikasi (disimpan jika Anda ingin menampilkan notifikasi di halaman ini) */
     @keyframes fade-in-out {
       0% { opacity: 0; transform: translateY(-20px); }
       10% { opacity: 1; transform: translateY(0); }
@@ -81,7 +29,7 @@
 {% block content %}
 <div class="h-full w-full p-4 sm:p-6 lg:p-8 flex flex-col">
 
-    <!-- VIEW 1: PEMILIHAN FITUR (Tampilan Awal) -->
+    <!-- VIEW TUNGGAL: PEMILIHAN FITUR -->
     <div id="feature-selection-view" class="flex flex-col h-full">
         <header class="mb-8 flex-shrink-0 text-center animate-fade-in-up">
             <h1 class="text-3xl md:text-4xl font-bold text-primary">Asisten Penulisan AI (PRO)</h1>
@@ -91,201 +39,64 @@
                 <span>Sisa Percobaan PRO: <strong id="assistant-remaining-count">...</strong></span>
             </div>
         </header>
+
+        <!-- Kumpulan Kartu Fitur -->
         <div class="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in-up" style="animation-delay: 0.2s;">
+            
             <!-- Kartu Fitur: Generator Latar Belakang -->
-            <a href="#" data-target="background-generator-view" class="feature-card apex-card flex flex-col items-center justify-center text-center">
+            <!-- href bisa diubah nanti ke halaman spesifik, misal: href="/assistant/background-generator" -->
+            <a href="#" class="feature-card apex-card flex flex-col items-center justify-center text-center">
                 <i data-lucide="file-text" class="w-12 h-12 text-accent-cyan mb-4"></i>
                 <h3 class="text-xl font-bold text-primary">Generator Latar Belakang</h3>
                 <p class="text-secondary mt-2 text-sm">Buat paragraf pendahuluan yang kuat berdasarkan judul skripsi Anda.</p>
             </a>
+            
             <!-- Kartu Fitur: Generator Rumusan Masalah -->
-            <a href="#" data-target="problem-statement-generator-view" class="feature-card apex-card flex flex-col items-center justify-center text-center">
+            <a href="#" class="feature-card apex-card flex flex-col items-center justify-center text-center">
                 <i data-lucide="lightbulb" class="w-12 h-12 text-accent-cyan mb-4"></i>
                 <h3 class="text-xl font-bold text-primary">Generator Rumusan Masalah</h3>
                 <p class="text-secondary mt-2 text-sm">Identifikasi pertanyaan penelitian yang relevan dari topik Anda.</p>
             </a>
+            
             <!-- Kartu Fitur: Generator Kerangka -->
-            <a href="#" data-target="outline-generator-view" class="feature-card apex-card flex flex-col items-center justify-center text-center">
+            <a href="#" class="feature-card apex-card flex flex-col items-center justify-center text-center">
                 <i data-lucide="list-tree" class="w-12 h-12 text-accent-cyan mb-4"></i>
                 <h3 class="text-xl font-bold text-primary">Generator Kerangka</h3>
                 <p class="text-secondary mt-2 text-sm">Susun struktur bab dan sub-bab skripsi Anda secara otomatis.</p>
             </a>
+            
             <!-- Kartu Fitur: Generator Abstrak -->
-            <a href="#" data-target="abstract-generator-view" class="feature-card apex-card flex flex-col items-center justify-center text-center">
+            <a href="#" class="feature-card apex-card flex flex-col items-center justify-center text-center">
                 <i data-lucide="book-open-check" class="w-12 h-12 text-accent-cyan mb-4"></i>
                 <h3 class="text-xl font-bold text-primary">Generator Abstrak</h3>
                 <p class="text-secondary mt-2 text-sm">Rangkum keseluruhan isi skripsi Anda menjadi abstrak yang padat.</p>
             </a>
-        </div>
-    </div>
 
-    <!-- VIEW 2: GENERATOR LATAR BELAKANG (Tersembunyi) -->
-    <div id="background-generator-view" class="generator-view h-full flex flex-col">
-        <header class="mb-6 flex-shrink-0 flex items-center gap-4">
-            <button class="back-to-menu btn-secondary !p-2"><i data-lucide="arrow-left"></i></button>
-            <div>
-                <h2 class="text-2xl font-bold text-primary">Generator Latar Belakang</h2>
-                <p class="text-md text-secondary">Masukkan judul untuk menghasilkan draf latar belakang masalah.</p>
-            </div>
-        </header>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
-            <div class="io-panel">
-                <h3 class="text-lg font-semibold text-primary mb-3">Judul Skripsi</h3>
-                <textarea id="background-input" class="io-textarea" placeholder="Contoh: Pengaruh Kecerdasan Buatan Terhadap Motivasi Belajar Mahasiswa Informatika"></textarea>
-            </div>
-            <div class="io-panel">
-                <h3 class="text-lg font-semibold text-primary mb-3">Hasil Draf Latar Belakang</h3>
-                <div id="background-output" class="io-output prose max-w-none"><p class="text-slate-500 italic">Hasil akan ditampilkan di sini.</p></div>
-            </div>
-        </div>
-        <div class="flex justify-center items-center flex-shrink-0 pt-6">
-            <button id="generate-background-btn" class="btn-primary !py-3 !px-8 flex items-center gap-2"><i data-lucide="sparkles"></i><span>Buat Latar Belakang</span></button>
-        </div>
-    </div>
-    
-    <!-- VIEW 3: GENERATOR RUMUSAN MASALAH (Tersembunyi) -->
-    <div id="problem-statement-generator-view" class="generator-view h-full flex flex-col">
-        <header class="mb-6 flex-shrink-0 flex items-center gap-4">
-            <button class="back-to-menu btn-secondary !p-2"><i data-lucide="arrow-left"></i></button>
-            <div>
-                <h2 class="text-2xl font-bold text-primary">Generator Rumusan Masalah</h2>
-                <p class="text-md text-secondary">Masukkan topik atau draf latar belakang untuk menemukan pertanyaan penelitian.</p>
-            </div>
-        </header>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
-            <div class="io-panel">
-                <h3 class="text-lg font-semibold text-primary mb-3">Topik atau Latar Belakang</h3>
-                <textarea id="problem-input" class="io-textarea" placeholder="Contoh: Mahasiswa seringkali kehilangan motivasi saat mengerjakan skripsi karena kesulitan mencari referensi. AI dapat membantu dengan merekomendasikan artikel relevan secara otomatis..."></textarea>
-            </div>
-            <div class="io-panel">
-                <h3 class="text-lg font-semibold text-primary mb-3">Hasil Rumusan Masalah</h3>
-                <div id="problem-output" class="io-output prose max-w-none"><p class="text-slate-500 italic">Hasil akan ditampilkan di sini.</p></div>
-            </div>
-        </div>
-        <div class="flex justify-center items-center flex-shrink-0 pt-6">
-            <button id="generate-problem-btn" class="btn-primary !py-3 !px-8 flex items-center gap-2"><i data-lucide="sparkles"></i><span>Buat Rumusan Masalah</span></button>
-        </div>
-    </div>
+            <!-- Anda bisa menambahkan kartu fitur lainnya di sini -->
 
-    <!-- VIEW 4: GENERATOR KERANGKA (Tersembunyi, versi lama yang diadaptasi) -->
-    <div id="outline-generator-view" class="generator-view h-full flex flex-col">
-        <header class="mb-6 flex-shrink-0 flex items-center gap-4">
-            <button class="back-to-menu btn-secondary !p-2"><i data-lucide="arrow-left"></i></button>
-            <div>
-                <h2 class="text-2xl font-bold text-primary">Generator Kerangka</h2>
-                <p class="text-md text-secondary">Masukkan judul untuk menyusun kerangka skripsi Anda.</p>
-            </div>
-        </header>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
-            <div class="io-panel">
-                <h3 class="text-lg font-semibold text-primary mb-3">Judul Skripsi</h3>
-                <textarea id="outline-input" class="io-textarea" placeholder="Contoh: Pengaruh Kecerdasan Buatan Terhadap Motivasi Belajar Mahasiswa Informatika"></textarea>
-            </div>
-            <div class="io-panel">
-                <h3 class="text-lg font-semibold text-primary mb-3">Hasil Kerangka</h3>
-                <div id="outline-output" class="io-output prose max-w-none"><p class="text-slate-500 italic">Hasil akan ditampilkan di sini.</p></div>
-            </div>
-        </div>
-        <div class="flex justify-center items-center flex-shrink-0 pt-6">
-            <button id="generate-outline-btn" class="btn-primary !py-3 !px-8 flex items-center gap-2"><i data-lucide="sparkles"></i><span>Buat Kerangka</span></button>
-        </div>
-    </div>
-
-    <!-- VIEW 5: GENERATOR ABSTRAK (Tersembunyi, versi lama yang diadaptasi) -->
-    <div id="abstract-generator-view" class="generator-view h-full flex flex-col">
-        <header class="mb-6 flex-shrink-0 flex items-center gap-4">
-            <button class="back-to-menu btn-secondary !p-2"><i data-lucide="arrow-left"></i></button>
-            <div>
-                <h2 class="text-2xl font-bold text-primary">Generator Abstrak</h2>
-                <p class="text-md text-secondary">Impor atau tempel teks lengkap skripsi untuk membuat abstrak.</p>
-            </div>
-        </header>
-        <input type="file" id="abstract-file-input" class="hidden" accept=".pdf,.docx">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
-            <div class="io-panel">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-lg font-semibold text-primary">Teks Lengkap Skripsi</h3>
-                    <button id="import-abstract-btn" class="btn-secondary !py-1 !px-2"><i data-lucide="upload-cloud" class="w-4 h-4 mr-2"></i>Impor File</button>
-                </div>
-                <textarea id="abstract-input" class="io-textarea" placeholder="Tempelkan seluruh teks skripsi atau impor dari file .docx/.pdf"></textarea>
-            </div>
-            <div class="io-panel">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-lg font-semibold text-primary">Hasil Abstrak</h3>
-                    <div class="flex items-center gap-2">
-                        <button id="copy-abstract-btn" class="btn-secondary !p-2" title="Salin Teks"><i data-lucide="copy"></i></button>
-                    </div>
-                </div>
-                <div id="abstract-output" class="io-output prose max-w-none"><p class="text-slate-500 italic">Hasil akan ditampilkan di sini.</p></div>
-            </div>
-        </div>
-        <div class="flex justify-center items-center flex-shrink-0 pt-6">
-            <button id="generate-abstract-btn" class="btn-primary !py-3 !px-8 flex items-center gap-2"><i data-lucide="sparkles"></i><span>Buat Abstrak</span></button>
         </div>
     </div>
 </div>
 
-<!-- Kontainer Notifikasi (tetap sama) -->
+<!-- Kontainer Notifikasi (opsional, bisa dihapus jika tidak perlu) -->
 <div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-xs"></div>
 {% endblock %}
 
 {% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Inisialisasi Elemen ---
-    const featureSelectionView = document.getElementById('feature-selection-view');
-    const featureCards = document.querySelectorAll('.feature-card');
-    const generatorViews = document.querySelectorAll('.generator-view');
-    const backButtons = document.querySelectorAll('.back-to-menu');
-    const converter = new showdown.Converter({ tables: true, strikethrough: true, simpleLineBreaks: true, openLinksInNewWindow: true });
+    /*
+      SKRIP YANG DISIMPLIFIKASI
+      Hanya logika yang relevan untuk halaman menu yang disimpan.
+      - Logika navigasi antar-view dihapus.
+      - Logika untuk handleGeneration, import file, copy, dll. dihapus.
+    */
 
-    // --- Inisialisasi Elemen per Generator ---
-    // Latar Belakang
-    const generateBackgroundBtn = document.getElementById('generate-background-btn');
-    const backgroundInput = document.getElementById('background-input');
-    const backgroundOutput = document.getElementById('background-output');
-    // Rumusan Masalah
-    const generateProblemBtn = document.getElementById('generate-problem-btn');
-    const problemInput = document.getElementById('problem-input');
-    const problemOutput = document.getElementById('problem-output');
-    // Kerangka
-    const generateOutlineBtn = document.getElementById('generate-outline-btn');
-    const outlineInput = document.getElementById('outline-input');
-    const outlineOutput = document.getElementById('outline-output');
-    // Abstrak
-    const generateAbstractBtn = document.getElementById('generate-abstract-btn');
-    const abstractInput = document.getElementById('abstract-input');
-    const abstractOutput = document.getElementById('abstract-output');
-    const importAbstractBtn = document.getElementById('import-abstract-btn');
-    const abstractFileInput = document.getElementById('abstract-file-input');
-    const copyAbstractBtn = document.getElementById('copy-abstract-btn');
-
-    // --- Logika Navigasi ---
-    featureCards.forEach(card => {
-        card.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetViewId = card.dataset.target;
-            const targetView = document.getElementById(targetViewId);
-            
-            featureSelectionView.style.display = 'none';
-            if (targetView) {
-                targetView.style.display = 'flex';
-            }
-        });
-    });
-
-    backButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            generatorViews.forEach(view => view.style.display = 'none');
-            featureSelectionView.style.display = 'flex';
-        });
-    });
-
-    // --- Logika Helper (Notifikasi, Kuota, dll - tidak berubah banyak) ---
+    // --- Logika untuk mengambil dan menampilkan kuota ---
     const fetchAndDisplayUsage = async () => {
         const display = document.getElementById('usage-counter-display');
         try {
+            // Pastikan URL ini benar sesuai dengan endpoint API Anda
             const response = await fetch(`${window.location.origin}/api/get-usage-status`);
             if (!response.ok) return;
             const data = await response.json();
@@ -300,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     fetchAndDisplayUsage();
 
+    // --- Fungsi Notifikasi (opsional) ---
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         if (!container) return;
@@ -310,87 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(notif);
         setTimeout(() => { notif.remove(); }, 4000);
     };
-
-    // --- Logika Impor File untuk Abstrak ---
-    importAbstractBtn.addEventListener('click', () => abstractFileInput.click());
-    abstractFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        showNotification('Memproses file...', 'success');
-        try {
-            let textContent = '';
-            if (file.name.toLowerCase().endsWith('.pdf')) {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const text = await page.getTextContent();
-                    textContent += text.items.map(s => s.str).join(' ');
-                }
-            } else if (file.name.toLowerCase().endsWith('.docx')) {
-                const arrayBuffer = await file.arrayBuffer();
-                const result = await mammoth.extractRawText({ arrayBuffer });
-                textContent = result.value;
-            } else {
-                throw new Error("Format file tidak didukung.");
-            }
-            abstractInput.value = textContent;
-            showNotification('File berhasil diimpor!', 'success');
-        } catch (error) {
-            showNotification(`Error: ${error.message}`, 'error');
-        } finally {
-            e.target.value = '';
-        }
-    });
-
-    // --- Logika Salin Teks ---
-    copyAbstractBtn.addEventListener('click', () => {
-        const textToCopy = abstractOutput.innerText || abstractOutput.textContent;
-        if (!textToCopy || abstractOutput.querySelector('.italic')) {
-             showNotification('Tidak ada hasil untuk disalin.', 'error');
-             return;
-        }
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            showNotification('Hasil berhasil disalin!');
-        });
-    });
-
-    // --- Fungsi Utama untuk Menghasilkan Konten AI ---
-    async function handleGeneration(button, input, output, task) {
-        const context = input.value.trim();
-        if (!context) {
-            showNotification('Input tidak boleh kosong.', 'error');
-            return;
-        }
-        const originalButtonHTML = button.innerHTML;
-        button.disabled = true;
-        button.innerHTML = `<span class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></span><span>Memproses...</span>`;
-        output.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-secondary italic">AI sedang bekerja, mohon tunggu...</p></div>`;
-
-        try {
-            const response = await fetch('/api/writing-assistant', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task, context })
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Gagal memproses permintaan.');
-            output.innerHTML = converter.makeHtml(data.generated_text);
-            fetchAndDisplayUsage();
-        } catch (error) {
-            output.innerHTML = `<p class="text-red-500 font-semibold">${error.message}</p>`;
-            showNotification(error.message, 'error');
-        } finally {
-            button.disabled = false;
-            button.innerHTML = originalButtonHTML;
-        }
-    }
-
-    // --- Event Listeners untuk Tombol Generate ---
-    generateBackgroundBtn.addEventListener('click', () => handleGeneration(generateBackgroundBtn, backgroundInput, backgroundOutput, 'generate_background'));
-    generateProblemBtn.addEventListener('click', () => handleGeneration(generateProblemBtn, problemInput, problemOutput, 'generate_problem_statement'));
-    generateOutlineBtn.addEventListener('click', () => handleGeneration(generateOutlineBtn, outlineInput, outlineOutput, 'generate_outline'));
-    generateAbstractBtn.addEventListener('click', () => handleGeneration(generateAbstractBtn, abstractInput, abstractOutput, 'generate_abstract'));
     
     // Inisialisasi ikon saat pertama kali load
     lucide.createIcons();
