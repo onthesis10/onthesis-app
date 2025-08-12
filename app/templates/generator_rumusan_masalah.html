@@ -11,7 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 
 <style>
-    /* ... (Tidak ada perubahan pada CSS) ... */
+    /* ... (CSS tidak berubah) ... */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ===================================================================
-    // FUNGSI EKSPOR DENGAN TATA LETAK MANUAL (FINAL)
+    // FUNGSI EKSPOR DENGAN TATA LETAK MANUAL (VERSI DISEMPURNAKAN)
     // ===================================================================
     const handleExport = async () => {
         const content = document.getElementById('output-content').innerHTML;
@@ -350,8 +350,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- PERSIAPAN DOKUMEN ---
             const margin = 15;
             const maxWidth = doc.internal.pageSize.width - margin * 2;
-            let y = 15; // Posisi Y awal
+            let y = 15; // Posisi Y awal, akan terus diupdate
 
+            // Fungsi bantuan untuk memeriksa dan menambah halaman baru jika perlu
             const checkPageBreak = (currentY, elementHeight) => {
                 if (currentY + elementHeight > doc.internal.pageSize.height - margin) {
                     doc.addPage();
@@ -373,13 +374,24 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- 2. RENDER JUDUL DOKUMEN ---
             doc.setFontSize(16);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor('#181C32');
+            doc.setTextColor('#181C32'); // Warna teks gelap
             const docTitle = "Hasil Generator Rumusan Masalah";
             doc.text(docTitle, margin, y);
-            y += 10;
+            y += 8;
             
+            // --- Tambahan: RENDER JUDUL PENELITIAN (TOPIK) ---
+            const researchTitle = document.getElementById('input-topic').value.trim();
+            if (researchTitle) {
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor('#5E6278'); // Warna teks abu-abu
+                const splitTitle = doc.splitTextToSize(`Topik: ${researchTitle}`, maxWidth);
+                doc.text(splitTitle, margin, y);
+                y += (splitTitle.length * 5) + 5; // Tambah spasi setelahnya
+            }
+
             doc.setLineWidth(0.5);
-            doc.line(margin, y, doc.internal.pageSize.width - margin, y); // Garis bawah judul
+            doc.line(margin, y, doc.internal.pageSize.width - margin, y); // Garis pemisah
             y += 8;
 
             // --- 3. RENDER KONTEN UTAMA SECARA MANUAL ---
@@ -392,31 +404,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const tagName = node.tagName.toUpperCase();
                 
-                if (tagName === 'P' || tagName === 'STRONG') {
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', tagName === 'STRONG' ? 'bold' : 'normal');
+                // Jika elemen adalah PARAGRAF
+                if (tagName === 'P') {
+                    // Cek apakah paragraf ini berisi variabel (ditandai dengan <strong>)
+                    const isVariableParagraph = node.querySelector('strong') !== null;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', isVariableParagraph ? 'bold' : 'normal');
+
                     const lines = doc.splitTextToSize(node.textContent, maxWidth);
-                    const elementHeight = lines.length * 5; // Perkiraan tinggi
+                    const elementHeight = lines.length * 5;
                     y = checkPageBreak(y, elementHeight);
                     doc.text(lines, margin, y);
                     y += elementHeight + 4; // Spasi setelah paragraf
                 } 
+                // Jika elemen adalah ORDERED LIST
                 else if (tagName === 'OL') {
                     const listItems = node.querySelectorAll('li');
                     if (listItems.length === 0) continue;
 
-                    doc.setFontSize(12);
+                    doc.setFontSize(11);
                     doc.setFont('helvetica', 'normal');
                     let listCounter = 1;
                     
                     for (const item of listItems) {
-                        const itemMaxWidth = maxWidth - 7; // Indentasi untuk teks list
+                        const itemMaxWidth = maxWidth - 7; // Beri ruang untuk nomor
                         const lines = doc.splitTextToSize(item.textContent, itemMaxWidth);
                         const elementHeight = lines.length * 5;
                         y = checkPageBreak(y, elementHeight);
 
-                        doc.text(`${listCounter}.`, margin, y);
-                        doc.text(lines, margin + 7, y);
+                        doc.text(`${listCounter}.`, margin, y); // Tulis nomor
+                        doc.text(lines, margin + 7, y); // Tulis teks list dengan indentasi
                         y += elementHeight + 3; // Spasi antar item list
                         listCounter++;
                     }
@@ -424,10 +441,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // --- 4. SIMPAN DOKUMEN ---
-            const researchTitle = document.getElementById('input-topic').value.trim();
             const fileName = `Rumusan Masalah - ${researchTitle || 'Hasil'}.pdf`;
             doc.save(fileName);
-            showNotification('PDF berhasil dibuat!', 'success');
+            showNotification('PDF profesional berhasil dibuat!', 'success');
 
         } catch (error) {
             console.error("Export error:", error);

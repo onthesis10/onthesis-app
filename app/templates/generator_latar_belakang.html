@@ -3,12 +3,17 @@
 {% block title %}Generator Latar Belakang Terverifikasi - Asisten AI{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka Ikon -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
 <script src="https://unpkg.com/lucide@latest"></script>
-<!-- Pustaka untuk konversi Markdown ke HTML -->
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 
 <style>
+    /* ... (Tidak ada perubahan pada CSS, semua gaya tetap sama) ... */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -32,8 +37,6 @@
         border-color: var(--accent-cyan);
         box-shadow: 0 0 0 3px var(--accent-cyan-glow);
     }
-    
-    /* PERBAIKAN: Mengembalikan warna kartu hasil sesuai mode tema */
     #output-panel {
         background-color: var(--bg-panel);
     }
@@ -50,7 +53,6 @@
     .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
     .io-output .prose a { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dashed var(--accent-cyan); }
     .io-output .prose pre { background-color: var(--bg-canvas); border: 1px solid var(--border-panel); border-radius: 0.5rem; padding: 1rem; }
-    
     .form-step label, .control-group label {
         display: block;
         font-size: 1rem;
@@ -81,7 +83,6 @@
         background-repeat: no-repeat;
         background-size: 1.5em 1.5em;
     }
-    
     #generate-btn {
         display: inline-flex;
         align-items: center;
@@ -99,7 +100,6 @@
     html.light #generate-btn { color: #fff; }
     #generate-btn:hover { filter: brightness(1.1); }
     #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
-
     #loading-overlay {
         position: fixed;
         top: 0;
@@ -117,7 +117,6 @@
         color: var(--text-primary);
         transition: opacity 0.3s ease;
     }
-    
     .futuristic-spinner {
         width: 60px;
         height: 60px;
@@ -141,7 +140,6 @@
         animation: spin 1.5s linear infinite reverse;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     #notification-container {
         position: fixed;
         bottom: 1.25rem;
@@ -339,51 +337,185 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const handleExport = async (format) => {
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = (err) => {
+                console.error("Gagal memuat gambar dari URL:", url);
+                reject(err);
+            };
+            img.src = url;
+        });
+    };
+
+    // ===================================================================
+    // FUNGSI EKSPOR PDF DENGAN TATA LETAK MANUAL
+    // ===================================================================
+    const handlePdfExport = async () => {
         const content = outputContent.innerHTML;
         if (!content) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
-        showNotification(`Mempersiapkan file ${format.toUpperCase()}...`, 'success');
+        
+        showNotification('Mempersiapkan PDF Profesional...', 'success');
+        exportPdfBtn.disabled = true;
+
         try {
-            const response = await fetch('/api/export-document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: content,
-                    format: format,
-                    title: `Latar Belakang - ${document.getElementById('input-topic').value.trim()}`
-                })
-            });
-            if (!response.ok) {
-                const result = await response.json();
-                 if (result.redirect) {
-                    showNotification('Batas penggunaan tercapai. Anda akan dialihkan.', 'error');
-                    setTimeout(() => { window.location.href = result.redirect; }, 2000);
-                } else {
-                    throw new Error(result.error || `Gagal mengekspor ${format.toUpperCase()}.`);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+            const margin = 15;
+            const maxWidth = doc.internal.pageSize.width - margin * 2;
+            let y = 15;
+
+            const checkPageBreak = (currentY, elementHeight) => {
+                if (currentY + elementHeight > doc.internal.pageSize.height - margin) {
+                    doc.addPage();
+                    return margin;
                 }
-                return;
+                return currentY;
+            };
+
+            // 1. RENDER HEADER & LOGO
+            try {
+                const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
+                const logoData = await loadImageAsBase64(logoUrl);
+                doc.addImage(logoData, 'PNG', doc.internal.pageSize.width - margin - 30, 10, 30, 8);
+            } catch (logoError) {
+                console.warn("Logo tidak dapat dimuat.");
             }
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
+
+            // 2. RENDER JUDUL
+            doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor('#181C32');
+            doc.text("Draf Latar Belakang Masalah", margin, y);
+            y += 8;
+
+            const researchTitle = document.getElementById('input-topic').value.trim();
+            if (researchTitle) {
+                doc.setFontSize(11).setFont('helvetica', 'italic').setTextColor('#5E6278');
+                const splitTitle = doc.splitTextToSize(`Topik: ${researchTitle}`, maxWidth);
+                doc.text(splitTitle, margin, y);
+                y += (splitTitle.length * 5) + 5;
+            }
+
+            doc.setLineWidth(0.5).line(margin, y, doc.internal.pageSize.width - margin, y);
+            y += 8;
+
+            // 3. RENDER KONTEN UTAMA
+            const sourceElement = document.getElementById('output-content');
+            const children = sourceElement.childNodes;
+
+            for (const node of children) {
+                if (node.nodeType !== 1 || !node.textContent.trim()) continue;
+
+                const tagName = node.tagName.toUpperCase();
+                
+                if (tagName === 'H3') { // Untuk sub-judul seperti "Latar Belakang Masalah"
+                    doc.setFontSize(12).setFont('helvetica', 'bold');
+                    const lines = doc.splitTextToSize(node.textContent, maxWidth);
+                    const elementHeight = lines.length * 6;
+                    y = checkPageBreak(y, elementHeight);
+                    doc.text(lines, margin, y);
+                    y += elementHeight + 3;
+                } else if (tagName === 'P') { // Untuk paragraf
+                    doc.setFontSize(11).setFont('helvetica', 'normal');
+                    // Ganti &nbsp; dengan spasi biasa dan rapikan spasi berlebih
+                    const cleanText = node.textContent.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ');
+                    const lines = doc.splitTextToSize(cleanText, maxWidth);
+                    const elementHeight = lines.length * 5;
+                    y = checkPageBreak(y, elementHeight);
+                    doc.text(lines, margin, y, { align: 'justify' }); // Gunakan perataan justifikasi
+                    y += elementHeight + 4;
+                } else if (tagName === 'BLOCKQUOTE') { // Untuk daftar pustaka
+                    doc.setFontSize(11).setFont('helvetica', 'bold');
+                    let text = 'Daftar Pustaka';
+                    y = checkPageBreak(y, text.length);
+                    doc.text(text, margin, y);
+                    y += 6;
+
+                    doc.setFontSize(10).setFont('helvetica', 'normal');
+                    const pElements = node.querySelectorAll('p');
+                    pElements.forEach(p => {
+                         const lines = doc.splitTextToSize(p.textContent, maxWidth);
+                         const elementHeight = lines.length * 4.5;
+                         y = checkPageBreak(y, elementHeight);
+                         doc.text(lines, margin, y);
+                         y += elementHeight + 3;
+                    });
+                }
+            }
+            
+            // 4. SIMPAN DOKUMEN
+            const fileName = `Latar Belakang - ${researchTitle || 'Hasil'}.pdf`;
+            doc.save(fileName);
+            showNotification('PDF profesional berhasil dibuat!', 'success');
+
         } catch (error) {
-            showNotification(error.message, 'error');
+            console.error("Export error:", error);
+            showNotification("Gagal mengekspor ke PDF. Cek Console (F12).", 'error');
+        } finally {
+            exportPdfBtn.disabled = false;
+        }
+    };
+
+    // ===================================================================
+    // FUNGSI EKSPOR WORD (DOCX) CLIENT-SIDE
+    // ===================================================================
+    const handleWordExport = async () => {
+        const contentHtml = outputContent.innerHTML;
+        if (!contentHtml) {
+            showNotification('Tidak ada konten untuk diekspor.', 'error');
+            return;
+        }
+
+        showNotification('Mempersiapkan file DOCX...', 'success');
+        exportWordBtn.disabled = true;
+
+        try {
+            // Membuat salinan dari konten untuk dimanipulasi
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = contentHtml;
+
+            // Hapus link dari sitasi agar tidak biru/bergaris bawah di Word
+            tempDiv.querySelectorAll('a').forEach(a => {
+                const span = document.createElement('span');
+                span.textContent = a.textContent;
+                a.parentNode.replaceChild(span, a);
+            });
+
+            const title = `<h1>Latar Belakang - ${document.getElementById('input-topic').value.trim()}</h1>`;
+            const finalHtml = `
+                <!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+                ${title}
+                ${tempDiv.innerHTML}
+                </body></html>
+            `;
+            
+            const converted = htmlDocx.asBlob(finalHtml);
+            const fileName = `Latar Belakang - ${document.getElementById('input-topic').value.trim() || 'Hasil'}.docx`;
+            saveAs(converted, fileName);
+
+        } catch (error) {
+            console.error("Word export error:", error);
+            showNotification("Gagal mengekspor ke Word.", 'error');
+        } finally {
+            exportWordBtn.disabled = false;
         }
     };
 
     generateBtn.addEventListener('click', handleGeneration);
-    exportPdfBtn.addEventListener('click', () => handleExport('pdf'));
-    exportWordBtn.addEventListener('click', () => handleExport('word'));
+    exportPdfBtn.addEventListener('click', handlePdfExport);
+    exportWordBtn.addEventListener('click', handleWordExport);
 
     renderIcons();
 });
