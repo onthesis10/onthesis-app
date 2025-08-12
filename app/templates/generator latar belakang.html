@@ -5,6 +5,8 @@
 {% block page_styles %}
 <!-- Pustaka Ikon -->
 <script src="https://unpkg.com/lucide@latest"></script>
+<!-- Pustaka untuk konversi Markdown ke HTML -->
+<script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 
 <style>
     /* Menggunakan variabel tema dari styles.css */
@@ -85,6 +87,28 @@
         border-color: var(--accent-cyan);
     }
     
+    /* Kelas CSS baru untuk tombol Generate */
+    .btn-generate {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border: 1px solid transparent;
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+        background-color: #22c55e; /* Tailwind green-500 */
+        color: white;
+    }
+    .btn-generate:hover {
+        filter: brightness(1.1);
+    }
+    .btn-generate:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     /* Animasi notifikasi */
     @keyframes fade-in-out {
       0% { opacity: 0; transform: translateY(20px); } 10% { opacity: 1; transform: translateY(0); }
@@ -159,17 +183,17 @@
                     <div class="control-group">
                         <label for="writing-mode">Mode Penulisan</label>
                         <select id="writing-mode" class="control-select">
-                            <option value="academic">Akademik Formal</option>
-                            <option value="semi-formal">Semi-Formal</option>
-                            <option value="persuasive">Persuasif (Data-driven)</option>
+                            <option value="Akademik Formal">Akademik Formal</option>
+                            <option value="Semi-Formal">Semi-Formal</option>
+                            <option value="Persuasif (Data-driven)">Persuasif (Data-driven)</option>
                         </select>
                     </div>
                     <div class="control-group">
                         <label for="citation-style">Gaya Sitasi</label>
                         <select id="citation-style" class="control-select">
-                            <option value="apa">APA 7</option>
-                            <option value="ieee">IEEE</option>
-                            <option value="mla">MLA</option>
+                            <option value="APA 7">APA 7</option>
+                            <option value="IEEE">IEEE</option>
+                            <option value="MLA">MLA</option>
                         </select>
                     </div>
                 </div>
@@ -221,14 +245,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let currentStep = 0;
 
-    // --- Fungsi untuk merender ikon (lebih aman) ---
     const renderIcons = () => {
         if (window.lucide) {
             window.lucide.createIcons();
         }
     };
 
-    // --- Logika Wizard (Form Multi-Step) ---
     const updateWizard = () => {
         wizardSteps.forEach((step, index) => {
             step.classList.toggle('active', index === currentStep);
@@ -238,13 +260,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         prevBtn.disabled = currentStep === 0;
 
-        // Mengganti tombol "Selanjutnya" menjadi "Generate" di langkah terakhir
         if (currentStep === wizardSteps.length - 1) {
             nextBtn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>Generate`;
-            nextBtn.className = 'btn bg-green-500 hover:bg-green-600 text-white'; // Menggunakan className untuk mereset dan menerapkan gaya baru
+            nextBtn.className = 'btn-generate';
         } else {
             nextBtn.innerHTML = `Selanjutnya`;
-            nextBtn.className = 'btn-primary'; // Kembali ke gaya tombol utama
+            nextBtn.className = 'btn-primary';
         }
         renderIcons();
     };
@@ -254,7 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentStep++;
             updateWizard();
         } else {
-            // Tombol menjadi "Generate" di langkah terakhir
             handleGeneration();
         }
     });
@@ -266,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Fungsi Notifikasi ---
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         const icon = type === 'error' ? `<i data-lucide="x-circle"></i>` : `<i data-lucide="check-circle"></i>`;
@@ -279,9 +298,15 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { notif.remove(); }, 4000);
     };
 
-    // --- Logika Inti: Generate Konten (Simulasi) ---
-    const handleGeneration = () => {
-        const topic = document.getElementById('input-topic').value;
+    // --- Logika Inti: Generate Konten dengan AI ---
+    const handleGeneration = async () => {
+        const topic = document.getElementById('input-topic').value.trim();
+        const problem = document.getElementById('input-problem').value.trim();
+        const goal = document.getElementById('input-goal').value.trim();
+        const location = document.getElementById('input-location').value.trim();
+        const writingMode = document.getElementById('writing-mode').value;
+        const citationStyle = document.getElementById('citation-style').value;
+
         if (!topic) {
             showNotification('Langkah 1 (Topik) tidak boleh kosong.', 'error');
             return;
@@ -291,35 +316,72 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="h-full flex flex-col justify-center items-center text-center">
                 <span class="h-10 w-10 animate-spin rounded-full border-4 border-solid border-accent-cyan border-r-transparent mb-4"></span>
                 <h3 class="text-lg font-semibold text-primary">AI sedang menganalisis...</h3>
-                <p class="text-secondary">Mencari data pendukung dan menyusun struktur...</p>
+                <p class="text-secondary">Menyusun draf dan mencari data pendukung...</p>
             </div>
         `;
         originalityIndicator.classList.add('hidden');
+        nextBtn.disabled = true;
 
-        // Simulasi pemanggilan API (delay 3 detik)
-        setTimeout(() => {
-            const writingMode = document.getElementById('writing-mode').value;
-            const citationStyle = document.getElementById('citation-style').value;
-            
-            const mockResult = `
-                <h3 class="font-bold text-primary">1. Pendahuluan</h3>
-                <p>Di era digital saat ini, ${topic} telah menjadi bagian tak terpisahkan dari kehidupan sehari-hari, terutama di kalangan mahasiswa. Platform seperti Instagram, TikTok, dan Twitter menawarkan ruang untuk interaksi sosial, namun juga membawa dampak signifikan terhadap berbagai aspek kehidupan pengguna, termasuk kesehatan mental.</p>
-                
-                <h3 class="font-bold text-primary mt-4">2. Masalah Aktual dan Data Pendukung</h3>
-                <p>Studi terbaru menunjukkan tren yang mengkhawatirkan. Menurut survei oleh Asosiasi Psikologi Indonesia (API), terjadi peningkatan laporan gejala kecemasan sebesar 45% di kalangan remaja dan dewasa muda dalam dua tahun terakhir, yang berkorelasi dengan peningkatan waktu layar harian <strong>(API, 2024)</strong>. Data dari BPS juga mencatat bahwa rata-rata penggunaan media sosial di Indonesia kini mencapai 3.5 jam per hari, naik dari 2.8 jam pada tahun 2022 <strong>(BPS, 2023)</strong>. Fenomena ini mengindikasikan adanya masalah nyata yang memerlukan perhatian akademis.</p>
-                
-                <h3 class="font-bold text-primary mt-4">3. Relevansi dan Kesenjangan Penelitian</h3>
-                <p>Meskipun banyak penelitian telah membahas dampak umum media sosial, studi yang secara spesifik menganalisis mekanisme perbandingan sosial di Instagram dan hubungannya dengan gejala depresi pada konteks mahasiswa di Indonesia masih terbatas. Penelitian ini penting untuk mengisi kesenjangan tersebut dan memberikan pemahaman yang lebih mendalam mengenai faktor risiko psikologis di lingkungan akademik lokal.</p>
-                
-                <h3 class="font-bold text-primary mt-4">4. Transisi ke Rumusan Masalah</h3>
-                <p>Berdasarkan urgensi dan kesenjangan yang telah diuraikan, maka penelitian ini bertujuan untuk menjawab bagaimana intensitas penggunaan Instagram dan tingkat perbandingan sosial secara bersamaan memengaruhi tingkat depresi pada mahasiswa. Mode penulisan saat ini: <strong>${writingMode}</strong>. Gaya sitasi: <strong>${citationStyle}</strong>.</p>
+        // --- PERUBAHAN UTAMA: Panggilan ke API Gemini ---
+        try {
+            const prompt = `
+                Anda adalah seorang asisten penulis skripsi ahli dengan gaya penulisan yang profesional dan akademis. Tugas Anda adalah membuat draf Latar Belakang Masalah untuk sebuah skripsi berdasarkan informasi berikut:
+
+                1.  **Topik Utama:** ${topic}
+                2.  **Masalah yang Diamati:** ${problem || 'Belum ditentukan secara spesifik, jelaskan masalah umum terkait topik.'}
+                3.  **Tujuan Penelitian:** ${goal || 'Belum ditentukan, jelaskan tujuan umum penelitian pada topik ini.'}
+                4.  **Konteks/Lokasi (jika ada):** ${location || 'Umum/Tidak spesifik.'}
+
+                Instruksi Penulisan:
+                * **Mode Penulisan:** ${writingMode}.
+                * **Gaya Sitasi:** ${citationStyle}.
+                * **Struktur Output:** Hasilkan teks dalam format Markdown dengan struktur wajib sebagai berikut:
+                    * \`### 1. Pendahuluan\`: Pengenalan topik secara umum.
+                    * \`### 2. Masalah Aktual dan Data Pendukung\`: Jelaskan masalah dengan mengintegrasikan data atau fakta relevan. Jika memungkinkan, cari dan sertakan data statistik pendukung (misalnya dari BPS, lembaga survei, atau jurnal) dan berikan sitasi palsu sesuai gaya yang diminta, contoh: (Nama Lembaga, 2024).
+                    * \`### 3. Relevansi dan Kesenjangan Penelitian\`: Jelaskan mengapa topik ini penting dan apa yang belum banyak dibahas oleh penelitian sebelumnya.
+                    * \`### 4. Transisi ke Rumusan Masalah\`: Tutup latar belakang dengan kalimat yang mengarah ke rumusan masalah.
+
+                Tulis draf Latar Belakang Masalah sekarang.
             `;
+
+            const apiKey = ""; // API Key akan di-handle oleh environment
+            // PERBAIKAN: Karakter '\' yang tidak valid telah dihapus
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             
-            outputContent.innerHTML = mockResult;
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Gagal mendapat respon dari AI.');
+            }
+
+            const result = await response.json();
+            const generatedText = result.candidates[0].content.parts[0].text;
+
+            // Menggunakan Showdown.js untuk mengubah Markdown ke HTML
+            const converter = new showdown.Converter({tables: true, strikethrough: true, openLinksInNewWindow: true});
+            outputContent.innerHTML = converter.makeHtml(generatedText);
+
             originalityIndicator.classList.remove('hidden');
             originalityIndicator.classList.add('flex');
             showNotification('Draf latar belakang berhasil dibuat!', 'success');
-        }, 3000);
+
+        } catch (error) {
+            outputContent.innerHTML = `<div class="p-4 rounded-md bg-red-900/50 border border-red-500/50 text-red-300"><h4 class="font-bold">Terjadi Kesalahan</h4><p>${error.message}</p></div>`;
+            showNotification('Gagal memproses permintaan.', 'error');
+        } finally {
+            nextBtn.disabled = false;
+        }
     };
 
     // --- Event Listeners untuk Tombol Lainnya (Simulasi) ---
