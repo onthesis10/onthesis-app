@@ -136,6 +136,17 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+    .checkbox-group input {
+        accent-color: var(--accent-cyan);
+    }
 </style>
 {% endblock %}
 
@@ -181,6 +192,19 @@
                         <option>MLA</option>
                         <option>Harvard</option>
                     </select>
+                </div>
+            </div>
+
+            <!-- PENAMBAHAN: Pilihan Sumber Referensi -->
+            <div class="control-group mb-8">
+                <label>5. Pilih Sumber Referensi</label>
+                <p>Pilih minimal satu. Semakin banyak sumber, semakin baik hasilnya.</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 checkbox-group">
+                    <label><input type="checkbox" name="source" value="core" checked> CORE</label>
+                    <label><input type="checkbox" name="source" value="openalex"> OpenAlex</label>
+                    <label><input type="checkbox" name="source" value="doaj"> DOAJ</label>
+                    <label><input type="checkbox" name="source" value="eric"> ERIC</label>
+                    <label><input type="checkbox" name="source" value="pubmed"> PubMed</label>
                 </div>
             </div>
 
@@ -262,12 +286,20 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Judul Penelitian tidak boleh kosong.', 'error');
             return;
         }
+
+        // --- PENAMBAHAN: Mengambil sumber yang dipilih ---
+        const selectedSources = Array.from(document.querySelectorAll('input[name="source"]:checked')).map(cb => cb.value);
+        if (selectedSources.length === 0) {
+            showNotification('Pilih minimal satu sumber referensi.', 'error');
+            return;
+        }
         
         const payload = {
             title: title,
             keywords: document.getElementById('input-keywords').value.trim(),
             min_year: document.getElementById('input-min-year').value,
-            citation_format: document.getElementById('input-citation-format').value
+            citation_format: document.getElementById('input-citation-format').value,
+            sources: selectedSources // Mengirim daftar sumber ke backend
         };
 
         loadingOverlay.style.display = 'flex';
