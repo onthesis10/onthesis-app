@@ -487,7 +487,6 @@ def export_document():
         logo_path = os.path.join(app.static_folder, 'images', 'logo.png')
 
         if export_format == 'pdf':
-            # --- PERBAIKAN: Memeriksa apakah library tersedia ---
             if not PDF_EXPORT_ENABLED:
                 return jsonify({'error': 'Fungsi ekspor PDF tidak tersedia di server.'}), 501
             
@@ -514,7 +513,6 @@ def export_document():
             filename = f'{secure_filename(title)}.pdf'
 
         elif export_format == 'word':
-            # --- PERBAIKAN: Memeriksa apakah library tersedia ---
             if not WORD_EXPORT_ENABLED:
                 return jsonify({'error': 'Fungsi ekspor Word tidak tersedia di server.'}), 501
 
