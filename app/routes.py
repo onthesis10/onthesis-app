@@ -47,6 +47,7 @@ import PyPDF2
 import docx
 
 # --- PENAMBAHAN: Impor untuk Ekspor Dokumen ---
+# Pastikan library ini terinstal: pip install reportlab python-docx
 try:
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
@@ -54,9 +55,12 @@ try:
     from reportlab.lib.units import inch
     from docx import Document
     from docx.shared import Inches
+    PDF_EXPORT_ENABLED = True
+    WORD_EXPORT_ENABLED = True
 except ImportError:
     print("PERINGATAN: Library 'reportlab' atau 'python-docx' tidak terinstal. Fitur ekspor tidak akan berfungsi.")
-    pass
+    PDF_EXPORT_ENABLED = False
+    WORD_EXPORT_ENABLED = False
 
 
 # --- Konfigurasi Tambahan ---
@@ -378,7 +382,6 @@ def api_writing_assistant():
         elif task == 'generate_abstract':
             prompt = f"Buatkan draf abstrak yang ringkas dan padat (sekitar 200-250 kata) berdasarkan isi skripsi berikut:\n\n{context}"
         
-        # --- PERBAIKAN: Mengganti nama task dan menambahkan alur verifikasi ---
         elif task == 'generate_verified_background':
             if not isinstance(context, dict):
                 return jsonify({'error': 'Context untuk generate_background harus berupa objek.'}), 400
@@ -389,7 +392,6 @@ def api_writing_assistant():
             citation_style = context.get('citationStyle', 'APA 7')
             paragraph_count = context.get('paragraphCount', '4')
 
-            # --- Langkah 2: Pencarian Data Real-time ---
             references_text = ""
             try:
                 search_query = f"{topic} in {major}"
@@ -405,7 +407,6 @@ def api_writing_assistant():
                 if crossref_response.ok:
                     items = crossref_response.json().get('message', {}).get('items', [])
                     for item in items:
-                        # --- Langkah 3: Ekstraksi & Analisis Sumber ---
                         title = item.get('title', [''])[0]
                         authors_list = item.get('author', [])
                         authors = ", ".join([f"{author.get('family', '')}, {author.get('given', '')[0]}." for author in authors_list if author.get('family') and author.get('given')])
@@ -414,14 +415,12 @@ def api_writing_assistant():
                         doi = item.get('DOI', '')
                         
                         if title and authors and pub_year:
-                            # Membuat string mentah untuk diformat oleh AI
                             ref_info = f"Judul: {title}, Penulis: {authors}, Tahun: {pub_year}"
                             if journal: ref_info += f", Jurnal: {journal}"
                             if doi: ref_info += f", DOI: {doi} (Link: https://doi.org/{doi})"
                             found_references.append(ref_info)
 
                 if found_references:
-                    # --- Langkah 5: Penambahan Sitasi (Formatting) ---
                     formatting_prompt = f"""
                     Berdasarkan daftar informasi referensi berikut, format masing-masing ke dalam gaya sitasi {citation_style}.
                     Sajikan hasilnya sebagai daftar bernomor. Pastikan formatnya benar dan konsisten.
@@ -432,13 +431,12 @@ def api_writing_assistant():
                     formatting_response = model.generate_content(formatting_prompt)
                     references_text = formatting_response.text
                 else:
-                    references_text = "Tidak ada referensi relevan yang ditemukan secara otomatis. Bagian ini bisa diisi manual."
+                    references_text = "Tidak ada referensi relevan yang ditemukan secara otomatis. Silakan tambahkan secara manual."
 
             except Exception as e:
                 print(f"Gagal mencari referensi nyata: {e}")
                 references_text = "Terjadi kesalahan saat mencari referensi. Bagian ini bisa diisi manual."
             
-            # --- Langkah 4: Penyusunan Draft Latar Belakang ---
             prompt = f"""
                 Anda adalah seorang asisten penulis skripsi ahli. Tugas Anda adalah membuat draf Latar Belakang Masalah berdasarkan informasi berikut:
 
@@ -489,6 +487,10 @@ def export_document():
         logo_path = os.path.join(app.static_folder, 'images', 'logo.png')
 
         if export_format == 'pdf':
+            # --- PERBAIKAN: Memeriksa apakah library tersedia ---
+            if not PDF_EXPORT_ENABLED:
+                return jsonify({'error': 'Fungsi ekspor PDF tidak tersedia di server.'}), 501
+            
             doc = SimpleDocTemplate(buffer, pagesize=letter)
             styles = getSampleStyleSheet()
             story = []
@@ -512,6 +514,10 @@ def export_document():
             filename = f'{secure_filename(title)}.pdf'
 
         elif export_format == 'word':
+            # --- PERBAIKAN: Memeriksa apakah library tersedia ---
+            if not WORD_EXPORT_ENABLED:
+                return jsonify({'error': 'Fungsi ekspor Word tidak tersedia di server.'}), 501
+
             document = Document()
             if os.path.exists(logo_path):
                 document.add_picture(logo_path, width=Inches(1.5))
