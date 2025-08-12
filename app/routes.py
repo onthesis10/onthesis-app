@@ -129,7 +129,10 @@ def make_api_request_with_retry(url, headers, timeout=25, retries=3, backoff_fac
     for attempt in range(retries):
         try:
             response = requests.get(url, headers=headers, timeout=timeout)
-            response.raise_for_status()  # Ini akan memicu error untuk status 4xx/5xx
+            if response.status_code == 404:
+                print(f"Sumber tidak ditemukan (404) di URL: {url}. Melewati.")
+                return None # Kembalikan None jika 404, agar bisa dilewati
+            response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
@@ -139,9 +142,9 @@ def make_api_request_with_retry(url, headers, timeout=25, retries=3, backoff_fac
                     time.sleep(delay)
                 else:
                     print("Gagal setelah beberapa kali percobaan. Melemparkan error.")
-                    raise  # Lemparkan error setelah semua percobaan gagal
+                    raise
             else:
-                raise # Lemparkan error lain yang bukan 429
+                raise
         except requests.exceptions.RequestException as e:
             print(f"Error koneksi: {e}")
             if attempt < retries - 1:
@@ -149,6 +152,7 @@ def make_api_request_with_retry(url, headers, timeout=25, retries=3, backoff_fac
                 time.sleep(delay)
             else:
                 raise
+    return None # Kembalikan None jika semua percobaan gagal
 
 # =========================================================================
 # MODEL PENGGUNA & LOADER (PERBAIKAN SINKRONISASI PRO)
@@ -546,7 +550,6 @@ def api_generate_theory():
         core_api_key = os.getenv('CORE_API_KEY')
         if not core_api_key: return jsonify({'error': 'Kunci API CORE tidak dikonfigurasi di server.'}), 500
         
-        # --- PERBAIKAN: Memecah kata kunci untuk pencarian yang lebih baik ---
         keyword_list = [keyword.strip() for keyword in keywords.split(',')]
         core_query = " AND ".join(keyword_list)
         

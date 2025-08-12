@@ -3,17 +3,19 @@
 {% block title %}Generator Kajian Teori - Asisten AI{% endblock %}
 
 {% block page_styles %}
+<!-- Pustaka yang Diperlukan -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
+<!-- Pustaka Ikon & Markdown -->
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 
 <style>
-    /* Menggunakan gaya yang konsisten dengan halaman lain */
+    /* ... (Gaya lain tetap sama) ... */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -73,6 +75,77 @@
     .checkbox-group input {
         accent-color: var(--accent-cyan);
     }
+
+    /* --- PERBAIKAN: Gaya Loading Overlay Baru yang Estetis --- */
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--glass-bg, rgba(13, 17, 23, 0.8));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 100;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        color: var(--text-primary);
+        transition: opacity 0.3s ease;
+    }
+
+    .sci-fi-loader {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: radial-gradient(var(--bg-canvas), var(--bg-panel));
+        box-shadow: 0 0 10px var(--accent-cyan-glow), inset 0 0 15px var(--accent-cyan-glow), 0 0 0 2px var(--accent-cyan);
+    }
+    .sci-fi-loader::before, .sci-fi-loader::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        inset: -10px;
+        border: 4px dashed var(--accent-cyan);
+        opacity: 0.3;
+        animation: spin 10s linear infinite;
+    }
+    .sci-fi-loader::after {
+        inset: -25px;
+        animation: spin 18s linear infinite reverse;
+        border-style: solid;
+        opacity: 0.15;
+    }
+    .scanner {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='100' ry='100' stroke='%2322D3EE80' stroke-width='4' stroke-dasharray='6%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+        animation: spin 4s linear infinite;
+    }
+    .scanner span {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 50%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--accent-cyan));
+        transform-origin: left;
+        animation: radar-scan 2s linear infinite;
+    }
+    #loading-text {
+        min-height: 20px;
+        transition: all 0.3s ease-in-out;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes radar-scan {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
 {% endblock %}
 
@@ -91,6 +164,7 @@
     </header>
 
     <div class="w-full flex flex-col items-center gap-8">
+        <!-- Panel Input -->
         <div class="io-panel w-full max-w-4xl">
             <div class="control-group mb-6">
                 <label for="input-title">1. Judul Penelitian</label>
@@ -147,6 +221,7 @@
             </div>
         </div>
 
+        <!-- Panel Output -->
         <div id="output-panel" class="io-panel w-full max-w-4xl hidden flex-col gap-4">
             <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
                 <h2 class="text-xl font-bold text-primary">Hasil Draf Kajian Teori (BAB 2)</h2>
@@ -168,10 +243,14 @@
 </div>
 
 <div id="notification-container"></div>
+
+<!-- PERBAIKAN: Struktur HTML Loading Overlay Baru -->
 <div id="loading-overlay" style="display: none;">
-    <div class="futuristic-spinner"></div>
-    <h3 class="text-xl font-semibold">Mencari Referensi & Menyusun Teks...</h3>
-    <p class="text-secondary">Proses ini bisa memakan waktu 1-2 menit. Mohon tunggu.</p>
+    <div class="sci-fi-loader">
+        <div class="scanner"><span></span></div>
+    </div>
+    <h3 id="loading-title" class="text-xl font-semibold mt-8">Menganalisis...</h3>
+    <p id="loading-text" class="text-secondary">Memulai proses...</p>
 </div>
 {% endblock %}
 
@@ -183,8 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const outputPanel = document.getElementById('output-panel');
     const outputContent = document.getElementById('output-content');
     const loadingOverlay = document.getElementById('loading-overlay');
-    const exportPdfBtn = document.getElementById('export-pdf-btn');
-    const exportWordBtn = document.getElementById('export-word-btn');
     
     // Fungsi pembantu
     const renderIcons = () => window.lucide && window.lucide.createIcons();
@@ -197,6 +274,19 @@ document.addEventListener('DOMContentLoaded', () => {
         renderIcons();
         setTimeout(() => notif.remove(), 4000);
     };
+
+    // --- PERBAIKAN: Logika untuk Teks Loading Dinamis ---
+    let loadingInterval;
+    const loadingMessages = [
+        "Menghubungi database akademik CORE...",
+        "Mengumpulkan metadata dari CrossRef...",
+        "Menganalisis dan memilih sumber terbaik...",
+        "Mengirimkan instruksi ke model AI...",
+        "Menyusun draf Landasan Teori...",
+        "Merangkum Penelitian Terdahulu...",
+        "Menyelesaikan format dan sitasi...",
+        "Hampir selesai..."
+    ];
 
     // Fungsi Utama: Generate Kajian Teori
     const handleGeneration = async () => {
@@ -220,6 +310,15 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.style.display = 'flex';
         generateBtn.disabled = true;
 
+        // Mulai interval untuk teks loading
+        const loadingTextEl = document.getElementById('loading-text');
+        let messageIndex = 0;
+        loadingTextEl.textContent = loadingMessages[messageIndex];
+        loadingInterval = setInterval(() => {
+            messageIndex = (messageIndex + 1) % loadingMessages.length;
+            loadingTextEl.textContent = loadingMessages[messageIndex];
+        }, 3000); // Ganti pesan setiap 3 detik
+
         try {
             const response = await fetch('/api/generate-theory', {
                 method: 'POST',
@@ -238,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true });
+            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true, simplifiedAutoLink: true, strikethrough: true });
             outputContent.innerHTML = converter.makeHtml(result.generated_text);
             outputPanel.classList.remove('hidden');
             outputPanel.classList.add('flex');
@@ -246,54 +345,25 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             showNotification(error.message, 'error');
         } finally {
+            clearInterval(loadingInterval); // Hentikan interval
             loadingOverlay.style.display = 'none';
             generateBtn.disabled = false;
         }
     };
-
-    // --- LOGIKA EKSPOR ---
-    const loadImageAsBase64 = (url) => {
-        // ... (Fungsi ini sama seperti sebelumnya)
-    };
-
-    const handlePdfExport = async () => {
-        // Menggunakan logika perenderan manual yang sudah terbukti
-    };
-
-    const handleWordExport = async () => {
-        // Menggunakan logika html-docx-js yang sudah terbukti
-    };
     
     // Event Listeners
     generateBtn.addEventListener('click', handleGeneration);
-    // exportPdfBtn.addEventListener('click', handlePdfExport);
-    // exportWordBtn.addEventListener('click', handleWordExport);
     
     renderIcons();
 });
 
-// Implementasi detail untuk fungsi-fungsi yang kompleks (ditaruh di luar DOMContentLoaded)
-const loadImageAsBase64 = (url) => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width; canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = reject;
-        img.src = url;
-    });
-};
-
+// --- LOGIKA EKSPOR (Ditaruh di luar agar rapi) ---
 document.addEventListener('DOMContentLoaded', () => {
     const exportPdfBtn = document.getElementById('export-pdf-btn');
     const exportWordBtn = document.getElementById('export-word-btn');
     const outputContent = document.getElementById('output-content');
-    const showNotification = (message, type = 'success') => { // re-declare for this scope
+    
+    const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         const notif = document.createElement('div');
         notif.className = `toast-notification ${type}`;
@@ -301,6 +371,22 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(notif);
         window.lucide && window.lucide.createIcons();
         setTimeout(() => notif.remove(), 4000);
+    };
+
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
     };
 
     const handlePdfExport = async () => {
@@ -401,10 +487,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Re-attach event listeners in this scope
     if(exportPdfBtn) exportPdfBtn.addEventListener('click', handlePdfExport);
     if(exportWordBtn) exportWordBtn.addEventListener('click', handleWordExport);
 });
-
 </script>
 {% endblock %}
