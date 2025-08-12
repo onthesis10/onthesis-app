@@ -357,9 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // ===================================================================
-    // FUNGSI EKSPOR PDF DENGAN TATA LETAK MANUAL
-    // ===================================================================
     const handlePdfExport = async () => {
         const content = outputContent.innerHTML;
         if (!content) {
@@ -396,13 +393,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. RENDER JUDUL
-            doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor('#000000'); // PERBAIKAN: Warna judul hitam
+            doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor('#000000');
             doc.text("Draf Latar Belakang Masalah", margin, y);
             y += 8;
 
             const researchTitle = document.getElementById('input-topic').value.trim();
             if (researchTitle) {
-                doc.setFontSize(11).setFont('helvetica', 'italic').setTextColor('#444444'); // Warna abu-abu gelap untuk subjudul
+                doc.setFontSize(11).setFont('helvetica', 'italic').setTextColor('#444444');
                 const splitTitle = doc.splitTextToSize(`Topik: ${researchTitle}`, maxWidth);
                 doc.text(splitTitle, margin, y);
                 y += (splitTitle.length * 5) + 5;
@@ -411,7 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setLineWidth(0.5).line(margin, y, doc.internal.pageSize.width - margin, y);
             y += 8;
             
-            // PERBAIKAN: Set warna font default menjadi hitam untuk seluruh konten
             doc.setTextColor('#000000');
 
             // 3. RENDER KONTEN UTAMA
@@ -436,25 +432,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lines = doc.splitTextToSize(cleanText, maxWidth);
                     const elementHeight = lines.length * 5;
                     y = checkPageBreak(y, elementHeight);
-                    // PERBAIKAN: Hapus opsi 'justify' untuk perataan kiri yang rapi
                     doc.text(lines, margin, y); 
                     y += elementHeight + 4;
                 } else if (tagName === 'BLOCKQUOTE') {
-                    y += 5; // Beri spasi sebelum daftar pustaka
+                    y = checkPageBreak(y, 15); // Periksa ruang untuk judul dan item pertama
+                    y += 5;
                     doc.setFontSize(12).setFont('helvetica', 'bold');
-                    let text = 'Daftar Pustaka';
-                    y = checkPageBreak(y, text.length);
-                    doc.text(text, margin, y);
-                    y += 6;
+                    doc.text('Daftar Pustaka', margin, y);
+                    y += 7;
 
                     doc.setFontSize(10).setFont('helvetica', 'normal');
-                    const pElements = node.querySelectorAll('p');
-                    pElements.forEach(p => {
-                         const lines = doc.splitTextToSize(p.textContent, maxWidth);
+
+                    // --- PERBAIKAN UNTUK DAFTAR PUSTAKA ---
+                    // Mengambil seluruh teks dari blockquote dan membaginya per baris
+                    const referencesText = node.innerText || node.textContent;
+                    const referencesArray = referencesText.split('\n').filter(ref => ref.trim() !== '');
+
+                    referencesArray.forEach(ref => {
+                         const lines = doc.splitTextToSize(ref.trim(), maxWidth);
                          const elementHeight = lines.length * 4.5;
                          y = checkPageBreak(y, elementHeight);
                          doc.text(lines, margin, y);
-                         y += elementHeight + 3;
+                         y += elementHeight + 3; // Spasi antar referensi
                     });
                 }
             }
@@ -472,9 +471,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ===================================================================
-    // FUNGSI EKSPOR WORD (DOCX) CLIENT-SIDE
-    // ===================================================================
     const handleWordExport = async () => {
         const contentHtml = outputContent.innerHTML;
         if (!contentHtml) {

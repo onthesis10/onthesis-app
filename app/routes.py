@@ -194,7 +194,8 @@ def check_and_update_usage(user_id, feature_name):
         usage_data = {
             'paraphrase_count': 0, 'chat_count': 0, 'search_count': 0,
             'writing_assistant_count': 0, 'data_analysis_count': 0, 'export_doc_count': 0,
-            'last_reset_date': today_str, 'citation_count': citation_total
+            'last_reset_date': today_str, 'citation_count': citation_total,
+            'generate_theory_count': 0 # --- PENAMBAHAN: Reset counter fitur baru ---
         }
         user_ref.set({'usage_limits': usage_data}, merge=True)
     count_key = f"{feature_name}_count"
@@ -207,7 +208,8 @@ def check_and_update_usage(user_id, feature_name):
     return True, "OK"
 
 def check_and_update_pro_trial(user_id, feature_name):
-    PRO_TRIAL_LIMITS = {'writing_assistant': 3, 'data_analysis': 3, 'export_doc': 1}
+    # --- PENAMBAHAN: Batas percobaan untuk fitur Generator Kajian Teori ---
+    PRO_TRIAL_LIMITS = {'writing_assistant': 3, 'data_analysis': 3, 'export_doc': 1, 'generate_theory': 2}
     limit = PRO_TRIAL_LIMITS.get(feature_name)
     if limit is None: return True, "OK"
     user_ref = db.collection('users').document(user_id)
@@ -289,6 +291,12 @@ def generator_latar_belakang():
 @login_required
 def generator_rumusan_masalah():
     return render_template('generator_rumusan_masalah.html')
+
+# --- PENAMBAHAN: Rute halaman untuk fitur baru ---
+@app.route('/generator-kajian-teori')
+@login_required
+def generator_kajian_teori():
+    return render_template('generator_kajian_teori.html')
 
 @app.route('/data-analysis')
 @login_required
@@ -422,7 +430,7 @@ def api_writing_assistant():
                         if title and authors and pub_year:
                             ref_info = f"Judul: {title}, Penulis: {authors}, Tahun: {pub_year}"
                             if journal: ref_info += f", Jurnal: {journal}"
-                            if doi: ref_info += f", DOI: {doi} (Link: https://doi.org/{doi})"
+                            if doi: ref_info += f", DOI: https://doi.org/{doi}"
                             found_references.append(ref_info)
 
                 if found_references:
@@ -484,6 +492,147 @@ def api_writing_assistant():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# --- PENAMBAHAN: Rute API untuk Generator Kajian Teori ---
+@app.route('/api/generate-theory', methods=['POST'])
+@login_required
+def api_generate_theory():
+    # 1. Integrasi dengan sistem limitasi PRO/Trial
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'generate_theory')
+        if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan untuk fitur ini tercapai. Upgrade ke PRO untuk akses tanpa batas.", 'redirect': url_for('upgrade_page')}), 429
+            return jsonify({'error': message}), 429
+
+    data = request.get_json()
+    if not data or not data.get('keywords'):
+        return jsonify({"error": "Kata kunci tidak boleh kosong."}), 400
+
+    # 2. Ambil semua input dari frontend
+    research_title = data.get('title', '')
+    keywords = data.get('keywords', '')
+    style = data.get('style', 'Akademik')
+    length = data.get('length', '1.000 - 1.500')
+    source_types = data.get('source_types', [])
+    
+    try:
+        # 3. Cari literatur di CORE
+        core_api_key = os.getenv('CORE_API_KEY')
+        if not core_api_key: return jsonify({'error': 'Kunci API CORE tidak dikonfigurasi di server.'}), 500
+        
+        core_query = f'"{keywords}"'
+        core_url = f"https://api.core.ac.uk/v3/search/works?q={core_query}&limit=25"
+        core_headers = {"Authorization": f"Bearer {core_api_key}"}
+        core_response = requests.get(core_url, headers=core_headers, timeout=25)
+        core_response.raise_for_status()
+        core_results = core_response.json().get('results', [])
+
+        if not core_results:
+            return jsonify({"error": "Tidak ada literatur yang ditemukan di CORE untuk kata kunci tersebut."}), 404
+
+        # 4. Proses hasil & ambil metadata dari CrossRef
+        processed_references = []
+        crossref_headers = {'User-Agent': 'OnThesisApp/1.0 (mailto:dev@onthesis.app)'} # Ganti dengan email Anda
+        
+        for item in core_results:
+            doi = item.get('doi')
+            if not doi: continue
+
+            time.sleep(0.05) # Jeda kecil agar tidak membanjiri API
+            crossref_url = f"https://api.crossref.org/works/{doi}"
+            crossref_response = requests.get(crossref_url, headers=crossref_headers, timeout=10)
+            
+            if crossref_response.status_code == 200:
+                crossref_data = crossref_response.json().get('message', {})
+                if crossref_data.get('abstract'):
+                    authors = crossref_data.get('author', [])
+                    if not authors: continue
+
+                    authors_str_list = [a.get('family', '') for a in authors if a.get('family')]
+                    if not authors_str_list: continue # Lewati jika tidak ada nama keluarga
+                    
+                    authors_str = " & ".join(authors_str_list[:2])
+                    if len(authors_str_list) > 2: authors_str += ", et al."
+                    
+                    year_parts = crossref_data.get('issued', {}).get('date-parts', [[None]])[0]
+                    year = year_parts[0] if year_parts and year_parts[0] else "n.d."
+
+                    first_author_lastname = authors_str_list[0]
+
+                    citation_apa = f"{authors_str} ({year}). {crossref_data.get('title', [''])[0]}."
+                    
+                    processed_references.append({
+                        "title": crossref_data.get('title', [''])[0],
+                        "authors_str": authors_str,
+                        "year": year,
+                        "abstract": re.sub('<[^<]+?>', '', crossref_data.get('abstract')), # Hapus tag HTML dari abstrak
+                        "citation_apa": citation_apa,
+                        "citation_placeholder": f"[{first_author_lastname}, {year}]"
+                    })
+            if len(processed_references) >= 7: # Batasi 7 referensi terbaik untuk dikirim ke LLM
+                break
+        
+        if len(processed_references) < 3:
+             return jsonify({"error": "Referensi yang ditemukan tidak cukup (kurang dari 3) untuk menghasilkan kajian teori yang baik."}), 404
+
+        # 5. Susun Prompt untuk LLM (Gemini)
+        sources_text = ""
+        for i, ref in enumerate(processed_references):
+            sources_text += f"{i+1}. Judul: {ref.get('title')}\n   Penulis: {ref.get('authors_str')}\n   Tahun: {ref.get('year')}\n   Abstrak: {ref.get('abstract')}\n\n"
+
+        prompt = f"""Peran: Anda adalah seorang asisten peneliti akademik ahli.
+        Konteks:
+        - Judul Penelitian: "{research_title}"
+        - Kata Kunci: "{keywords}"
+        - Gaya: "{style}"
+        - Panjang: "{length}"
+        Tugas: Tulis draf Bab 2 Kajian Teori dalam Bahasa Indonesia dengan struktur heading markdown `###`. Berdasarkan HANYA pada sumber yang diberikan.
+        Struktur:
+        ### 2.1 Landasan Teori
+        Jelaskan teori utama yang relevan.
+        ### 2.2 Penelitian Terdahulu
+        Rangkum temuan kunci dari sumber. Sisipkan sitasi dalam teks dengan format [NamaBelakangPenulis, Tahun], contoh: [{processed_references[0]['authors_str'].split(' ')[0]}, {processed_references[0]['year']}].
+        ### 2.3 Kerangka Teori
+        Jelaskan secara singkat hubungan antar variabel.
+        SUMBER RUJUKAN:
+        {sources_text}
+        Aturan: Jangan berspekulasi. Sitasi setiap klaim.
+        """
+        
+        # 6. Panggil Model Gemini
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        generated_text = response.text
+
+        # 7. Post-processing untuk mengganti placeholder sitasi
+        final_text = generated_text
+        used_citations = set()
+        
+        # Pola Regex untuk menemukan [Nama, Tahun] atau [Nama et al., Tahun]
+        placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
+        
+        temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
+
+        for author_match, year_match in placeholders_in_text:
+            placeholder = f"[{author_match}, {year_match}]"
+            matched_ref = temp_ref_map.get(placeholder.lower())
+            if matched_ref:
+                in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
+                final_text = final_text.replace(placeholder, in_text_citation)
+                used_citations.add(matched_ref['citation_apa'])
+        
+        bibliography = "\n\n".join(sorted(list(used_citations)))
+        final_output = final_text + f"\n\n### Daftar Pustaka\n{bibliography}"
+
+        return jsonify({"generated_text": final_output})
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Gagal menghubungi API eksternal (CORE/CrossRef). Coba lagi nanti. Detail: {e}"}), 503
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Terjadi kesalahan internal yang tidak terduga: {str(e)}"}), 500
 
 @app.route('/api/export-document', methods=['POST'])
 @login_required
@@ -956,7 +1105,7 @@ def api_descriptive_analysis():
 def get_usage_status():
     if current_user.is_pro:
         return jsonify({'status': 'pro', 'message': 'Akses Penuh Tanpa Batas'})
-    LIMITS = {'paraphrase': 5, 'chat': 10, 'search': 5, 'citation': 15, 'writing_assistant': 3, 'data_analysis': 3, 'export_doc': 1}
+    LIMITS = {'paraphrase': 5, 'chat': 10, 'search': 5, 'citation': 15, 'writing_assistant': 3, 'data_analysis': 3, 'export_doc': 1, 'generate_theory': 2}
     user_ref = db.collection('users').document(current_user.id)
     user_doc = user_ref.get()
     if not user_doc.exists: return jsonify({'error': 'User not found'}), 404
@@ -975,6 +1124,7 @@ def get_usage_status():
         'writing_assistant_remaining': LIMITS['writing_assistant'] - usage_data.get('writing_assistant_count', 0),
         'data_analysis_remaining': LIMITS['data_analysis'] - usage_data.get('data_analysis_count', 0),
         'export_doc_remaining': LIMITS['export_doc'] - usage_data.get('export_doc_count', 0),
+        'generate_theory_remaining': LIMITS['generate_theory'] - usage_data.get('generate_theory_count', 0),
         'limits': LIMITS
     })
 
@@ -1077,3 +1227,4 @@ def payment_notification():
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+

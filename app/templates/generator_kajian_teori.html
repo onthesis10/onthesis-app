@@ -1,0 +1,410 @@
+{% extends "layout.html" %}
+
+{% block title %}Generator Kajian Teori - Asisten AI{% endblock %}
+
+{% block page_styles %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
+
+<style>
+    /* Menggunakan gaya yang konsisten dengan halaman lain */
+    .io-panel {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-panel);
+        border-radius: 1rem;
+        padding: 2rem;
+        transition: all 0.3s ease-in-out;
+    }
+    .io-textarea, .control-input, .control-select {
+        width: 100%;
+        background-color: var(--bg-canvas);
+        border: 1px solid var(--border-panel);
+        color: var(--text-primary);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s ease;
+    }
+    .io-textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+    .io-textarea:focus, .control-input:focus, .control-select:focus {
+        outline: none;
+        border-color: var(--accent-cyan);
+        box-shadow: 0 0 0 3px var(--accent-cyan-glow);
+    }
+    .control-group label {
+        display: block;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+    }
+     .control-group p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+        margin-top: -0.5rem;
+    }
+    #output-panel {
+        background-color: var(--bg-panel);
+    }
+    .io-output {
+        width: 100%;
+        min-height: 300px;
+        overflow-y: auto;
+        color: var(--text-secondary);
+    }
+    .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
+    .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    .checkbox-group input {
+        accent-color: var(--accent-cyan);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="h-full w-full p-4 sm:p-6 lg:p-8 overflow-y-auto">
+    <header class="w-full max-w-4xl mx-auto mb-8">
+        <div class="flex items-center gap-4">
+            <a href="{{ url_for('writing_assistant') }}" class="btn-secondary !p-2" title="Kembali ke Menu">
+                <i data-lucide="arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Kajian Teori (BAB 2)</h1>
+                <p class="text-md text-secondary mt-1">Buat draf kajian teori, penelitian terdahulu, dan daftar pustaka dari sumber-sumber akademik.</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="w-full flex flex-col items-center gap-8">
+        <div class="io-panel w-full max-w-4xl">
+            <div class="control-group mb-6">
+                <label for="input-title">1. Judul Penelitian</label>
+                <textarea id="input-title" class="io-textarea" placeholder="Contoh: Pengaruh Intensitas Penggunaan Media Sosial terhadap Kesehatan Mental Mahasiswa di Era Digital"></textarea>
+            </div>
+
+            <div class="control-group mb-6">
+                <label for="input-keywords">2. Kata Kunci / Topik Utama</label>
+                <p>Pisahkan dengan koma. Contoh: media sosial, kesehatan mental, mahasiswa, depresi</p>
+                <textarea id="input-keywords" class="io-textarea" placeholder="media sosial, kesehatan mental, mahasiswa"></textarea>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="control-group">
+                    <label for="input-style">3. Gaya Penulisan</label>
+                    <select id="input-style" class="control-select">
+                        <option>Akademik</option>
+                        <option>Detail</option>
+                        <option>Ringkas</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="input-length">4. Perkiraan Panjang</label>
+                    <select id="input-length" class="control-select">
+                        <option>1.000 - 1.500 kata</option>
+                        <option>2.000 - 2.500 kata</option>
+                        <option>3.000+ kata</option>
+                    </select>
+                </div>
+                 <div class="control-group">
+                    <label for="input-language">5. Bahasa</label>
+                    <select id="input-language" class="control-select">
+                        <option>Indonesia</option>
+                        <option>English</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group mb-8">
+                <label>6. Tipe Sumber (Opsional)</label>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 checkbox-group">
+                    <label><input type="checkbox" name="source_type" value="journal article"> Jurnal</label>
+                    <label><input type="checkbox" name="source_type" value="book"> Buku</label>
+                    <label><input type="checkbox" name="source_type" value="conference paper"> Conference Paper</label>
+                    <label><input type="checkbox" name="source_type" value="dissertation"> Disertasi</label>
+                </div>
+            </div>
+
+            <div class="text-center mt-8 pt-8 border-t border-border-panel">
+                <button id="generate-btn" class="btn-primary">
+                    <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i>
+                    Generate Kajian Teori
+                </button>
+            </div>
+        </div>
+
+        <div id="output-panel" class="io-panel w-full max-w-4xl hidden flex-col gap-4">
+            <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
+                <h2 class="text-xl font-bold text-primary">Hasil Draf Kajian Teori (BAB 2)</h2>
+                <div class="flex items-center gap-2">
+                    <button id="export-pdf-btn" class="btn-secondary !p-2" title="Ekspor ke PDF">
+                        <i data-lucide="file-type-2"></i>
+                    </button>
+                    <button id="export-word-btn" class="btn-secondary !p-2" title="Ekspor ke Word">
+                        <i data-lucide="file-text"></i>
+                    </button>
+                    <button id="export-bib-btn" class="btn-secondary !p-2" title="Ekspor ke BibTeX (.bib)" disabled>
+                        <i data-lucide="book-marked"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="output-content" class="io-output prose max-w-none"></div>
+        </div>
+    </div>
+</div>
+
+<div id="notification-container"></div>
+<div id="loading-overlay" style="display: none;">
+    <div class="futuristic-spinner"></div>
+    <h3 class="text-xl font-semibold">Mencari Referensi & Menyusun Teks...</h3>
+    <p class="text-secondary">Proses ini bisa memakan waktu 1-2 menit. Mohon tunggu.</p>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Referensi Elemen DOM
+    const generateBtn = document.getElementById('generate-btn');
+    const outputPanel = document.getElementById('output-panel');
+    const outputContent = document.getElementById('output-content');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const exportWordBtn = document.getElementById('export-word-btn');
+    
+    // Fungsi pembantu
+    const renderIcons = () => window.lucide && window.lucide.createIcons();
+    const showNotification = (message, type = 'success') => {
+        const container = document.getElementById('notification-container');
+        const notif = document.createElement('div');
+        notif.className = `toast-notification ${type}`;
+        notif.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'x-circle'}"></i><span>${message}</span>`;
+        container.appendChild(notif);
+        renderIcons();
+        setTimeout(() => notif.remove(), 4000);
+    };
+
+    // Fungsi Utama: Generate Kajian Teori
+    const handleGeneration = async () => {
+        const keywords = document.getElementById('input-keywords').value.trim();
+        if (!keywords) {
+            showNotification('Kata Kunci / Topik Utama tidak boleh kosong.', 'error');
+            return;
+        }
+
+        const selectedTypes = Array.from(document.querySelectorAll('input[name="source_type"]:checked')).map(cb => cb.value);
+        
+        const payload = {
+            title: document.getElementById('input-title').value.trim(),
+            keywords: keywords,
+            language: document.getElementById('input-language').value,
+            style: document.getElementById('input-style').value,
+            length: document.getElementById('input-length').value,
+            source_types: selectedTypes
+        };
+
+        loadingOverlay.style.display = 'flex';
+        generateBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/generate-theory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                if (result.redirect) {
+                    showNotification('Batas penggunaan tercapai. Anda akan dialihkan.', 'error');
+                    setTimeout(() => { window.location.href = result.redirect; }, 2000);
+                } else {
+                    throw new Error(result.error || 'Gagal mendapat respon dari server.');
+                }
+                return;
+            }
+
+            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true });
+            outputContent.innerHTML = converter.makeHtml(result.generated_text);
+            outputPanel.classList.remove('hidden');
+            outputPanel.classList.add('flex');
+            showNotification('Draf Kajian Teori berhasil dibuat!', 'success');
+        } catch (error) {
+            showNotification(error.message, 'error');
+        } finally {
+            loadingOverlay.style.display = 'none';
+            generateBtn.disabled = false;
+        }
+    };
+
+    // --- LOGIKA EKSPOR ---
+    const loadImageAsBase64 = (url) => {
+        // ... (Fungsi ini sama seperti sebelumnya)
+    };
+
+    const handlePdfExport = async () => {
+        // Menggunakan logika perenderan manual yang sudah terbukti
+    };
+
+    const handleWordExport = async () => {
+        // Menggunakan logika html-docx-js yang sudah terbukti
+    };
+    
+    // Event Listeners
+    generateBtn.addEventListener('click', handleGeneration);
+    // exportPdfBtn.addEventListener('click', handlePdfExport);
+    // exportWordBtn.addEventListener('click', handleWordExport);
+    
+    renderIcons();
+});
+
+// Implementasi detail untuk fungsi-fungsi yang kompleks (ditaruh di luar DOMContentLoaded)
+const loadImageAsBase64 = (url) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = reject;
+        img.src = url;
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const exportWordBtn = document.getElementById('export-word-btn');
+    const outputContent = document.getElementById('output-content');
+    const showNotification = (message, type = 'success') => { // re-declare for this scope
+        const container = document.getElementById('notification-container');
+        const notif = document.createElement('div');
+        notif.className = `toast-notification ${type}`;
+        notif.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'x-circle'}"></i><span>${message}</span>`;
+        container.appendChild(notif);
+        window.lucide && window.lucide.createIcons();
+        setTimeout(() => notif.remove(), 4000);
+    };
+
+    const handlePdfExport = async () => {
+        if (!outputContent.innerHTML.trim()) {
+            showNotification('Tidak ada konten untuk diekspor.', 'error');
+            return;
+        }
+        showNotification('Mempersiapkan PDF Profesional...', 'success');
+        exportPdfBtn.disabled = true;
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const margin = 15;
+            const maxWidth = doc.internal.pageSize.width - margin * 2;
+            let y = 15;
+            const checkPageBreak = (currentY, elementHeight) => {
+                if (currentY + elementHeight > doc.internal.pageSize.height - margin) {
+                    doc.addPage();
+                    return margin;
+                }
+                return currentY;
+            };
+
+            try {
+                const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
+                const logoData = await loadImageAsBase64(logoUrl);
+                doc.addImage(logoData, 'PNG', doc.internal.pageSize.width - margin - 30, 10, 30, 8);
+            } catch (logoError) { console.warn("Logo tidak dapat dimuat."); }
+
+            doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor('#000000');
+            doc.text("BAB II: Kajian Teori", margin, y);
+            y += 8;
+
+            const researchTitle = document.getElementById('input-title').value.trim();
+            if (researchTitle) {
+                doc.setFontSize(11).setFont('helvetica', 'italic').setTextColor('#444444');
+                const splitTitle = doc.splitTextToSize(`Topik: ${researchTitle}`, maxWidth);
+                doc.text(splitTitle, margin, y);
+                y += (splitTitle.length * 5) + 5;
+            }
+            
+            doc.setLineWidth(0.5).line(margin, y, doc.internal.pageSize.width - margin, y);
+            y += 8;
+            doc.setTextColor('#000000');
+
+            const sourceElement = document.getElementById('output-content');
+            const children = sourceElement.childNodes;
+
+            for (const node of children) {
+                if (node.nodeType !== 1 || !node.textContent.trim()) continue;
+                const tagName = node.tagName.toUpperCase();
+                
+                if (tagName === 'H3') {
+                    y = checkPageBreak(y, 8);
+                    doc.setFontSize(12).setFont('helvetica', 'bold');
+                    const lines = doc.splitTextToSize(node.textContent, maxWidth);
+                    doc.text(lines, margin, y);
+                    y += (lines.length * 6) + 3;
+                } else if (tagName === 'P') {
+                    doc.setFontSize(11).setFont('helvetica', 'normal');
+                    const lines = doc.splitTextToSize(node.textContent, maxWidth);
+                    const elementHeight = lines.length * 5;
+                    y = checkPageBreak(y, elementHeight);
+                    doc.text(lines, margin, y); 
+                    y += elementHeight + 4;
+                }
+            }
+            
+            doc.save(`Kajian Teori - ${researchTitle || 'Hasil'}.pdf`);
+            showNotification('PDF profesional berhasil dibuat!', 'success');
+        } catch (error) {
+            console.error("Export error:", error);
+            showNotification("Gagal mengekspor ke PDF.", 'error');
+        } finally {
+            exportPdfBtn.disabled = false;
+        }
+    };
+
+    const handleWordExport = async () => {
+        if (!outputContent.innerHTML.trim()) {
+            showNotification('Tidak ada konten untuk diekspor.', 'error');
+            return;
+        }
+        showNotification('Mempersiapkan file DOCX...', 'success');
+        exportWordBtn.disabled = true;
+
+        try {
+            const title = `<h1>BAB II: Kajian Teori</h1><h2>${document.getElementById('input-title').value.trim()}</h2>`;
+            const finalHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${title}${outputContent.innerHTML}</body></html>`;
+            const converted = htmlDocx.asBlob(finalHtml);
+            saveAs(converted, `Kajian Teori - ${document.getElementById('input-title').value.trim() || 'Hasil'}.docx`);
+        } catch (error) {
+            console.error("Word export error:", error);
+            showNotification("Gagal mengekspor ke Word.", 'error');
+        } finally {
+            exportWordBtn.disabled = false;
+        }
+    };
+    
+    // Re-attach event listeners in this scope
+    if(exportPdfBtn) exportPdfBtn.addEventListener('click', handlePdfExport);
+    if(exportWordBtn) exportWordBtn.addEventListener('click', handleWordExport);
+});
+
+</script>
+{% endblock %}
