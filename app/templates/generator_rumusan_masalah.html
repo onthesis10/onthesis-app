@@ -4,9 +4,11 @@
 
 {% block page_styles %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
     .io-panel {
@@ -323,6 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // ===================================================================
+    // FUNGSI EKSPOR PROFESIONAL (FINAL)
+    // ===================================================================
     const handleExport = async () => {
         const content = document.getElementById('output-content').innerHTML;
         if (!content) {
@@ -370,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 callback: function(doc) {
                     const fileName = `Rumusan Masalah - ${researchTitle || 'Hasil'}.pdf`;
                     doc.save(fileName);
+                    showNotification('PDF berhasil dibuat!', 'success');
                 },
                 x: 15,
                 y: 50, // Posisi Y setelah header dan judul
@@ -382,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Export error:", error);
-            showNotification("Gagal mengekspor ke PDF.", 'error');
+            showNotification("Gagal mengekspor ke PDF. Cek Console (F12) untuk detail.", 'error');
         } finally {
             exportPdfBtn.disabled = false;
         }
