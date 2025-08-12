@@ -519,7 +519,6 @@ def api_writing_assistant():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# --- MODIFIKASI: Rute API untuk Generator Kajian Teori dengan Logika Retry ---
 @app.route('/api/generate-theory', methods=['POST'])
 @login_required
 def api_generate_theory():
@@ -547,11 +546,13 @@ def api_generate_theory():
         core_api_key = os.getenv('CORE_API_KEY')
         if not core_api_key: return jsonify({'error': 'Kunci API CORE tidak dikonfigurasi di server.'}), 500
         
-        core_query = f'"{keywords}"'
+        # --- PERBAIKAN: Memecah kata kunci untuk pencarian yang lebih baik ---
+        keyword_list = [keyword.strip() for keyword in keywords.split(',')]
+        core_query = " AND ".join(keyword_list)
+        
         core_url = f"https://api.core.ac.uk/v3/search/works?q={core_query}&limit=25"
         core_headers = {"Authorization": f"Bearer {core_api_key}"}
         
-        # Menggunakan fungsi helper baru dengan retry
         core_response = make_api_request_with_retry(core_url, headers=core_headers)
         core_results = core_response.json().get('results', [])
 
@@ -567,7 +568,6 @@ def api_generate_theory():
             if not doi: continue
 
             crossref_url = f"https://api.crossref.org/works/{doi}"
-            # Menggunakan fungsi helper baru juga untuk CrossRef
             crossref_response = make_api_request_with_retry(crossref_url, headers=crossref_headers, timeout=10)
             
             if crossref_response and crossref_response.status_code == 200:
