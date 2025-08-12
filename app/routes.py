@@ -349,18 +349,61 @@ def api_writing_assistant():
         task = data.get('task')
         context = data.get('context')
         if not task or not context: return jsonify({'error': 'Task dan context diperlukan.'}), 400
+        
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = ""
+
         if task == 'generate_outline':
             prompt = f"Buatkan kerangka skripsi yang terstruktur dan logis berdasarkan judul berikut: \"{context}\""
+        
         elif task == 'generate_abstract':
             prompt = f"Buatkan draf abstrak yang ringkas dan padat (sekitar 200-250 kata) berdasarkan isi skripsi berikut:\n\n{context}"
+        
+        # --- TAMBAHKAN BLOK INI ---
+        elif task == 'generate_background':
+            # Pastikan context adalah dictionary
+            if not isinstance(context, dict):
+                return jsonify({'error': 'Context untuk generate_background harus berupa objek.'}), 400
+            
+            # Ekstrak data dari context
+            topic = context.get('topic', '')
+            problem = context.get('problem', 'Belum ditentukan secara spesifik, jelaskan masalah umum terkait topik.')
+            goal = context.get('goal', 'Belum ditentukan, jelaskan tujuan umum penelitian pada topik ini.')
+            location = context.get('location', 'Umum/Tidak spesifik.')
+            writing_mode = context.get('writingMode', 'Akademik Formal')
+            citation_style = context.get('citationStyle', 'APA 7')
+
+            # Buat prompt yang detail untuk AI
+            prompt = f"""
+                Anda adalah seorang asisten penulis skripsi ahli dengan gaya penulisan yang profesional dan akademis. Tugas Anda adalah membuat draf Latar Belakang Masalah untuk sebuah skripsi berdasarkan informasi berikut:
+
+                1.  **Topik Utama:** {topic}
+                2.  **Masalah yang Diamati:** {problem}
+                3.  **Tujuan Penelitian:** {goal}
+                4.  **Konteks/Lokasi (jika ada):** {location}
+
+                Instruksi Penulisan:
+                * **Mode Penulisan:** {writing_mode}.
+                * **Gaya Sitasi:** {citation_style}.
+                * **Struktur Output:** Hasilkan teks dalam format Markdown dengan struktur wajib sebagai berikut:
+                    * `### 1. Pendahuluan`: Pengenalan topik secara umum.
+                    * `### 2. Masalah Aktual dan Data Pendukung`: Jelaskan masalah dengan mengintegrasikan data atau fakta relevan. Jika memungkinkan, cari dan sertakan data statistik pendukung (misalnya dari BPS, lembaga survei, atau jurnal) dan berikan sitasi palsu sesuai gaya yang diminta, contoh: (Nama Lembaga, 2024).
+                    * `### 3. Relevansi dan Kesenjangan Penelitian`: Jelaskan mengapa topik ini penting dan apa yang belum banyak dibahas oleh penelitian sebelumnya.
+                    * `### 4. Transisi ke Rumusan Masalah`: Tutup latar belakang dengan kalimat yang mengarah ke rumusan masalah.
+
+                Tulis draf Latar Belakang Masalah sekarang.
+            """
+        # --- AKHIR BLOK TAMBAHAN ---
+
         else:
             return jsonify({'error': 'Task tidak valid.'}), 400
+            
         response = model.generate_content(prompt)
         return jsonify({'generated_text': response.text})
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/interpret-analysis', methods=['POST'])
 @login_required

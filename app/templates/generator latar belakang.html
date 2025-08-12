@@ -14,7 +14,7 @@
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
         border-radius: 1rem;
-        padding: 2rem; /* Padding disesuaikan */
+        padding: 2rem;
         transition: all 0.3s ease-in-out;
     }
     .io-textarea {
@@ -39,14 +39,13 @@
         overflow-y: auto;
         color: var(--text-secondary);
     }
-    /* Menggunakan gaya .prose untuk konsistensi */
     .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
     .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
     .io-output .prose a { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dashed var(--accent-cyan); }
     .io-output .prose a:hover { color: var(--text-primary); }
     .io-output .prose pre { background-color: var(--bg-canvas); border: 1px solid var(--border-panel); border-radius: 0.5rem; padding: 1rem; }
     
-    .control-group label, .form-step label {
+    .form-step label {
         display: block;
         font-size: 1rem;
         font-weight: 600;
@@ -79,7 +78,6 @@
         box-shadow: 0 0 0 3px var(--accent-cyan-glow);
     }
     
-    /* Menggunakan gaya .btn-primary dari styles.css */
     #generate-btn {
         display: inline-flex;
         align-items: center;
@@ -92,7 +90,7 @@
         transition: all 0.2s ease-in-out;
         cursor: pointer;
         background-color: var(--accent-cyan);
-        color: var(--bg-panel); /* Disesuaikan agar kontras */
+        color: var(--bg-panel);
     }
      html.light #generate-btn {
         color: #fff;
@@ -106,14 +104,12 @@
         filter: none;
     }
 
-    /* Animasi notifikasi */
     @keyframes fade-in-out {
       0% { opacity: 0; transform: translateY(20px); } 10% { opacity: 1; transform: translateY(0); }
       90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(20px); }
     }
     .animate-fade-in-out { animation: fade-in-out 4s ease-in-out forwards; }
 
-    /* Gaya untuk Loading Overlay disesuaikan dengan tema */
     #loading-overlay {
         position: fixed;
         top: 0;
@@ -146,9 +142,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="h-full w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
+<!-- Kontainer utama dengan layout vertikal dan scroll -->
+<div class="h-full w-full p-4 sm:p-6 lg:p-8 flex flex-col items-center gap-8 overflow-y-auto">
     <!-- Header Halaman Generator -->
-    <header class="flex-shrink-0 flex items-center gap-4 animate-fade-in-up">
+    <header class="w-full max-w-4xl flex-shrink-0 flex items-center gap-4 animate-fade-in-up">
         <a href="/writing_assistant" class="back-to-menu btn-secondary !p-2" title="Kembali ke Menu Asisten">
             <i data-lucide="arrow-left"></i>
         </a>
@@ -159,31 +156,30 @@
     </header>
 
     <!-- Panel Input & Kontrol Utama -->
-    <div class="io-panel w-full max-w-4xl mx-auto flex flex-col gap-8">
-        <!-- Form Steps -->
-        <div class="form-step">
+    <div class="io-panel w-full max-w-4xl">
+        <div class="form-step mb-8">
             <label for="input-topic">Langkah 1: Topik Utama Penelitian</label>
             <p>Masukkan beberapa kata kunci utama yang paling relevan (3-5 kata).</p>
             <textarea id="input-topic" class="io-textarea" placeholder="Contoh: pengaruh media sosial, kesehatan mental, mahasiswa"></textarea>
         </div>
-        <div class="form-step">
+        <div class="form-step mb-8">
             <label for="input-problem">Langkah 2: Masalah yang Diangkat</label>
             <p>Jelaskan secara singkat masalah yang Anda amati terkait topik.</p>
             <textarea id="input-problem" class="io-textarea" placeholder="Contoh: Peningkatan kecemasan dan depresi di kalangan mahasiswa akibat tekanan perbandingan sosial di Instagram."></textarea>
         </div>
-        <div class="form-step">
+        <div class="form-step mb-8">
             <label for="input-goal">Langkah 3: Tujuan Penelitian</label>
             <p>Sebutkan apa yang ingin Anda capai atau buktikan melalui penelitian ini.</p>
             <textarea id="input-goal" class="io-textarea" placeholder="Contoh: Menganalisis hubungan antara intensitas penggunaan Instagram dengan tingkat depresi mahasiswa."></textarea>
         </div>
-        <div class="form-step">
+        <div class="form-step mb-8">
             <label for="input-location">Langkah 4: Lokasi Penelitian (Opsional)</label>
             <p>Spesifikkan lokasi jika ada, ini akan membantu AI mencari data yang lebih akurat.</p>
             <textarea id="input-location" class="io-textarea" placeholder="Contoh: Universitas Gadjah Mada, Yogyakarta"></textarea>
         </div>
 
         <!-- Pengaturan Penulisan -->
-        <div class="border-t border-border-panel pt-8">
+        <div class="border-t border-border-panel pt-8 mb-8">
             <h3 class="text-xl font-bold text-primary mb-4">Pengaturan Penulisan</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="control-group">
@@ -206,7 +202,7 @@
         </div>
         
         <!-- Tombol Generate -->
-        <div class="mt-4 text-center">
+        <div class="text-center">
             <button id="generate-btn" class="btn-primary">
                 <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i>
                 Generate Latar Belakang
@@ -215,7 +211,7 @@
     </div>
 
     <!-- Panel Output -->
-    <div id="output-panel" class="io-panel w-full max-w-4xl mx-auto flex-col gap-4 hidden">
+    <div id="output-panel" class="io-panel w-full max-w-4xl hidden flex-col gap-4">
         <!-- Toolbar Output -->
         <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
             <h2 class="text-xl font-bold text-primary">Hasil Draf Latar Belakang</h2>
@@ -274,16 +270,19 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { notif.remove(); }, 4000);
     };
 
-    // --- Logika Inti: Generate Konten dengan AI ---
+    // --- Logika Inti: Generate Konten dengan AI (Sudah disinkronkan dengan Backend) ---
     const handleGeneration = async () => {
-        const topic = document.getElementById('input-topic').value.trim();
-        const problem = document.getElementById('input-problem').value.trim();
-        const goal = document.getElementById('input-goal').value.trim();
-        const location = document.getElementById('input-location').value.trim();
-        const writingMode = document.getElementById('writing-mode').value;
-        const citationStyle = document.getElementById('citation-style').value;
+        // Mengumpulkan data dari form
+        const contextData = {
+            topic: document.getElementById('input-topic').value.trim(),
+            problem: document.getElementById('input-problem').value.trim(),
+            goal: document.getElementById('input-goal').value.trim(),
+            location: document.getElementById('input-location').value.trim(),
+            writingMode: document.getElementById('writing-mode').value,
+            citationStyle: document.getElementById('citation-style').value
+        };
 
-        if (!topic) {
+        if (!contextData.topic) {
             showNotification('Langkah 1 (Topik) tidak boleh kosong.', 'error');
             return;
         }
@@ -294,48 +293,41 @@ document.addEventListener('DOMContentLoaded', () => {
         generateBtn.disabled = true;
 
         try {
-            const prompt = `
-                Anda adalah seorang asisten penulis skripsi ahli dengan gaya penulisan yang profesional dan akademis. Tugas Anda adalah membuat draf Latar Belakang Masalah untuk sebuah skripsi berdasarkan informasi berikut:
-
-                1.  **Topik Utama:** ${topic}
-                2.  **Masalah yang Diamati:** ${problem || 'Belum ditentukan secara spesifik, jelaskan masalah umum terkait topik.'}
-                3.  **Tujuan Penelitian:** ${goal || 'Belum ditentukan, jelaskan tujuan umum penelitian pada topik ini.'}
-                4.  **Konteks/Lokasi (jika ada):** ${location || 'Umum/Tidak spesifik.'}
-
-                Instruksi Penulisan:
-                * **Mode Penulisan:** ${writingMode}.
-                * **Gaya Sitasi:** ${citationStyle}.
-                * **Struktur Output:** Hasilkan teks dalam format Markdown dengan struktur wajib sebagai berikut:
-                    * \`### 1. Pendahuluan\`: Pengenalan topik secara umum.
-                    * \`### 2. Masalah Aktual dan Data Pendukung\`: Jelaskan masalah dengan mengintegrasikan data atau fakta relevan. Jika memungkinkan, cari dan sertakan data statistik pendukung (misalnya dari BPS, lembaga survei, atau jurnal) dan berikan sitasi palsu sesuai gaya yang diminta, contoh: (Nama Lembaga, 2024).
-                    * \`### 3. Relevansi dan Kesenjangan Penelitian\`: Jelaskan mengapa topik ini penting dan apa yang belum banyak dibahas oleh penelitian sebelumnya.
-                    * \`### 4. Transisi ke Rumusan Masalah\`: Tutup latar belakang dengan kalimat yang mengarah ke rumusan masalah.
-
-                Tulis draf Latar Belakang Masalah sekarang.
-            `;
-
-            const apiKey = ""; // API Key akan di-handle oleh environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            // PERUBAHAN: Panggil API backend, bukan Google API langsung
+            const apiUrl = '/api/writing-assistant';
             
+            // PERUBAHAN: Buat payload sesuai kontrak API backend
             const payload = {
-                contents: [{
-                    parts: [{ text: prompt }]
-                }]
+                task: 'generate_background', // Task baru untuk backend
+                context: contextData
             };
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    // Header lain jika diperlukan (misal: CSRF token)
+                },
                 body: JSON.stringify(payload)
             });
 
+            const result = await response.json();
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'Gagal mendapat respon dari AI.');
+                // Handle error khusus dari backend (misal: batas penggunaan)
+                if (result.redirect) {
+                    showNotification('Batas penggunaan tercapai. Anda akan dialihkan.', 'error');
+                    setTimeout(() => {
+                        window.location.href = result.redirect;
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Gagal mendapat respon dari server.');
+                }
+                return; // Hentikan eksekusi jika ada error
             }
 
-            const result = await response.json();
-            const generatedText = result.candidates[0].content.parts[0].text;
+            // PERUBAHAN: Ambil hasil dari properti 'generated_text'
+            const generatedText = result.generated_text;
 
             // Menggunakan Showdown.js untuk mengubah Markdown ke HTML
             const converter = new showdown.Converter({tables: true, strikethrough: true, openLinksInNewWindow: true});
@@ -350,8 +342,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Draf latar belakang berhasil dibuat!', 'success');
 
         } catch (error) {
-            outputContent.innerHTML = `<div class="p-4 rounded-md bg-red-900/50 border border-red-500/50 text-red-300"><h4 class="font-bold">Terjadi Kesalahan</h4><p>${error.message}</p></div>`;
-            showNotification('Gagal memproses permintaan.', 'error');
+            outputPanel.classList.add('hidden'); // Sembunyikan panel jika error
+            showNotification(error.message, 'error');
         } finally {
             // Sembunyikan loading overlay dan aktifkan kembali tombol
             loadingOverlay.classList.add('hidden');
