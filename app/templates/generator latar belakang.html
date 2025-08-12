@@ -221,6 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let currentStep = 0;
 
+    // --- Fungsi untuk merender ikon (lebih aman) ---
+    const renderIcons = () => {
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    };
+
     // --- Logika Wizard (Form Multi-Step) ---
     const updateWizard = () => {
         wizardSteps.forEach((step, index) => {
@@ -230,16 +237,16 @@ document.addEventListener('DOMContentLoaded', () => {
             indicator.classList.toggle('active', index <= currentStep);
         });
         prevBtn.disabled = currentStep === 0;
+
+        // Mengganti tombol "Selanjutnya" menjadi "Generate" di langkah terakhir
         if (currentStep === wizardSteps.length - 1) {
             nextBtn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>Generate`;
-            nextBtn.classList.remove('btn-primary');
-            nextBtn.classList.add('bg-green-500', 'hover:bg-green-600', 'text-white', 'btn');
+            nextBtn.className = 'btn bg-green-500 hover:bg-green-600 text-white'; // Menggunakan className untuk mereset dan menerapkan gaya baru
         } else {
-            nextBtn.textContent = 'Selanjutnya';
-            nextBtn.classList.add('btn-primary');
-            nextBtn.classList.remove('bg-green-500', 'hover:bg-green-600', 'text-white', 'btn');
+            nextBtn.innerHTML = `Selanjutnya`;
+            nextBtn.className = 'btn-primary'; // Kembali ke gaya tombol utama
         }
-        lucide.createIcons();
+        renderIcons();
     };
 
     nextBtn.addEventListener('click', () => {
@@ -268,13 +275,12 @@ document.addEventListener('DOMContentLoaded', () => {
         notif.className = `flex items-center gap-3 px-4 py-3 text-white ${bgColor} rounded-lg shadow-2xl mb-2 animate-fade-in-out`;
         notif.innerHTML = `${icon}<span>${message}</span>`;
         container.appendChild(notif);
-        lucide.createIcons();
+        renderIcons();
         setTimeout(() => { notif.remove(); }, 4000);
     };
 
     // --- Logika Inti: Generate Konten (Simulasi) ---
     const handleGeneration = () => {
-        // Simulasi pengumpulan data dari form
         const topic = document.getElementById('input-topic').value;
         if (!topic) {
             showNotification('Langkah 1 (Topik) tidak boleh kosong.', 'error');
@@ -295,7 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const writingMode = document.getElementById('writing-mode').value;
             const citationStyle = document.getElementById('citation-style').value;
             
-            // Contoh hasil simulasi
             const mockResult = `
                 <h3 class="font-bold text-primary">1. Pendahuluan</h3>
                 <p>Di era digital saat ini, ${topic} telah menjadi bagian tak terpisahkan dari kehidupan sehari-hari, terutama di kalangan mahasiswa. Platform seperti Instagram, TikTok, dan Twitter menawarkan ruang untuk interaksi sosial, namun juga membawa dampak signifikan terhadap berbagai aspek kehidupan pengguna, termasuk kesehatan mental.</p>
@@ -323,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inisialisasi awal
     updateWizard();
-    lucide.createIcons();
+    renderIcons();
 });
 </script>
 {% endblock %}
