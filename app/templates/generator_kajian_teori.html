@@ -15,7 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 
 <style>
-    /* ... (Gaya lain tetap sama) ... */
+    /* Menggunakan gaya yang konsisten dengan halaman lain */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -71,12 +71,13 @@
         gap: 0.5rem;
         color: var(--text-secondary);
         font-size: 0.9rem;
+        cursor: pointer;
     }
     .checkbox-group input {
         accent-color: var(--accent-cyan);
     }
 
-    /* --- PERBAIKAN: Gaya Loading Overlay Baru yang Estetis --- */
+    /* Gaya Loading Overlay Baru yang Estetis */
     #loading-overlay {
         position: fixed;
         top: 0;
@@ -158,7 +159,7 @@
             </a>
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Kajian Teori (BAB 2)</h1>
-                <p class="text-md text-secondary mt-1">Buat draf kajian teori, penelitian terdahulu, dan daftar pustaka dari sumber-sumber akademik.</p>
+                <p class="text-md text-secondary mt-1">Buat draf kajian teori, penelitian terdahulu, dan daftar pustaka dari berbagai sumber akademik.</p>
             </div>
         </div>
     </header>
@@ -173,7 +174,7 @@
 
             <div class="control-group mb-6">
                 <label for="input-keywords">2. Kata Kunci / Topik Utama</label>
-                <p>Pisahkan dengan koma. Contoh: media sosial, kesehatan mental, mahasiswa, depresi</p>
+                <p>Pisahkan dengan koma. Contoh: media sosial, kesehatan mental, mahasiswa</p>
                 <textarea id="input-keywords" class="io-textarea" placeholder="media sosial, kesehatan mental, mahasiswa"></textarea>
             </div>
             
@@ -204,12 +205,14 @@
             </div>
 
             <div class="control-group mb-8">
-                <label>6. Tipe Sumber (Opsional)</label>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 checkbox-group">
-                    <label><input type="checkbox" name="source_type" value="journal article"> Jurnal</label>
-                    <label><input type="checkbox" name="source_type" value="book"> Buku</label>
-                    <label><input type="checkbox" name="source_type" value="conference paper"> Conference Paper</label>
-                    <label><input type="checkbox" name="source_type" value="dissertation"> Disertasi</label>
+                <label>6. Pilih Sumber Referensi</label>
+                <p>Pilih minimal satu. Semakin banyak sumber, semakin baik hasilnya.</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 checkbox-group">
+                    <label><input type="checkbox" name="source" value="core" checked> CORE</label>
+                    <label><input type="checkbox" name="source" value="openalex"> OpenAlex</label>
+                    <label><input type="checkbox" name="source" value="doaj"> DOAJ</label>
+                    <label><input type="checkbox" name="source" value="eric"> ERIC</label>
+                    <label><input type="checkbox" name="source" value="pubmed"> PubMed</label>
                 </div>
             </div>
 
@@ -232,9 +235,6 @@
                     <button id="export-word-btn" class="btn-secondary !p-2" title="Ekspor ke Word">
                         <i data-lucide="file-text"></i>
                     </button>
-                    <button id="export-bib-btn" class="btn-secondary !p-2" title="Ekspor ke BibTeX (.bib)" disabled>
-                        <i data-lucide="book-marked"></i>
-                    </button>
                 </div>
             </div>
             <div id="output-content" class="io-output prose max-w-none"></div>
@@ -243,8 +243,6 @@
 </div>
 
 <div id="notification-container"></div>
-
-<!-- PERBAIKAN: Struktur HTML Loading Overlay Baru -->
 <div id="loading-overlay" style="display: none;">
     <div class="sci-fi-loader">
         <div class="scanner"><span></span></div>
@@ -275,12 +273,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => notif.remove(), 4000);
     };
 
-    // --- PERBAIKAN: Logika untuk Teks Loading Dinamis ---
+    // Logika untuk Teks Loading Dinamis
     let loadingInterval;
     const loadingMessages = [
-        "Menghubungi database akademik CORE...",
-        "Mengumpulkan metadata dari CrossRef...",
-        "Menganalisis dan memilih sumber terbaik...",
+        "Menghubungi database akademik...",
+        "Mengumpulkan metadata dari berbagai sumber...",
+        "Menganalisis dan memilih referensi terbaik...",
         "Mengirimkan instruksi ke model AI...",
         "Menyusun draf Landasan Teori...",
         "Merangkum Penelitian Terdahulu...",
@@ -296,7 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const selectedTypes = Array.from(document.querySelectorAll('input[name="source_type"]:checked')).map(cb => cb.value);
+        const selectedSources = Array.from(document.querySelectorAll('input[name="source"]:checked')).map(cb => cb.value);
+        if (selectedSources.length === 0) {
+            showNotification('Pilih minimal satu sumber referensi.', 'error');
+            return;
+        }
         
         const payload = {
             title: document.getElementById('input-title').value.trim(),
@@ -304,20 +306,19 @@ document.addEventListener('DOMContentLoaded', () => {
             language: document.getElementById('input-language').value,
             style: document.getElementById('input-style').value,
             length: document.getElementById('input-length').value,
-            source_types: selectedTypes
+            sources: selectedSources
         };
 
         loadingOverlay.style.display = 'flex';
         generateBtn.disabled = true;
 
-        // Mulai interval untuk teks loading
         const loadingTextEl = document.getElementById('loading-text');
         let messageIndex = 0;
         loadingTextEl.textContent = loadingMessages[messageIndex];
         loadingInterval = setInterval(() => {
             messageIndex = (messageIndex + 1) % loadingMessages.length;
             loadingTextEl.textContent = loadingMessages[messageIndex];
-        }, 3000); // Ganti pesan setiap 3 detik
+        }, 3500);
 
         try {
             const response = await fetch('/api/generate-theory', {
@@ -345,15 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             showNotification(error.message, 'error');
         } finally {
-            clearInterval(loadingInterval); // Hentikan interval
+            clearInterval(loadingInterval);
             loadingOverlay.style.display = 'none';
             generateBtn.disabled = false;
         }
     };
     
-    // Event Listeners
     generateBtn.addEventListener('click', handleGeneration);
-    
     renderIcons();
 });
 
