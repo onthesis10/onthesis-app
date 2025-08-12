@@ -260,7 +260,15 @@ def chat_ai(): return render_template('chat_ai.html')
 
 @app.route('/writing-assistant')
 @login_required
-def writing_assistant(): return render_template('writing_assistant.html')
+def writing_assistant(): 
+    return render_template('writing_assistant.html')
+
+# --- TAMBAHKAN RUTE BARU INI UNTUK MENGHINDARI ERROR ---
+@app.route('/generator-latar-belakang')
+@login_required
+def generator_latar_belakang():
+    return render_template('generator_latar_belakang.html')
+# --- AKHIR DARI RUTE BARU ---
 
 @app.route('/data-analysis')
 @login_required
