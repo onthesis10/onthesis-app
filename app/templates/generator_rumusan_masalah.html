@@ -6,12 +6,9 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
-    /* CATATAN: Seluruh blok style ini telah dibersihkan dari karakter spasi non-standar (non-breaking spaces) 
-    untuk memperbaiki kesalahan parsing CSS di editor kode.
-    */
+    /* ... (Tidak ada perubahan pada CSS, semua gaya tetap sama) ... */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -35,7 +32,6 @@
         border-color: var(--accent-cyan);
         box-shadow: 0 0 0 3px var(--accent-cyan-glow);
     }
-    
     #output-panel {
         background-color: var(--bg-panel);
     }
@@ -50,7 +46,6 @@
     }
     .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
     .io-output .prose strong, .io-output .prose h2, .io-output .prose code { color: var(--text-primary); }
-    
     .control-group label {
         display: block;
         font-size: 1rem;
@@ -79,7 +74,6 @@
         background-repeat: no-repeat;
         background-size: 1.5em 1.5em;
     }
-    
     #generate-btn {
         display: inline-flex;
         align-items: center;
@@ -97,7 +91,6 @@
     html.light #generate-btn { color: #fff; }
     #generate-btn:hover { filter: brightness(1.1); }
     #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
-
     #loading-overlay {
         position: fixed;
         top: 0;
@@ -115,7 +108,6 @@
         color: var(--text-primary);
         transition: opacity 0.3s ease;
     }
-    
     .futuristic-spinner {
         width: 60px;
         height: 60px;
@@ -139,7 +131,6 @@
         animation: spin 1.5s linear infinite reverse;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     #notification-container {
         position: fixed;
         bottom: 1.25rem;
@@ -246,6 +237,7 @@
 {% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // ... (Tidak ada perubahan pada fungsi handleGeneration, showNotification, dll) ...
     const generateBtn = document.getElementById('generate-btn');
     const outputPanel = document.getElementById('output-panel');
     const outputContent = document.getElementById('output-content');
@@ -312,32 +304,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const handleExport = async () => {
-        const elementToExport = document.getElementById('output-panel');
-        const content = document.getElementById('output-content').innerHTML;
+    // --- PERUBAHAN UTAMA: FUNGSI EKSPOR PDF PROFESIONAL ---
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    };
 
+    const handleExport = async () => {
+        const content = document.getElementById('output-content').innerHTML;
         if (!content) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
-
+        
         showNotification('Mempersiapkan file PDF...', 'success');
-
-        const actionButtons = elementToExport.querySelector('.flex.items-center.gap-2');
-        if (actionButtons) actionButtons.style.display = 'none';
+        exportPdfBtn.disabled = true;
 
         try {
-            const canvas = await html2canvas(elementToExport, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: getComputedStyle(document.body).getPropertyValue('--bg-panel')
-            });
-
-            if (actionButtons) actionButtons.style.display = 'flex';
-
-            const imgData = canvas.toDataURL('image/png');
-            const title = `Rumusan Masalah - ${document.getElementById('input-topic').value.trim() || 'Hasil'}`;
-
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({
                 orientation: 'portrait',
@@ -345,35 +340,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 format: 'a4'
             });
 
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 15;
-            const contentWidth = pageWidth - (margin * 2);
-            const contentHeight = (canvas.height * contentWidth) / canvas.width;
+            // 1. Tambahkan Header & Logo (seperti di contoh)
+            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
+            const logoData = await loadImageAsBase64(logoUrl);
+            const pageWidth = doc.internal.pageSize.width;
+            doc.addImage(logoData, 'PNG', pageWidth - 15 - 30, 10, 30, 8);
             
-            let heightLeft = contentHeight;
-            let position = margin;
+            // 2. Tambahkan Judul Dokumen
+            doc.setFontSize(18);
+            doc.setTextColor('#181C32'); // Warna teks primer
+            const docTitle = "Hasil Generator Rumusan Masalah";
+            doc.text(docTitle, 105, 25, { align: 'center' });
 
-            doc.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-            heightLeft -= (pageHeight - (margin * 2));
+            // 3. Tambahkan Judul Penelitian dari Input
+            doc.setFontSize(12);
+            doc.setTextColor('#5E6278'); // Warna teks sekunder
+            const researchTitle = document.getElementById('input-topic').value.trim();
+            const splitTitle = doc.splitTextToSize(`Topik: ${researchTitle}`, 180); // 180mm = lebar konten
+            doc.text(splitTitle, 105, 35, { align: 'center' });
+            
+            // 4. Render Konten HTML sebagai Teks Asli di PDF
+            const sourceHtml = document.getElementById('output-content');
+            
+            // Atur warna teks di konten agar sesuai dengan tema terang untuk PDF
+            $(sourceHtml).find('*').css('color', '#000000');
 
-            while (heightLeft > 0) {
-                position = -heightLeft - margin;
-                doc.addPage();
-                doc.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-                heightLeft -= pageHeight;
-            }
-
-            doc.save(`${title}.pdf`);
+            await doc.html(sourceHtml, {
+                callback: function(doc) {
+                    const fileName = `Rumusan Masalah - ${researchTitle || 'Hasil'}.pdf`;
+                    doc.save(fileName);
+                },
+                x: 15,
+                y: 50, // Posisi Y setelah header dan judul
+                width: 180, // Lebar konten (210mm A4 - 15mm margin kiri - 15mm margin kanan)
+                windowWidth: sourceHtml.scrollWidth // Gunakan lebar scroll untuk kalkulasi
+            });
+            
+            // Kembalikan warna asli setelah render
+            $(sourceHtml).find('*').css('color', '');
 
         } catch (error) {
             console.error("Export error:", error);
             showNotification("Gagal mengekspor ke PDF.", 'error');
-            if (actionButtons) actionButtons.style.display = 'flex';
+        } finally {
+            exportPdfBtn.disabled = false;
         }
     };
-
+    
     const handleCopy = () => {
+        // ... (fungsi handleCopy tidak berubah) ...
         const textToCopy = outputContent.innerText || outputContent.textContent;
         if (!textToCopy) {
             showNotification('Tidak ada teks untuk disalin.', 'error');
