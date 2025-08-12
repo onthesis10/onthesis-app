@@ -3,15 +3,15 @@
 {% block title %}Generator Rumusan Masalah - Asisten AI{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka Ikon -->
 <script src="https://unpkg.com/lucide@latest"></script>
-<!-- Pustaka untuk konversi Markdown ke HTML -->
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
-<!-- Pustaka untuk Ekspor Profesional -->
-<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
+    /* CATATAN: Seluruh blok style ini telah dibersihkan dari karakter spasi non-standar (non-breaking spaces) 
+    untuk memperbaiki kesalahan parsing CSS di editor kode.
+    */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -224,7 +224,7 @@
                     <button id="copy-btn" class="btn-secondary !p-2" title="Salin Teks">
                         <i data-lucide="copy"></i>
                     </button>
-                    <button id="export-word-btn" class="btn-secondary !p-2" title="Ekspor ke Word">
+                    <button id="export-pdf-btn" class="btn-secondary !p-2" title="Ekspor ke PDF">
                         <i data-lucide="file-text"></i>
                     </button>
                 </div>
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const outputContent = document.getElementById('output-content');
     const loadingOverlay = document.getElementById('loading-overlay');
     const copyBtn = document.getElementById('copy-btn');
-    const exportWordBtn = document.getElementById('export-word-btn');
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
     
     const renderIcons = () => {
         if (window.lucide) window.lucide.createIcons();
@@ -312,67 +312,64 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- PERBAIKAN: Logika Ekspor Profesional ---
-    const loadImageAsBase64 = (url) => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                resolve(canvas.toDataURL('image/png'));
-            };
-            img.onerror = reject;
-            img.src = url;
-        });
-    };
-
     const handleExport = async () => {
-        const content = outputContent.innerHTML;
+        const elementToExport = document.getElementById('output-panel');
+        const content = document.getElementById('output-content').innerHTML;
+
         if (!content) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
-        showNotification(`Mempersiapkan file DOCX...`, 'success');
-        
+
+        showNotification('Mempersiapkan file PDF...', 'success');
+
+        const actionButtons = elementToExport.querySelector('.flex.items-center.gap-2');
+        if (actionButtons) actionButtons.style.display = 'none';
+
         try {
-            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
-            const logoBase64 = await loadImageAsBase64(logoUrl);
-            const title = `Rumusan Masalah - ${document.getElementById('input-topic').value.trim()}`;
+            const canvas = await html2canvas(elementToExport, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--bg-panel')
+            });
+
+            if (actionButtons) actionButtons.style.display = 'flex';
+
+            const imgData = canvas.toDataURL('image/png');
+            const title = `Rumusan Masalah - ${document.getElementById('input-topic').value.trim() || 'Hasil'}`;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 15;
+            const contentWidth = pageWidth - (margin * 2);
+            const contentHeight = (canvas.height * contentWidth) / canvas.width;
             
-            // Membuat HTML lengkap dengan gaya dan header
-            const fullHtml = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; }
-                        p, li { line-height: 1.5; }
-                        h1 { text-align: center; }
-                        .header { text-align: right; margin-bottom: 20px; }
-                        .header img { width: 150px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <img src="${logoBase64}" alt="Logo">
-                    </div>
-                    <h1>${title}</h1>
-                    ${content}
-                </body>
-                </html>
-            `;
-            
-            const converted = htmlDocx.asBlob(fullHtml);
-            saveAs(converted, `${title}.docx`);
+            let heightLeft = contentHeight;
+            let position = margin;
+
+            doc.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+            heightLeft -= (pageHeight - (margin * 2));
+
+            while (heightLeft > 0) {
+                position = -heightLeft - margin;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+                heightLeft -= pageHeight;
+            }
+
+            doc.save(`${title}.pdf`);
 
         } catch (error) {
             console.error("Export error:", error);
-            showNotification("Gagal memuat logo untuk ekspor.", 'error');
+            showNotification("Gagal mengekspor ke PDF.", 'error');
+            if (actionButtons) actionButtons.style.display = 'flex';
         }
     };
 
@@ -398,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateBtn.addEventListener('click', handleGeneration);
     copyBtn.addEventListener('click', handleCopy);
-    exportWordBtn.addEventListener('click', handleExport);
+    exportPdfBtn.addEventListener('click', handleExport);
 
     renderIcons();
 });
