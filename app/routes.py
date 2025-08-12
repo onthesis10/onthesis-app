@@ -367,21 +367,19 @@ def api_writing_assistant():
         elif task == 'generate_abstract':
             prompt = f"Buatkan draf abstrak yang ringkas dan padat (sekitar 200-250 kata) berdasarkan isi skripsi berikut:\n\n{context}"
         
-        # --- TAMBAHKAN BLOK INI ---
+        # --- PERBAIKAN: Blok ini diperbarui untuk fitur baru ---
         elif task == 'generate_background':
-            # Pastikan context adalah dictionary
             if not isinstance(context, dict):
                 return jsonify({'error': 'Context untuk generate_background harus berupa objek.'}), 400
             
-            # Ekstrak data dari context
             topic = context.get('topic', '')
             problem = context.get('problem', 'Belum ditentukan secara spesifik, jelaskan masalah umum terkait topik.')
             goal = context.get('goal', 'Belum ditentukan, jelaskan tujuan umum penelitian pada topik ini.')
             location = context.get('location', 'Umum/Tidak spesifik.')
             writing_mode = context.get('writingMode', 'Akademik Formal')
             citation_style = context.get('citationStyle', 'APA 7')
+            paragraph_count = context.get('paragraphCount', '4')
 
-            # Buat prompt yang detail untuk AI
             prompt = f"""
                 Anda adalah seorang asisten penulis skripsi ahli dengan gaya penulisan yang profesional dan akademis. Tugas Anda adalah membuat draf Latar Belakang Masalah untuk sebuah skripsi berdasarkan informasi berikut:
 
@@ -393,15 +391,17 @@ def api_writing_assistant():
                 Instruksi Penulisan:
                 * **Mode Penulisan:** {writing_mode}.
                 * **Gaya Sitasi:** {citation_style}.
-                * **Struktur Output:** Hasilkan teks dalam format Markdown dengan struktur wajib sebagai berikut:
+                * **Jumlah Paragraf:** Tulis draf Latar Belakang Masalah dalam {paragraph_count} paragraf yang terstruktur.
+                * **Struktur Output:** Hasilkan teks dalam format Markdown dengan struktur berikut:
                     * `### 1. Pendahuluan`: Pengenalan topik secara umum.
                     * `### 2. Masalah Aktual dan Data Pendukung`: Jelaskan masalah dengan mengintegrasikan data atau fakta relevan. Jika memungkinkan, cari dan sertakan data statistik pendukung (misalnya dari BPS, lembaga survei, atau jurnal) dan berikan sitasi palsu sesuai gaya yang diminta, contoh: (Nama Lembaga, 2024).
                     * `### 3. Relevansi dan Kesenjangan Penelitian`: Jelaskan mengapa topik ini penting dan apa yang belum banyak dibahas oleh penelitian sebelumnya.
                     * `### 4. Transisi ke Rumusan Masalah`: Tutup latar belakang dengan kalimat yang mengarah ke rumusan masalah.
+                * **Daftar Pustaka:** Setelah semua paragraf, buat bagian baru dengan judul `### Daftar Pustaka`. Di bawah judul ini, sertakan 3-5 referensi fiktif yang relevan dengan topik, diformat dengan benar sesuai gaya sitasi {citation_style}.
 
-                Tulis draf Latar Belakang Masalah sekarang.
+                Tulis draf Latar Belakang Masalah dan Daftar Pustaka sekarang.
             """
-        # --- AKHIR BLOK TAMBAHAN ---
+        # --- AKHIR BLOK PERBAIKAN ---
 
         else:
             return jsonify({'error': 'Task tidak valid.'}), 400
@@ -930,4 +930,4 @@ def payment_notification():
         return jsonify({'status': 'ok'}), 200
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
-        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 

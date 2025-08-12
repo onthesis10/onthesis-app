@@ -32,16 +32,27 @@
         border-color: var(--accent-cyan);
         box-shadow: 0 0 0 3px var(--accent-cyan-glow);
     }
+    
+    /* --- PERBAIKAN: Gaya Kartu Hasil --- */
+    #output-panel {
+        background-color: #FFFFFF; /* Latar belakang putih */
+        border: 1px solid var(--border-panel);
+        border-top: 4px solid var(--accent-cyan); /* Aksen biru di atas */
+        color: var(--text-primary-light, #181C32); /* Teks gelap untuk kontras */
+    }
+    #output-panel h2 {
+        color: var(--text-primary-light, #181C32);
+    }
     .io-output {
         width: 100%;
         min-height: 300px;
         overflow-y: auto;
-        color: var(--text-secondary);
+        color: var(--text-secondary-light, #5E6278);
     }
-    .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
-    .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
+    .io-output .prose p, .io-output .prose li { color: var(--text-secondary-light, #5E6278); }
+    .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary-light, #181C32); }
     .io-output .prose a { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dashed var(--accent-cyan); }
-    .io-output .prose pre { background-color: var(--bg-canvas); border: 1px solid var(--border-panel); border-radius: 0.5rem; padding: 1rem; }
+    .io-output .prose pre { background-color: #f0f2f5; border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 1rem; }
     
     .wizard-step { display: none; }
     .wizard-step.active { display: block; animation: fade-in-up 0.4s; }
@@ -66,7 +77,7 @@
         background-color: var(--accent-cyan);
     }
 
-    .wizard-step label {
+    .wizard-step label, .control-group label {
         display: block;
         font-size: 1rem;
         font-weight: 600;
@@ -158,48 +169,31 @@
         transition: opacity 0.3s ease;
     }
     
-    /* Animasi Buku */
-    .book {
-        --book-color: var(--border-panel);
-        --page-color: var(--bg-panel);
-        --page-text-color: var(--text-secondary);
-        position: relative;
-        width: 120px;
-        height: 80px;
-        transform-style: preserve-3d;
-        transform: perspective(2000px) rotate(-30deg);
+    /* Animasi Spinner Futuristik */
+    .futuristic-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid var(--border-panel);
+        border-top-color: var(--accent-cyan);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
         margin-bottom: 2rem;
+        position: relative;
     }
-    .book__pg-shadow {
+    .futuristic-spinner::before {
+        content: '';
         position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        transform: translateZ(-2px);
-        background-color: rgba(0,0,0,0.3);
-        filter: blur(10px);
+        top: 4px;
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
+        border: 4px solid transparent;
+        border-top-color: var(--accent-cyan);
+        border-radius: 50%;
+        animation: spin 1.5s linear infinite reverse;
     }
-    .book__pg {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: var(--page-color);
-        color: var(--page-text-color);
-        transform-origin: left center;
-        border: 2px solid var(--book-color);
-        animation: flip 1.2s infinite;
-    }
-    .book__pg:nth-child(2) { animation-delay: 0.15s; }
-    .book__pg:nth-child(3) { animation-delay: 0.3s; }
-    .book__pg:nth-child(4) { animation-delay: 0.45s; }
-    .book__pg:nth-child(5) { animation-delay: 0.6s; }
-    @keyframes flip {
-        0% { transform: rotateY(0deg); }
-        20% { transform: rotateY(-180deg); }
-        100% { transform: rotateY(-180deg); }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 
     /* Sistem Notifikasi Toast */
@@ -282,19 +276,28 @@
                 <div class="wizard-step">
                     <h3 class="text-xl font-bold text-primary mb-4">Langkah 5: Pengaturan Penulisan</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
+                        <div class="control-group">
                             <label for="writing-mode">Mode Penulisan</label>
                             <select id="writing-mode" class="control-select">
                                 <option>Akademik Formal</option>
                                 <option>Semi-Formal</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="control-group">
                             <label for="citation-style">Gaya Sitasi</label>
                             <select id="citation-style" class="control-select">
                                 <option>APA 7</option>
                                 <option>IEEE</option>
                                 <option>MLA</option>
+                            </select>
+                        </div>
+                        <!-- PENAMBAHAN: Opsi Jumlah Paragraf -->
+                        <div class="control-group md:col-span-2">
+                             <label for="paragraph-count">Jumlah Paragraf Latar Belakang</label>
+                            <select id="paragraph-count" class="control-select">
+                                <option value="4">4 Paragraf (Direkomendasikan)</option>
+                                <option value="3">3 Paragraf (Ringkas)</option>
+                                <option value="5">5 Paragraf (Detail)</option>
                             </select>
                         </div>
                     </div>
@@ -309,7 +312,7 @@
 
         <div id="output-panel" class="io-panel w-full max-w-4xl hidden flex-col gap-4">
             <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
-                <h2 class="text-xl font-bold text-primary">Hasil Draf Latar Belakang</h2>
+                <h2 class="text-xl font-bold">Hasil Draf Latar Belakang</h2>
                 <div class="flex items-center gap-2">
                     <button id="paraphrase-btn" class="btn-secondary !p-2" title="Parafrase Ulang"><i data-lucide="refresh-cw"></i></button>
                     <button id="export-btn" class="btn-secondary !p-2" title="Ekspor Dokumen"><i data-lucide="download"></i></button>
@@ -324,14 +327,7 @@
 <div id="notification-container"></div>
 
 <div id="loading-overlay" style="display: none;">
-    <div class="book">
-        <div class="book__pg-shadow"></div>
-        <div class="book__pg"></div>
-        <div class="book__pg"></div>
-        <div class="book__pg"></div>
-        <div class="book__pg"></div>
-        <div class="book__pg"></div>
-    </div>
+    <div class="futuristic-spinner"></div>
     <h3 class="text-xl font-semibold">AI sedang menganalisis...</h3>
     <p class="text-secondary">Mohon tunggu sebentar.</p>
 </div>
@@ -386,25 +382,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // PERBAIKAN: Fungsi Notifikasi Profesional
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         const notif = document.createElement('div');
         notif.className = `toast-notification ${type}`;
-        
         const icon = type === 'success' ? 'check-circle' : 'x-circle';
-        
-        notif.innerHTML = `
-            <i data-lucide="${icon}"></i>
-            <span>${message}</span>
-        `;
-        
+        notif.innerHTML = `<i data-lucide="${icon}"></i><span>${message}</span>`;
         container.appendChild(notif);
-        renderIcons(); // Render ikon baru
-        
-        setTimeout(() => {
-            notif.remove();
-        }, 4000);
+        renderIcons();
+        setTimeout(() => { notif.remove(); }, 4000);
     };
 
     const handleGeneration = async () => {
@@ -414,7 +400,9 @@ document.addEventListener('DOMContentLoaded', () => {
             goal: document.getElementById('input-goal').value.trim(),
             location: document.getElementById('input-location').value.trim(),
             writingMode: document.getElementById('writing-mode').value,
-            citationStyle: document.getElementById('citation-style').value
+            citationStyle: document.getElementById('citation-style').value,
+            // PENAMBAHAN: Mengambil nilai jumlah paragraf
+            paragraphCount: document.getElementById('paragraph-count').value
         };
 
         if (!contextData.topic) {
