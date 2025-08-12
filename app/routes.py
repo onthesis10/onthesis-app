@@ -121,6 +121,34 @@ def create_plot_as_base64(fig):
     plt.close(fig)
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
 
+# --- FUNGSI BARU: Untuk menangani API call dengan retry ---
+def make_api_request_with_retry(url, headers, timeout=25, retries=3, backoff_factor=2):
+    """
+    Membuat permintaan API dengan logika coba lagi jika terjadi error 429 (Too Many Requests).
+    """
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=timeout)
+            response.raise_for_status()  # Ini akan memicu error untuk status 4xx/5xx
+            return response
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                if attempt < retries - 1:
+                    delay = backoff_factor ** attempt
+                    print(f"Rate limit terdeteksi. Mencoba lagi dalam {delay} detik...")
+                    time.sleep(delay)
+                else:
+                    print("Gagal setelah beberapa kali percobaan. Melemparkan error.")
+                    raise  # Lemparkan error setelah semua percobaan gagal
+            else:
+                raise # Lemparkan error lain yang bukan 429
+        except requests.exceptions.RequestException as e:
+            print(f"Error koneksi: {e}")
+            if attempt < retries - 1:
+                delay = backoff_factor ** attempt
+                time.sleep(delay)
+            else:
+                raise
 
 # =========================================================================
 # MODEL PENGGUNA & LOADER (PERBAIKAN SINKRONISASI PRO)
@@ -195,7 +223,7 @@ def check_and_update_usage(user_id, feature_name):
             'paraphrase_count': 0, 'chat_count': 0, 'search_count': 0,
             'writing_assistant_count': 0, 'data_analysis_count': 0, 'export_doc_count': 0,
             'last_reset_date': today_str, 'citation_count': citation_total,
-            'generate_theory_count': 0 # --- PENAMBAHAN: Reset counter fitur baru ---
+            'generate_theory_count': 0
         }
         user_ref.set({'usage_limits': usage_data}, merge=True)
     count_key = f"{feature_name}_count"
@@ -208,7 +236,6 @@ def check_and_update_usage(user_id, feature_name):
     return True, "OK"
 
 def check_and_update_pro_trial(user_id, feature_name):
-    # --- PENAMBAHAN: Batas percobaan untuk fitur Generator Kajian Teori ---
     PRO_TRIAL_LIMITS = {'writing_assistant': 3, 'data_analysis': 3, 'export_doc': 1, 'generate_theory': 2}
     limit = PRO_TRIAL_LIMITS.get(feature_name)
     if limit is None: return True, "OK"
@@ -292,7 +319,6 @@ def generator_latar_belakang():
 def generator_rumusan_masalah():
     return render_template('generator_rumusan_masalah.html')
 
-# --- PENAMBAHAN: Rute halaman untuk fitur baru ---
 @app.route('/generator-kajian-teori')
 @login_required
 def generator_kajian_teori():
@@ -493,7 +519,7 @@ def api_writing_assistant():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# --- PENAMBAHAN: Rute API untuk Generator Kajian Teori ---
+# --- MODIFIKASI: Rute API untuk Generator Kajian Teori dengan Logika Retry ---
 @app.route('/api/generate-theory', methods=['POST'])
 @login_required
 def api_generate_theory():
@@ -524,8 +550,9 @@ def api_generate_theory():
         core_query = f'"{keywords}"'
         core_url = f"https://api.core.ac.uk/v3/search/works?q={core_query}&limit=25"
         core_headers = {"Authorization": f"Bearer {core_api_key}"}
-        core_response = requests.get(core_url, headers=core_headers, timeout=25)
-        core_response.raise_for_status()
+        
+        # Menggunakan fungsi helper baru dengan retry
+        core_response = make_api_request_with_retry(core_url, headers=core_headers)
         core_results = core_response.json().get('results', [])
 
         if not core_results:
@@ -533,24 +560,24 @@ def api_generate_theory():
 
         # 4. Proses hasil & ambil metadata dari CrossRef
         processed_references = []
-        crossref_headers = {'User-Agent': 'OnThesisApp/1.0 (mailto:dev@onthesis.app)'} # Ganti dengan email Anda
+        crossref_headers = {'User-Agent': 'OnThesisApp/1.0 (mailto:dev@onthesis.app)'}
         
         for item in core_results:
             doi = item.get('doi')
             if not doi: continue
 
-            time.sleep(0.05) # Jeda kecil agar tidak membanjiri API
             crossref_url = f"https://api.crossref.org/works/{doi}"
-            crossref_response = requests.get(crossref_url, headers=crossref_headers, timeout=10)
+            # Menggunakan fungsi helper baru juga untuk CrossRef
+            crossref_response = make_api_request_with_retry(crossref_url, headers=crossref_headers, timeout=10)
             
-            if crossref_response.status_code == 200:
+            if crossref_response and crossref_response.status_code == 200:
                 crossref_data = crossref_response.json().get('message', {})
                 if crossref_data.get('abstract'):
                     authors = crossref_data.get('author', [])
                     if not authors: continue
 
                     authors_str_list = [a.get('family', '') for a in authors if a.get('family')]
-                    if not authors_str_list: continue # Lewati jika tidak ada nama keluarga
+                    if not authors_str_list: continue
                     
                     authors_str = " & ".join(authors_str_list[:2])
                     if len(authors_str_list) > 2: authors_str += ", et al."
@@ -559,18 +586,17 @@ def api_generate_theory():
                     year = year_parts[0] if year_parts and year_parts[0] else "n.d."
 
                     first_author_lastname = authors_str_list[0]
-
                     citation_apa = f"{authors_str} ({year}). {crossref_data.get('title', [''])[0]}."
                     
                     processed_references.append({
                         "title": crossref_data.get('title', [''])[0],
                         "authors_str": authors_str,
                         "year": year,
-                        "abstract": re.sub('<[^<]+?>', '', crossref_data.get('abstract')), # Hapus tag HTML dari abstrak
+                        "abstract": re.sub('<[^<]+?>', '', crossref_data.get('abstract')),
                         "citation_apa": citation_apa,
                         "citation_placeholder": f"[{first_author_lastname}, {year}]"
                     })
-            if len(processed_references) >= 7: # Batasi 7 referensi terbaik untuk dikirim ke LLM
+            if len(processed_references) >= 7:
                 break
         
         if len(processed_references) < 3:
@@ -609,9 +635,7 @@ def api_generate_theory():
         final_text = generated_text
         used_citations = set()
         
-        # Pola Regex untuk menemukan [Nama, Tahun] atau [Nama et al., Tahun]
         placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
-        
         temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
 
         for author_match, year_match in placeholders_in_text:
@@ -1227,4 +1251,3 @@ def payment_notification():
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
-
