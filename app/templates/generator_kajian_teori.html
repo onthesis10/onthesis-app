@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Generator Kajian Teori - Asisten AI{% endblock %}
+{% block title %}Generator Kajian Teori (Advanced) - Asisten AI{% endblock %}
 
 {% block page_styles %}
 <!-- Pustaka yang Diperlukan -->
@@ -65,18 +65,7 @@
     }
     .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
     .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
-    .checkbox-group label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        cursor: pointer;
-    }
-    .checkbox-group input {
-        accent-color: var(--accent-cyan);
-    }
-
+    
     /* Gaya Loading Overlay Baru yang Estetis */
     #loading-overlay {
         position: fixed;
@@ -158,61 +147,40 @@
                 <i data-lucide="arrow-left"></i>
             </a>
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Kajian Teori (BAB 2)</h1>
-                <p class="text-md text-secondary mt-1">Buat draf kajian teori, penelitian terdahulu, dan daftar pustaka dari berbagai sumber akademik.</p>
+                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Kajian Teori (Advanced)</h1>
+                <p class="text-md text-secondary mt-1">AI akan merancang, meneliti, dan menulis draf Bab 2 untuk Anda.</p>
             </div>
         </div>
     </header>
 
     <div class="w-full flex flex-col items-center gap-8">
-        <!-- Panel Input -->
+        <!-- Panel Input (Disederhanakan) -->
         <div class="io-panel w-full max-w-4xl">
             <div class="control-group mb-6">
-                <label for="input-title">1. Judul Penelitian</label>
-                <textarea id="input-title" class="io-textarea" placeholder="Contoh: Pengaruh Intensitas Penggunaan Media Sosial terhadap Kesehatan Mental Mahasiswa di Era Digital"></textarea>
+                <label for="input-title">1. Judul Penelitian (Wajib)</label>
+                <p>Masukkan judul selengkap dan sespesifik mungkin untuk hasil terbaik.</p>
+                <textarea id="input-title" class="io-textarea" placeholder="Contoh: Pengaruh Penggunaan Artificial Intelligence terhadap Hasil Belajar Siswa pada Pelajaran Akidah Akhlak"></textarea>
             </div>
 
             <div class="control-group mb-6">
-                <label for="input-keywords">2. Kata Kunci / Topik Utama</label>
-                <p>Pisahkan dengan koma. Contoh: media sosial, kesehatan mental, mahasiswa</p>
-                <textarea id="input-keywords" class="io-textarea" placeholder="media sosial, kesehatan mental, mahasiswa"></textarea>
+                <label for="input-keywords">2. Kata Kunci Tambahan (Opsional)</label>
+                <p>Pisahkan dengan koma. AI akan memprioritaskan kata kunci ini.</p>
+                <textarea id="input-keywords" class="io-textarea !min-h-[60px]" placeholder="Contoh: personalized learning, etika AI, metode pembelajaran"></textarea>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="control-group">
-                    <label for="input-style">3. Gaya Penulisan</label>
-                    <select id="input-style" class="control-select">
-                        <option>Akademik</option>
-                        <option>Detail</option>
-                        <option>Ringkas</option>
-                    </select>
+                    <label for="input-min-year">3. Tahun Publikasi Minimal</label>
+                    <input id="input-min-year" type="number" class="control-input" placeholder="Contoh: 2020">
                 </div>
                 <div class="control-group">
-                    <label for="input-length">4. Perkiraan Panjang</label>
-                    <select id="input-length" class="control-select">
-                        <option>1.000 - 1.500 kata</option>
-                        <option>2.000 - 2.500 kata</option>
-                        <option>3.000+ kata</option>
+                    <label for="input-citation-format">4. Format Sitasi</label>
+                    <select id="input-citation-format" class="control-select">
+                        <option>APA 7</option>
+                        <option>IEEE</option>
+                        <option>MLA</option>
+                        <option>Harvard</option>
                     </select>
-                </div>
-                 <div class="control-group">
-                    <label for="input-language">5. Bahasa</label>
-                    <select id="input-language" class="control-select">
-                        <option>Indonesia</option>
-                        <option>English</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="control-group mb-8">
-                <label>6. Pilih Sumber Referensi</label>
-                <p>Pilih minimal satu. Semakin banyak sumber, semakin baik hasilnya.</p>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 checkbox-group">
-                    <label><input type="checkbox" name="source" value="core" checked> CORE</label>
-                    <label><input type="checkbox" name="source" value="openalex"> OpenAlex</label>
-                    <label><input type="checkbox" name="source" value="doaj"> DOAJ</label>
-                    <label><input type="checkbox" name="source" value="eric"> ERIC</label>
-                    <label><input type="checkbox" name="source" value="pubmed"> PubMed</label>
                 </div>
             </div>
 
@@ -247,8 +215,8 @@
     <div class="sci-fi-loader">
         <div class="scanner"><span></span></div>
     </div>
-    <h3 id="loading-title" class="text-xl font-semibold mt-8">Menganalisis...</h3>
-    <p id="loading-text" class="text-secondary">Memulai proses...</p>
+    <h3 id="loading-title" class="text-xl font-semibold mt-8">Memulai Proses...</h3>
+    <p id="loading-text" class="text-secondary">AI sedang menganalisis judul Anda.</p>
 </div>
 {% endblock %}
 
@@ -276,37 +244,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Logika untuk Teks Loading Dinamis
     let loadingInterval;
     const loadingMessages = [
-        "Menghubungi database akademik...",
-        "Mengumpulkan metadata dari berbagai sumber...",
-        "Menganalisis dan memilih referensi terbaik...",
-        "Mengirimkan instruksi ke model AI...",
+        "Memecah topik penelitian...",
+        "Membuat rencana pencarian referensi...",
+        "Mencari literatur per sub-bab di database...",
+        "Menganalisis dan memfilter sumber relevan...",
         "Menyusun draf Landasan Teori...",
         "Merangkum Penelitian Terdahulu...",
+        "Menambahkan analisis research gap...",
         "Menyelesaikan format dan sitasi...",
         "Hampir selesai..."
     ];
 
     // Fungsi Utama: Generate Kajian Teori
     const handleGeneration = async () => {
-        const keywords = document.getElementById('input-keywords').value.trim();
-        if (!keywords) {
-            showNotification('Kata Kunci / Topik Utama tidak boleh kosong.', 'error');
-            return;
-        }
-
-        const selectedSources = Array.from(document.querySelectorAll('input[name="source"]:checked')).map(cb => cb.value);
-        if (selectedSources.length === 0) {
-            showNotification('Pilih minimal satu sumber referensi.', 'error');
+        const title = document.getElementById('input-title').value.trim();
+        if (!title) {
+            showNotification('Judul Penelitian tidak boleh kosong.', 'error');
             return;
         }
         
         const payload = {
-            title: document.getElementById('input-title').value.trim(),
-            keywords: keywords,
-            language: document.getElementById('input-language').value,
-            style: document.getElementById('input-style').value,
-            length: document.getElementById('input-length').value,
-            sources: selectedSources
+            title: title,
+            keywords: document.getElementById('input-keywords').value.trim(),
+            min_year: document.getElementById('input-min-year').value,
+            citation_format: document.getElementById('input-citation-format').value
         };
 
         loadingOverlay.style.display = 'flex';
@@ -318,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingInterval = setInterval(() => {
             messageIndex = (messageIndex + 1) % loadingMessages.length;
             loadingTextEl.textContent = loadingMessages[messageIndex];
-        }, 3500);
+        }, 4000); // Ganti pesan setiap 4 detik
 
         try {
             const response = await fetch('/api/generate-theory', {
@@ -441,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (tagName === 'H3') {
                     y = checkPageBreak(y, 8);
+                    y += 2; // Spasi sebelum sub-judul
                     doc.setFontSize(12).setFont('helvetica', 'bold');
                     const lines = doc.splitTextToSize(node.textContent, maxWidth);
                     doc.text(lines, margin, y);

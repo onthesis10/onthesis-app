@@ -1,6 +1,6 @@
 # ========================================================================
 # File: app/routes.py
-# Deskripsi: Versi lengkap dan final dengan semua fitur dan perbaikan bug.
+# Deskripsi: Versi lengkap dengan alur kerja AI multi-langkah untuk Kajian Teori.
 # ========================================================================
 
 # --- Impor Library ---
@@ -47,7 +47,7 @@ from firebase_admin import auth, firestore
 import PyPDF2
 import docx
 
-# --- PENAMBAHAN: Impor untuk Ekspor Dokumen ---
+# --- Impor untuk Ekspor Dokumen ---
 try:
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
@@ -81,11 +81,9 @@ except Exception as e:
     print(f"Peringatan: Gagal mengkonfigurasi Midtrans. Error: {e}")
     midtrans_snap = None
 
-# Konfigurasi untuk output statistik deskriptif
 OUTPUT_DIR = os.path.join(app.static_folder, 'outputs')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Konfigurasi gaya plot Matplotlib/Seaborn
 sns.set_style('whitegrid')
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans']
@@ -101,7 +99,6 @@ plt.rcParams['figure.figsize'] = (8,5)
 # FUNGSI HELPER
 # =========================================================================
 def read_pdf(file_stream):
-    """Membaca teks dari file PDF."""
     reader = PyPDF2.PdfReader(file_stream)
     text = ""
     for page in reader.pages:
@@ -109,22 +106,17 @@ def read_pdf(file_stream):
     return text
 
 def read_docx(file_stream):
-    """Membaca teks dari file DOCX."""
     doc = docx.Document(file_stream)
     text = "\n".join([para.text for para in doc.paragraphs])
     return text
 
 def create_plot_as_base64(fig):
-    """Mengubah figure Matplotlib menjadi string base64."""
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight')
     plt.close(fig)
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
 
 def make_api_request_with_retry(url, headers, params=None, timeout=25, retries=3, backoff_factor=2):
-    """
-    Membuat permintaan API dengan logika coba lagi jika terjadi error 429 atau 404.
-    """
     for attempt in range(retries):
         try:
             response = requests.get(url, headers=headers, params=params, timeout=timeout)
@@ -694,92 +686,136 @@ def api_generate_theory():
             return jsonify({'error': message}), 429
 
     data = request.get_json()
-    keywords = data.get('keywords', '')
-    sources_to_search = data.get('sources', ['core'])
     research_title = data.get('title', '')
-    style = data.get('style', 'Akademik')
-    length = data.get('length', '1.000 - 1.500')
-    
-    if not keywords:
-        return jsonify({"error": "Kata kunci tidak boleh kosong."}), 400
+    keywords = data.get('keywords', '')
+    citation_format = data.get('citation_format', 'APA 7')
+    min_year = data.get('min_year')
 
-    all_references = []
-    
-    with ThreadPoolExecutor() as executor:
-        future_to_source = {
-            'core': executor.submit(search_core, keywords) if 'core' in sources_to_search else None,
-            'openalex': executor.submit(search_openalex, keywords) if 'openalex' in sources_to_search else None,
-            'doaj': executor.submit(search_doaj, keywords) if 'doaj' in sources_to_search else None,
-            'eric': executor.submit(search_eric, keywords) if 'eric' in sources_to_search else None,
-            'pubmed': executor.submit(search_pubmed, keywords) if 'pubmed' in sources_to_search else None,
-        }
+    if not research_title:
+        return jsonify({"error": "Judul penelitian tidak boleh kosong."}), 400
+
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        # --- LANGKAH 1: AI Topic Breakdown ---
+        prompt_outline = f"""
+        Anda adalah seorang perencana penelitian. Berdasarkan judul penelitian berikut, buatlah outline terstruktur untuk Bab 2 Kajian Teori.
+        Judul: "{research_title}"
+        Kata Kunci Tambahan: "{keywords}"
+
+        Tugas Anda:
+        1.  Identifikasi 2-3 sub-bab utama untuk "Landasan Teori". Untuk setiap sub-bab, berikan 3-5 kata kunci pencarian yang sangat spesifik.
+        2.  Identifikasi 2-3 sub-bab utama untuk "Penelitian Terdahulu". Untuk setiap sub-bab, berikan 3-5 kata kunci pencarian yang spesifik.
         
-        for source, future in future_to_source.items():
-            if future:
+        Berikan output HANYA dalam format JSON yang valid, seperti contoh ini:
+        {{
+          "landasan_teori": [
+            {{ "sub_bab": "Definisi Kecerdasan Buatan", "keywords": "definisi artificial intelligence, sejarah AI, jenis-jenis AI" }},
+            {{ "sub_bab": "Teori Hasil Belajar", "keywords": "teori belajar kognitif, taksonomi bloom, faktor hasil belajar" }}
+          ],
+          "penelitian_terdahulu": [
+            {{ "sub_bab": "Penerapan AI dalam Pendidikan", "keywords": "AI in education, intelligent tutoring systems, personalized learning" }},
+            {{ "sub_bab": "Dampak Teknologi pada Prestasi Siswa", "keywords": "technology impact student achievement, educational technology outcomes" }}
+          ]
+        }}
+        """
+        
+        outline_response = model.generate_content(prompt_outline)
+        # Membersihkan output JSON dari markdown
+        clean_json_string = re.sub(r'```json\s*|\s*```', '', outline_response.text.strip(), flags=re.DOTALL)
+        research_plan = json.loads(clean_json_string)
+
+        # --- LANGKAH 2: Pencarian Referensi per Sub-Bab ---
+        all_references = []
+        search_tasks = []
+        all_sub_bab_sections = research_plan.get('landasan_teori', []) + research_plan.get('penelitian_terdahulu', [])
+
+        with ThreadPoolExecutor() as executor:
+            for section in all_sub_bab_sections:
+                # Menggunakan semua sumber pencarian
+                search_tasks.append(executor.submit(search_core, section['keywords']))
+                search_tasks.append(executor.submit(search_openalex, section['keywords']))
+                search_tasks.append(executor.submit(search_doaj, section['keywords']))
+            
+            for future in search_tasks:
                 try:
                     all_references.extend(future.result())
                 except Exception as e:
-                    print(f"Gagal mencari dari sumber {source}: {e}")
+                    print(f"Gagal mencari dari salah satu sumber: {e}")
 
-    unique_references = []
-    seen_titles = set()
-    for ref in all_references:
-        if ref['title'].lower() not in seen_titles:
-            ref['citation_apa'] = f"{ref['authors_str']} ({ref['year']}). {ref['title']}."
-            ref['citation_placeholder'] = f"[{ref['authors_str'].split(' ')[0]}, {ref['year']}]"
-            unique_references.append(ref)
-            seen_titles.add(ref['title'].lower())
+        # --- LANGKAH 3: De-duplikasi dan Filter Referensi ---
+        unique_references = []
+        seen_titles = set()
+        for ref in all_references:
+            # Filter berdasarkan tahun minimal jika ada
+            if min_year and ref.get('year') and int(ref.get('year')) < int(min_year):
+                continue
+            
+            if ref['title'].lower() not in seen_titles:
+                ref['citation_apa'] = f"{ref.get('authors_str', 'N/A')} ({ref.get('year', 'n.d.')}). {ref.get('title', 'N/A')}."
+                ref['citation_placeholder'] = f"[{ref.get('authors_str', 'N/A').split(' ')[0]}, {ref.get('year', 'n.d.')}]"
+                unique_references.append(ref)
+                seen_titles.add(ref['title'].lower())
 
-    if len(unique_references) < 3:
-        return jsonify({"error": "Referensi yang ditemukan tidak cukup (kurang dari 3) untuk menghasilkan kajian teori yang baik."}), 404
-    
-    processed_references = unique_references[:7]
-    
-    sources_text = ""
-    for i, ref in enumerate(processed_references):
-        sources_text += f"{i+1}. Judul: {ref.get('title')}\n   Penulis: {ref.get('authors_str')}\n   Tahun: {ref.get('year')}\n   Abstrak: {ref.get('abstract')}\n\n"
+        if len(unique_references) < 5:
+            return jsonify({"error": "Referensi yang ditemukan tidak cukup (kurang dari 5) untuk menghasilkan kajian teori yang baik."}), 404
 
-    prompt = f"""Peran: Anda adalah seorang asisten peneliti akademik ahli.
-    Konteks:
-    - Judul Penelitian: "{research_title}"
-    - Kata Kunci: "{keywords}"
-    - Gaya: "{style}"
-    - Panjang: "{length}"
-    Tugas: Tulis draf Bab 2 Kajian Teori dalam Bahasa Indonesia dengan struktur heading markdown `###`. Berdasarkan HANYA pada sumber yang diberikan.
-    Struktur:
-    ### 2.1 Landasan Teori
-    Jelaskan teori utama yang relevan.
-    ### 2.2 Penelitian Terdahulu
-    Rangkum temuan kunci dari sumber. Sisipkan sitasi dalam teks dengan format [NamaBelakangPenulis, Tahun], contoh: [{processed_references[0]['authors_str'].split(' ')[0]}, {processed_references[0]['year']}].
-    ### 2.3 Kerangka Teori
-    Jelaskan secara singkat hubungan antar variabel.
-    SUMBER RUJUKAN:
-    {sources_text}
-    Aturan: Jangan berspekulasi. Sitasi setiap klaim.
-    """
-    
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content(prompt)
-    generated_text = response.text
+        # --- LANGKAH 4: Penyusunan Draft Otomatis ---
+        processed_references = unique_references[:15] # Batasi 15 referensi untuk dikirim ke AI
+        sources_text = ""
+        for i, ref in enumerate(processed_references):
+            sources_text += f"{i+1}. Judul: {ref.get('title')}\n   Penulis: {ref.get('authors_str')}\n   Tahun: {ref.get('year')}\n   Abstrak: {ref.get('abstract')}\n\n"
 
-    final_text = generated_text
-    used_citations = set()
-    
-    placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
-    temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
+        prompt_draft = f"""
+        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis draf Bab 2 Kajian Teori yang komprehensif.
 
-    for author_match, year_match in placeholders_in_text:
-        placeholder = f"[{author_match}, {year_match}]"
-        matched_ref = temp_ref_map.get(placeholder.lower())
-        if matched_ref:
-            in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
-            final_text = final_text.replace(placeholder, in_text_citation)
-            used_citations.add(matched_ref['citation_apa'])
-    
-    bibliography = "\n\n".join(sorted(list(used_citations)))
-    final_output = final_text + f"\n\n### Daftar Pustaka\n{bibliography}"
+        Konteks Penelitian:
+        - Judul: "{research_title}"
+        - Outline yang Harus Diikuti: {json.dumps(research_plan, indent=2)}
 
-    return jsonify({"generated_text": final_output})
+        Sumber Rujukan (Gunakan HANYA informasi dari sumber-sumber ini):
+        {sources_text}
+
+        Instruksi:
+        1.  Tulis konten untuk setiap sub-bab dalam outline yang diberikan.
+        2.  Sintesis dan parafrase informasi dari sumber rujukan. Jangan hanya menyalin.
+        3.  Sangat Penting: Sisipkan sitasi dalam teks menggunakan format [NamaBelakangPenulis, Tahun] setiap kali Anda merujuk pada sebuah sumber.
+        4.  Gunakan Bahasa Indonesia yang formal dan akademik.
+        5.  Setelah semua bagian selesai, buat bagian baru `### Daftar Pustaka`.
+        """
+        
+        draft_response = model.generate_content(prompt_draft)
+        generated_text = draft_response.text
+
+        # --- LANGKAH 5: Post-processing & Finalisasi ---
+        final_text = generated_text
+        used_citations = set()
+        
+        placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
+        temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
+
+        for author_match, year_match in placeholders_in_text:
+            placeholder = f"[{author_match}, {year_match}]"
+            matched_ref = temp_ref_map.get(placeholder.lower())
+            if matched_ref:
+                in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
+                final_text = final_text.replace(placeholder, in_text_citation)
+                used_citations.add(matched_ref['citation_apa'])
+        
+        bibliography = "\n\n".join(sorted(list(used_citations)))
+        final_output = final_text.split('### Daftar Pustaka')[0] + f"\n\n### Daftar Pustaka\n{bibliography}"
+
+        return jsonify({"generated_text": final_output})
+
+    except json.JSONDecodeError:
+        return jsonify({"error": "AI gagal membuat outline penelitian. Coba dengan judul yang lebih spesifik."}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Gagal menghubungi API eksternal. Coba lagi nanti. Detail: {e}"}), 503
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Terjadi kesalahan internal yang tidak terduga: {str(e)}"}), 500
+
 
 @app.route('/api/export-document', methods=['POST'])
 @login_required
