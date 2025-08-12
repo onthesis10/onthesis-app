@@ -9,7 +9,6 @@
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
 
 <style>
-    /* Gaya ini sekarang selaras dengan styles.css Anda */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -42,16 +41,10 @@
     .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
     .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
     .io-output .prose a { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dashed var(--accent-cyan); }
-    .io-output .prose a:hover { color: var(--text-primary); }
     .io-output .prose pre { background-color: var(--bg-canvas); border: 1px solid var(--border-panel); border-radius: 0.5rem; padding: 1rem; }
     
-    .wizard-step {
-        display: none;
-        animation: fade-in-up 0.5s;
-    }
-    .wizard-step.active {
-        display: block;
-    }
+    .wizard-step { display: none; }
+    .wizard-step.active { display: block; animation: fade-in-up 0.4s; }
     @keyframes fade-in-up {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
@@ -71,7 +64,6 @@
     }
     .step-indicator.active {
         background-color: var(--accent-cyan);
-        flex-grow: 1.5;
     }
 
     .wizard-step label {
@@ -153,11 +145,11 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: var(--glass-bg);
+        background-color: var(--glass-bg, rgba(13, 17, 23, 0.7));
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         z-index: 100;
-        display: flex;
+        /* PERBAIKAN: Dihapus 'display: flex' agar style inline bekerja */
         justify-content: center;
         align-items: center;
         flex-direction: column;
@@ -179,21 +171,21 @@
 {% endblock %}
 
 {% block content %}
-<!-- Kontainer utama dengan layout vertikal dan scroll -->
 <div class="h-full w-full p-4 sm:p-6 lg:p-8 overflow-y-auto">
-    
-    <!-- Header Halaman Generator -->
-    <header class="w-full max-w-4xl mx-auto mb-8 animate-fade-in-up">
-        <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Latar Belakang</h1>
-        <p class="text-md text-secondary mt-1">Buat draf latar belakang masalah yang terstruktur dalam beberapa langkah.</p>
+    <header class="w-full max-w-4xl mx-auto mb-8">
+        <div class="flex items-center gap-4">
+            <a href="{{ url_for('writing_assistant') }}" class="btn-secondary !p-2" title="Kembali ke Menu">
+                <i data-lucide="arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Latar Belakang</h1>
+                <p class="text-md text-secondary mt-1">Buat draf latar belakang masalah yang terstruktur dalam beberapa langkah.</p>
+            </div>
+        </div>
     </header>
 
-    <!-- Wrapper untuk memastikan tumpukan vertikal -->
     <div class="w-full flex flex-col items-center gap-8">
-
-        <!-- Panel Input & Kontrol Utama -->
         <div class="io-panel w-full max-w-4xl">
-            <!-- Indikator Progres -->
             <div class="step-indicator-container">
                 <div class="step-indicator"></div>
                 <div class="step-indicator"></div>
@@ -202,133 +194,107 @@
                 <div class="step-indicator"></div>
             </div>
 
-            <!-- Kontainer untuk Langkah-langkah Wizard -->
-            <div id="wizard-container" class="mb-8">
-                <div class="wizard-step">
+            <div id="wizard-container" class="mb-8 min-h-[220px]">
+                <div class="wizard-step active">
                     <label for="input-topic">Langkah 1: Topik Utama Penelitian</label>
-                    <p>Masukkan beberapa kata kunci utama yang paling relevan (3-5 kata).</p>
+                    <p>Masukkan beberapa kata kunci utama (3-5 kata).</p>
                     <textarea id="input-topic" class="io-textarea" placeholder="Contoh: pengaruh media sosial, kesehatan mental, mahasiswa"></textarea>
                 </div>
                 <div class="wizard-step">
                     <label for="input-problem">Langkah 2: Masalah yang Diangkat</label>
                     <p>Jelaskan secara singkat masalah yang Anda amati terkait topik.</p>
-                    <textarea id="input-problem" class="io-textarea" placeholder="Contoh: Peningkatan kecemasan dan depresi di kalangan mahasiswa akibat tekanan perbandingan sosial di Instagram."></textarea>
+                    <textarea id="input-problem" class="io-textarea" placeholder="Contoh: Peningkatan kecemasan dan depresi di kalangan mahasiswa..."></textarea>
                 </div>
                 <div class="wizard-step">
                     <label for="input-goal">Langkah 3: Tujuan Penelitian</label>
-                    <p>Sebutkan apa yang ingin Anda capai atau buktikan melalui penelitian ini.</p>
-                    <textarea id="input-goal" class="io-textarea" placeholder="Contoh: Menganalisis hubungan antara intensitas penggunaan Instagram dengan tingkat depresi mahasiswa."></textarea>
+                    <p>Sebutkan apa yang ingin Anda capai atau buktikan.</p>
+                    <textarea id="input-goal" class="io-textarea" placeholder="Contoh: Menganalisis hubungan antara intensitas penggunaan Instagram..."></textarea>
                 </div>
                 <div class="wizard-step">
                     <label for="input-location">Langkah 4: Lokasi Penelitian (Opsional)</label>
-                    <p>Spesifikkan lokasi jika ada, ini akan membantu AI mencari data yang lebih akurat.</p>
+                    <p>Spesifikkan lokasi jika ada.</p>
                     <textarea id="input-location" class="io-textarea" placeholder="Contoh: Universitas Gadjah Mada, Yogyakarta"></textarea>
                 </div>
                 <div class="wizard-step">
                     <h3 class="text-xl font-bold text-primary mb-4">Langkah 5: Pengaturan Penulisan</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="control-group">
+                        <div>
                             <label for="writing-mode">Mode Penulisan</label>
                             <select id="writing-mode" class="control-select">
-                                <option value="Akademik Formal">Akademik Formal</option>
-                                <option value="Semi-Formal">Semi-Formal</option>
-                                <option value="Persuasif (Data-driven)">Persuasif (Data-driven)</option>
+                                <option>Akademik Formal</option>
+                                <option>Semi-Formal</option>
                             </select>
                         </div>
-                        <div class="control-group">
+                        <div>
                             <label for="citation-style">Gaya Sitasi</label>
                             <select id="citation-style" class="control-select">
-                                <option value="APA 7">APA 7</option>
-                                <option value="IEEE">IEEE</option>
-                                <option value="MLA">MLA</option>
+                                <option>APA 7</option>
+                                <option>IEEE</option>
+                                <option>MLA</option>
                             </select>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Tombol Navigasi Wizard -->
             <div class="flex justify-between items-center border-t border-border-panel pt-6">
                 <button id="prev-btn" class="btn-nav secondary">Sebelumnya</button>
                 <button id="next-btn" class="btn-nav primary">Selanjutnya</button>
             </div>
         </div>
 
-        <!-- Panel Output -->
         <div id="output-panel" class="io-panel w-full max-w-4xl hidden flex-col gap-4">
-            <!-- Toolbar Output -->
             <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
                 <h2 class="text-xl font-bold text-primary">Hasil Draf Latar Belakang</h2>
                 <div class="flex items-center gap-2">
-                    <div id="originality-indicator" class="hidden items-center gap-2 text-sm bg-green-900/50 text-green-300 px-3 py-1 rounded-full border border-green-500/50">
-                        <i data-lucide="shield-check" class="w-4 h-4"></i>
-                        <span>Originalitas: <strong id="originality-score">97%</strong></span>
-                    </div>
                     <button id="paraphrase-btn" class="btn-secondary !p-2" title="Parafrase Ulang"><i data-lucide="refresh-cw"></i></button>
                     <button id="export-btn" class="btn-secondary !p-2" title="Ekspor Dokumen"><i data-lucide="download"></i></button>
                 </div>
             </div>
-            <!-- Konten Output -->
-            <div id="output-content" class="io-output prose max-w-none">
-                <!-- Hasil generate akan muncul di sini -->
-            </div>
+            <div id="output-content" class="io-output prose max-w-none"></div>
         </div>
     </div>
 </div>
 
-<!-- Kontainer Notifikasi -->
-<div id="notification-container" class="fixed bottom-5 right-5 z-50 w-full max-w-sm"></div>
-
-<!-- Loading Overlay -->
-<div id="loading-overlay" class="hidden">
+<!-- PERBAIKAN: Menambahkan style="display: none;" untuk memastikan overlay tersembunyi saat awal -->
+<div id="loading-overlay" style="display: none;">
     <div class="spinner"></div>
     <h3 class="text-xl font-semibold">AI sedang menganalisis...</h3>
-    <p class="text-secondary">Menyusun draf dan mencari data pendukung. Mohon tunggu sebentar.</p>
+    <p class="text-secondary">Mohon tunggu sebentar.</p>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Inisialisasi Elemen ---
     const wizardSteps = document.querySelectorAll('.wizard-step');
     const stepIndicators = document.querySelectorAll('.step-indicator');
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
-
     const outputPanel = document.getElementById('output-panel');
     const outputContent = document.getElementById('output-content');
-    const originalityIndicator = document.getElementById('originality-indicator');
     const loadingOverlay = document.getElementById('loading-overlay');
     
     let currentStep = 0;
 
     const renderIcons = () => {
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
+        if (window.lucide) window.lucide.createIcons();
     };
 
     const updateWizard = () => {
-        // Perbarui langkah yang aktif
         wizardSteps.forEach((step, index) => {
             step.classList.toggle('active', index === currentStep);
         });
-
-        // Perbarui indikator
         stepIndicators.forEach((indicator, index) => {
             indicator.classList.toggle('active', index === currentStep);
         });
-
-        // Atur tombol navigasi
         prevBtn.disabled = currentStep === 0;
-
         if (currentStep === wizardSteps.length - 1) {
-            nextBtn.innerHTML = `<i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Generate Latar Belakang`;
+            nextBtn.innerHTML = `<i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Generate`;
         } else {
             nextBtn.innerHTML = `Selanjutnya`;
         }
-        renderIcons(); // Render ulang ikon jika ada di tombol
+        renderIcons();
     };
 
     nextBtn.addEventListener('click', () => {
@@ -336,7 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentStep++;
             updateWizard();
         } else {
-            // Jika di langkah terakhir, jalankan generasi
             handleGeneration();
         }
     });
@@ -347,20 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updateWizard();
         }
     });
-
+    
     const showNotification = (message, type = 'success') => {
-        const container = document.getElementById('notification-container');
-        const icon = type === 'error' ? `<i data-lucide="x-circle"></i>` : `<i data-lucide="check-circle"></i>`;
-        const bgColor = type === 'error' ? 'bg-red-500/90' : 'bg-cyan-500/90';
-        const notif = document.createElement('div');
-        notif.className = `flex items-center gap-3 px-4 py-3 text-white ${bgColor} rounded-lg shadow-2xl mb-2 animate-fade-in-out backdrop-blur-sm`;
-        notif.innerHTML = `${icon}<span>${message}</span>`;
-        container.appendChild(notif);
-        renderIcons();
-        setTimeout(() => { notif.remove(); }, 4000);
+        console.log(`${type}: ${message}`);
+        alert(message); // Placeholder
     };
 
-    // --- Logika Inti: Generate Konten dengan AI (Sudah disinkronkan dengan Backend) ---
     const handleGeneration = async () => {
         const contextData = {
             topic: document.getElementById('input-topic').value.trim(),
@@ -376,26 +333,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        loadingOverlay.classList.remove('hidden');
-        loadingOverlay.classList.add('flex');
+        // PERBAIKAN: Menggunakan style.display untuk kontrol yang lebih pasti
+        loadingOverlay.style.display = 'flex';
         nextBtn.disabled = true;
         prevBtn.disabled = true;
 
         try {
-            const apiUrl = '/api/writing-assistant';
-            const payload = {
-                task: 'generate_background',
-                context: contextData
-            };
-
-            const response = await fetch(apiUrl, {
+            const response = await fetch('/api/writing-assistant', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ task: 'generate_background', context: contextData })
             });
-
             const result = await response.json();
-
             if (!response.ok) {
                 if (result.redirect) {
                     showNotification('Batas penggunaan tercapai. Anda akan dialihkan.', 'error');
@@ -405,33 +354,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return;
             }
-
-            const generatedText = result.generated_text;
             const converter = new showdown.Converter({tables: true, strikethrough: true, openLinksInNewWindow: true});
-            outputContent.innerHTML = converter.makeHtml(generatedText);
-            
+            outputContent.innerHTML = converter.makeHtml(result.generated_text);
             outputPanel.classList.remove('hidden');
             outputPanel.classList.add('flex');
-            originalityIndicator.classList.remove('hidden');
-            originalityIndicator.classList.add('flex');
             showNotification('Draf latar belakang berhasil dibuat!', 'success');
-
         } catch (error) {
-            outputPanel.classList.add('hidden');
             showNotification(error.message, 'error');
         } finally {
-            loadingOverlay.classList.add('hidden');
-            loadingOverlay.classList.remove('flex');
+            // PERBAIKAN: Menggunakan style.display untuk kontrol yang lebih pasti
+            loadingOverlay.style.display = 'none';
             nextBtn.disabled = false;
             prevBtn.disabled = false;
         }
     };
 
-    // --- Event Listeners untuk Tombol Lainnya (Simulasi) ---
-    document.getElementById('paraphrase-btn').addEventListener('click', () => showNotification('Fitur parafrase akan memproses ulang teks...', 'success'));
-    document.getElementById('export-btn').addEventListener('click', () => showNotification('Dokumen akan diekspor dalam format yang dipilih...', 'success'));
-
-    // Inisialisasi awal
     updateWizard();
     renderIcons();
 });
