@@ -1,18 +1,14 @@
 {% extends "layout.html" %}
 
-{% block title %}Generator Bab 2 (Powerful Workflow) - Asisten AI{% endblock %}
+{% block title %}Generator Kajian Teori - Alur Baru{% endblock %}
 
 {% block page_styles %}
-<!-- Pustaka yang Diperlukan -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
 <!-- Pustaka Ikon & Markdown -->
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
+<!-- Pustaka untuk Ekspor Dokumen -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
 
 <style>
     /* Menggunakan gaya yang konsisten dengan halaman lain */
@@ -23,7 +19,7 @@
         padding: 2rem;
         transition: all 0.3s ease-in-out;
     }
-    .io-textarea, .control-input, .control-select {
+    .io-textarea, .control-input {
         width: 100%;
         background-color: var(--bg-canvas);
         border: 1px solid var(--border-panel);
@@ -36,7 +32,7 @@
         min-height: 80px;
         resize: vertical;
     }
-    .io-textarea:focus, .control-input:focus, .control-select:focus {
+    .io-textarea:focus, .control-input:focus {
         outline: none;
         border-color: var(--accent-cyan);
         box-shadow: 0 0 0 3px var(--accent-cyan-glow);
@@ -63,6 +59,7 @@
         overflow-y: auto;
         color: var(--text-secondary);
     }
+    /* Styling untuk konten yang di-generate dari markdown */
     .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
     .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
     
@@ -112,142 +109,72 @@
         text-align: center;
         min-height: 20px;
     }
-
-    .checkbox-group label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        cursor: pointer;
-    }
-    .checkbox-group input {
-        accent-color: var(--accent-cyan);
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="h-full w-full p-4 sm:p-6 lg:p-8 overflow-y-auto">
-    <header class="w-full max-w-5xl mx-auto mb-8">
+    <header class="w-full max-w-4xl mx-auto mb-8">
         <div class="flex items-center gap-4">
             <a href="{{ url_for('writing_assistant') }}" class="btn-secondary !p-2" title="Kembali ke Menu">
                 <i data-lucide="arrow-left"></i>
             </a>
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Bab 2 (Powerful Workflow)</h1>
-                <p class="text-md text-secondary mt-1">AI akan merancang, meneliti, dan menulis draf Bab 2 secara bertahap untuk Anda.</p>
+                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Kajian Teori (Bab 2)</h1>
+                <p class="text-md text-secondary mt-1">Cukup masukkan judul, AI akan merancang, meneliti, dan menulis draf Bab 2 untuk Anda.</p>
             </div>
         </div>
     </header>
 
     <div class="w-full flex flex-col items-center gap-8">
-        <!-- Panel Input (Diperbarui) -->
-        <div class="io-panel w-full max-w-5xl">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
-                <!-- Kolom Kiri -->
-                <div class="flex flex-col gap-6">
-                    <div class="control-group">
-                        <label for="input-title">1. Judul Penelitian (Wajib)</label>
-                        <p>Masukkan judul selengkap dan sespesifik mungkin.</p>
-                        <textarea id="input-title" class="io-textarea" placeholder="Contoh: Pengaruh Gamifikasi pada Motivasi Belajar Siswa SMA dalam Pembelajaran Sejarah"></textarea>
-                    </div>
-
-                    <div class="control-group">
-                        <label for="input-keywords">2. Kata Kunci Utama & Turunan (Opsional)</label>
-                        <p>Pisahkan dengan koma. AI akan memprioritaskan kata kunci ini.</p>
-                        <textarea id="input-keywords" class="io-textarea !min-h-[60px]" placeholder="Contoh: gamification, student motivation, history learning, interactive media"></textarea>
-                    </div>
-                    
-                    <div class="control-group">
-                        <label for="input-references">3. Daftar Referensi / Sumber Utama (Opsional)</label>
-                        <p>Masukkan link, DOI, atau daftar pustaka mentah. Pisahkan tiap entri dengan baris baru.</p>
-                        <textarea id="input-references" class="io-textarea" placeholder="Contoh: https://doi.org/10.1109/ACCESS.2023.12345&#x0a;Doe, J. (2022). The Art of Gamification. Publisher."></textarea>
-                    </div>
+        <!-- Panel Input (Sederhana) -->
+        <div class="io-panel w-full max-w-4xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <!-- Judul Penelitian -->
+                <div class="control-group md:col-span-2">
+                    <label for="input-title">Judul Penelitian (Wajib)</label>
+                    <p>Masukkan judul selengkap dan sespesifik mungkin untuk hasil terbaik.</p>
+                    <textarea id="input-title" class="io-textarea" placeholder="Contoh: Pengaruh Media Sosial terhadap Produktivitas Mahasiswa"></textarea>
                 </div>
 
-                <!-- Kolom Kanan -->
-                <div class="flex flex-col gap-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                         <div class="control-group">
-                            <label for="input-language">4. Bahasa</label>
-                            <select id="input-language" class="control-select">
-                                <option>Indonesia (Formal)</option>
-                                <option>English (Academic)</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="input-target-words">5. Target Kata</label>
-                            <select id="input-target-words" class="control-select">
-                                <option value="3000">~3.000 Kata</option>
-                                <option value="5000">~5.000 Kata</option>
-                                <option value="8000" selected>~8.000 Kata</option>
-                                <option value="10000">10.000+ Kata</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="input-min-year">6. Tahun Min.</label>
-                            <input id="input-min-year" type="number" class="control-input" placeholder="2020">
-                        </div>
-                    </div>
-
-                    <div class="control-group">
-                        <label for="input-citation-format">7. Format Sitasi</label>
-                        <select id="input-citation-format" class="control-select">
-                            <option>APA 7</option>
-                            <option>IEEE</option>
-                            <option>MLA</option>
-                            <option>Harvard</option>
-                            <option>Chicago</option>
-                        </select>
-                    </div>
-
-                    <div class="control-group">
-                        <label>8. Sumber Pencarian Referensi</label>
-                        <p>Pilih minimal satu. Semakin banyak, semakin komprehensif.</p>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 checkbox-group">
-                            <label><input type="checkbox" name="source" value="core" checked> CORE</label>
-                            <label><input type="checkbox" name="source" value="openalex" checked> OpenAlex</label>
-                            <label><input type="checkbox" name="source" value="doaj"> DOAJ</label>
-                            <label><input type="checkbox" name="source" value="eric"> ERIC</label>
-                            <label><input type="checkbox" name="source" value="pubmed"> PubMed</label>
-                            <label><input type="checkbox" name="source" value="semantic_scholar" checked> Semantic Scholar</label>
-                        </div>
-                    </div>
+                <!-- Kata Kunci -->
+                <div class="control-group md:col-span-2">
+                    <label for="input-keywords">Kata Kunci (Opsional)</label>
+                    <p>Pisahkan dengan koma. Ini membantu AI fokus pada teori yang paling relevan.</p>
+                    <textarea id="input-keywords" class="io-textarea !min-h-[60px]" placeholder="Contoh: media sosial, produktivitas, mahasiswa, dampak teknologi"></textarea>
                 </div>
             </div>
 
             <div class="text-center mt-8 pt-8 border-t border-border-panel">
                 <button id="generate-btn" class="btn-primary">
                     <i data-lucide="wand-2" class="w-5 h-5 mr-2"></i>
-                    Mulai Proses Penulisan Bab 2
+                    Generate Draf Bab 2
                 </button>
             </div>
         </div>
 
         <!-- Panel Output -->
         <div id="output-panel" class="io-panel w-full max-w-5xl hidden flex-col gap-4">
-            <div class="flex justify-between items-center pb-4 border-b border-[var(--border-panel)]">
-                <h2 class="text-xl font-bold text-primary">Hasil Draf Kajian Pustaka (BAB 2)</h2>
+            <div class="flex flex-wrap justify-between items-center pb-4 border-b border-[var(--border-panel)] gap-4">
+                <h2 class="text-xl font-bold text-primary">Hasil Draf Kajian Teori (Bab 2)</h2>
                 <div class="flex items-center gap-2">
-                    <button id="summarize-btn" class="btn-secondary" title="Buat Ringkasan">
-                        <i data-lucide="zap" class="w-4 h-4 mr-2"></i>Ringkas
+                    <button id="export-word-btn" class="btn-secondary" title="Ekspor ke Word">
+                        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>Ekspor Word
                     </button>
-                    <button id="export-pdf-btn" class="btn-secondary !p-2" title="Ekspor ke PDF">
-                        <i data-lucide="file-type-2"></i>
-                    </button>
-                    <button id="export-word-btn" class="btn-secondary !p-2" title="Ekspor ke Word">
-                        <i data-lucide="file-text"></i>
+                    <button id="export-pdf-btn" class="btn-secondary" title="Ekspor ke PDF">
+                        <i data-lucide="file-type-2" class="w-4 h-4 mr-2"></i>Ekspor PDF
                     </button>
                 </div>
             </div>
-            <div id="output-content" class="io-output prose max-w-none"></div>
-            <div id="references-content" class="io-output prose max-w-none pt-4 border-t border-border-panel"></div>
+            <div id="output-content" class="io-output prose max-w-none prose-invert"></div>
         </div>
     </div>
 </div>
 
+<!-- Container Notifikasi -->
 <div id="notification-container"></div>
+
+<!-- Overlay Loading -->
 <div id="loading-overlay" style="display: none;">
     <div class="loading-content">
         <h3 id="loading-title" class="text-2xl font-semibold">AI Sedang Bekerja...</h3>
@@ -266,185 +193,161 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const outputPanel = document.getElementById('output-panel');
     const outputContent = document.getElementById('output-content');
-    const referencesContent = document.getElementById('references-content');
     const loadingOverlay = document.getElementById('loading-overlay');
     const progressBar = document.getElementById('progress-bar');
     const loadingStatusText = document.getElementById('loading-status-text');
-    
-    // --- Variabel State untuk menyimpan hasil antar tahap ---
-    let researchInputs = {};
-    let generatedOutline = null;
-    let foundReferences = [];
-    let generatedChapters = {};
+    const inputTitle = document.getElementById('input-title');
+    const inputKeywords = document.getElementById('input-keywords');
+
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const exportWordBtn = document.getElementById('export-word-btn');
 
     // --- Fungsi Pembantu ---
-    const renderIcons = () => window.lucide && window.lucide.createIcons();
+    const renderIcons = () => {
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    };
+
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
+        if (!container) return;
         const notif = document.createElement('div');
         notif.className = `toast-notification ${type}`;
         notif.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'x-circle'}"></i><span>${message}</span>`;
         container.appendChild(notif);
         renderIcons();
-        setTimeout(() => notif.remove(), 5000);
+        setTimeout(() => {
+            notif.style.opacity = '0';
+            setTimeout(() => notif.remove(), 300);
+        }, 5000);
     };
 
+    // --- Logika Progress Bar (Simulasi) ---
+    let progressInterval;
     const updateProgress = (percentage, text) => {
         progressBar.style.width = `${percentage}%`;
         loadingStatusText.textContent = text;
     };
 
-    const handleApiError = (error) => {
-        console.error('API Error:', error);
-        let errorMessage = 'Terjadi kesalahan pada server.';
-        if (error.error) {
-            errorMessage = error.error;
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        showNotification(errorMessage, 'error');
+    const startSimulatedProgress = () => {
+        let progress = 0;
+        const stages = [
+            { percent: 10, text: 'Menganalisis judul dan kata kunci...', duration: 2000 },
+            { percent: 30, text: 'AI membuat kerangka Bab 2...', duration: 5000 },
+            { percent: 60, text: 'Mencari referensi dari berbagai sumber...', duration: 10000 },
+            { percent: 90, text: 'Menulis draf konten untuk setiap sub-bab...', duration: 15000 },
+            { percent: 95, text: 'Finalisasi dan menyusun daftar pustaka...', duration: 5000 }
+        ];
+
+        let currentStage = 0;
+        const runStage = () => {
+            if (currentStage >= stages.length) {
+                clearInterval(progressInterval);
+                return;
+            }
+            const stage = stages[currentStage];
+            updateProgress(stage.percent, stage.text);
+            currentStage++;
+            progressInterval = setTimeout(runStage, stage.duration);
+        };
+        runStage();
+    };
+    
+    const stopSimulatedProgress = () => {
+        clearInterval(progressInterval);
     };
 
-    // --- FUNGSI UTAMA: Alur Kerja Generasi Bertahap ---
+    // --- FUNGSI UTAMA: Alur Kerja Generator ---
     const handleGeneration = async () => {
-        const title = document.getElementById('input-title').value.trim();
+        const title = inputTitle.value.trim();
+        const keywords = inputKeywords.value.trim();
+
         if (!title) {
             showNotification('Judul Penelitian tidak boleh kosong.', 'error');
             return;
         }
 
-        // 1. Kumpulkan semua input dari form
-        researchInputs = {
-            title: title,
-            mainKeywords: document.getElementById('input-keywords').value.trim(),
-            initialReferences: document.getElementById('input-references').value.trim(),
-            language: document.getElementById('input-language').value,
-            targetWords: document.getElementById('input-target-words').value,
-            minYear: document.getElementById('input-min-year').value,
-            citationFormat: document.getElementById('input-citation-format').value,
-            sources: Array.from(document.querySelectorAll('input[name="source"]:checked')).map(cb => cb.value)
-        };
-
-        if (researchInputs.sources.length === 0) {
-            showNotification('Pilih minimal satu sumber referensi.', 'error');
-            return;
-        }
-
-        // 2. Mulai UI loading
-        loadingOverlay.style.display = 'flex';
+        // Reset UI
         generateBtn.disabled = true;
         outputPanel.classList.add('hidden');
         outputContent.innerHTML = '';
-        referencesContent.innerHTML = '';
-        updateProgress(0, 'Memulai...');
+        loadingOverlay.style.display = 'flex';
+        
+        // Mulai simulasi progress
+        startSimulatedProgress();
 
         try {
-            // --- TAHAP 1: Generate Outline & Cari Referensi ---
-            updateProgress(10, 'Tahap 1: Membuat outline & mencari referensi...');
-            const outlineResponse = await fetch('/generator_kajian_teori/generate_outline', {
+            // Panggil API tunggal yang kuat di backend
+            const response = await fetch('/api/generate-theory', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(researchInputs)
+                body: JSON.stringify({ title, keywords })
             });
-            const outlineResult = await outlineResponse.json();
-            if (!outlineResponse.ok) throw outlineResult;
 
-            generatedOutline = outlineResult.outline; // Simpan outline
-            foundReferences = outlineResult.references; // Simpan referensi
+            const result = await response.json();
+            stopSimulatedProgress(); // Hentikan simulasi saat respons diterima
 
-            if (!generatedOutline || generatedOutline.length === 0) {
-                throw new Error("Gagal membuat outline. Coba lagi dengan kata kunci yang berbeda.");
+            if (!response.ok) {
+                // Jika ada redirect, arahkan pengguna
+                if (result.redirect) {
+                    showNotification('Batas penggunaan tercapai. Mengarahkan ke halaman upgrade...', 'error');
+                    setTimeout(() => window.location.href = result.redirect, 2000);
+                }
+                throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui');
             }
-
-            // --- TAHAP 2: Generate Konten per Sub-bab ---
-            const totalSubchapters = generatedOutline.length;
-            let completedSubchapters = 0;
             
-            for (const subchapter of generatedOutline) {
-                const progress = 25 + (50 * (completedSubchapters / totalSubchapters));
-                updateProgress(progress, `Tahap 2: Menulis sub-bab "${subchapter.title}"...`);
-
-                const subchapterResponse = await fetch('/generator_kajian_teori/generate_subchapter', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        research_inputs: researchInputs,
-                        subchapter: subchapter,
-                        references: foundReferences
-                    })
-                });
-                const subchapterResult = await subchapterResponse.json();
-                if (!subchapterResponse.ok) throw subchapterResult;
-
-                generatedChapters[subchapter.title] = subchapterResult.content;
-                completedSubchapters++;
-            }
-
-            // --- TAHAP 3: Kompilasi & Review Final ---
-            updateProgress(85, 'Tahap 3: Finalisasi, review, & menyusun daftar pustaka...');
-            const compileResponse = await fetch('/generator_kajian_teori/compile_and_review', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    research_inputs: researchInputs,
-                    chapters: generatedChapters,
-                    references: foundReferences
-                })
-            });
-            const compileResult = await compileResponse.json();
-            if (!compileResponse.ok) throw compileResult;
-
-            // --- TAHAP 4: Tampilkan Hasil ---
+            // Tampilkan hasil
             updateProgress(100, 'Proses Selesai!');
-            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true });
-            outputContent.innerHTML = converter.makeHtml(compileResult.final_content);
-            referencesContent.innerHTML = converter.makeHtml(compileResult.final_references);
+            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true, simplifiedAutoLink: true });
+            const htmlOutput = converter.makeHtml(result.generated_text);
             
+            outputContent.innerHTML = htmlOutput;
             outputPanel.classList.remove('hidden');
             outputPanel.classList.add('flex');
-            showNotification('Draf Kajian Pustaka berhasil dibuat!', 'success');
+            
+            // Scroll ke hasil
+            outputPanel.scrollIntoView({ behavior: 'smooth' });
+            
+            showNotification('Draf Kajian Teori berhasil dibuat!', 'success');
 
         } catch (error) {
-            handleApiError(error);
+            console.error('API Error:', error);
+            showNotification(error.message, 'error');
         } finally {
-            // Reset UI setelah selesai atau gagal
+            // Sembunyikan loading dan aktifkan tombol
             loadingOverlay.style.display = 'none';
             generateBtn.disabled = false;
-            updateProgress(0, '');
+            updateProgress(0, ''); // Reset progress bar
         }
     };
-    
+
     generateBtn.addEventListener('click', handleGeneration);
 
-    // Placeholder untuk tombol ringkas
-    document.getElementById('summarize-btn').addEventListener('click', () => {
-        showNotification('Fitur ringkasan akan segera hadir!', 'info');
-    });
-
-    renderIcons();
-
-    // --- LOGIKA EKSPOR BARU (Menggunakan Backend) ---
+    // --- Logika Ekspor ---
     const handleExport = async (format) => {
-        const contentHtml = outputContent.innerHTML;
-        const referencesHtml = referencesContent.innerHTML;
+        const contentToExport = outputContent.innerHTML;
+        const title = inputTitle.value.trim() || "Kajian Teori";
 
-        if (!contentHtml.trim()) {
+        if (!contentToExport.trim()) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
-        showNotification(`Mempersiapkan file ${format.toUpperCase()}...`, 'info');
 
-        const exportBtn = format === 'pdf' ? document.getElementById('export-pdf-btn') : document.getElementById('export-word-btn');
-        exportBtn.disabled = true;
+        const btn = format === 'pdf' ? exportPdfBtn : exportWordBtn;
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4 mr-2"></i>Mengekspor...`;
+        renderIcons();
 
         try {
-            const formData = new FormData();
-            formData.append('content', `<h2>${researchInputs.title}</h2>` + contentHtml);
-            formData.append('references', referencesHtml);
-
-            const response = await fetch(`/generator_kajian_teori/export?format=${format}`, {
+            const response = await fetch('/api/export-document', {
                 method: 'POST',
-                body: formData // Kirim sebagai FormData, bukan JSON
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    content: contentToExport,
+                    format: format,
+                    title: `Bab 2 - ${title}`
+                })
             });
 
             if (!response.ok) {
@@ -453,19 +356,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const blob = await response.blob();
-            const fileName = `Kajian Pustaka - ${researchInputs.title || 'Hasil'}.${format}`;
-            saveAs(blob, fileName); // Menggunakan FileSaver.js
+            const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const extension = format === 'pdf' ? 'pdf' : 'docx';
+            saveAs(blob, `Bab_2_${safeTitle}.${extension}`);
             showNotification(`File ${format.toUpperCase()} berhasil diunduh!`, 'success');
 
         } catch (error) {
             showNotification(error.message, 'error');
         } finally {
-            exportBtn.disabled = false;
+            btn.disabled = false;
+            const icon = format === 'pdf' ? 'file-type-2' : 'file-text';
+            btn.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 mr-2"></i>Ekspor ${format === 'pdf' ? 'PDF' : 'Word'}`;
+            renderIcons();
         }
     };
-    
-    document.getElementById('export-pdf-btn').addEventListener('click', () => handleExport('pdf'));
-    document.getElementById('export-word-btn').addEventListener('click', () => handleExport('docx'));
+
+    exportPdfBtn.addEventListener('click', () => handleExport('pdf'));
+    exportWordBtn.addEventListener('click', () => handleExport('word'));
+
+    // Inisialisasi ikon saat halaman dimuat
+    renderIcons();
 });
 </script>
 {% endblock %}
