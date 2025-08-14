@@ -53,8 +53,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login' # Halaman login jika user belum terautentikasi
 
-# --- PERBAIKAN: Menambahkan User class dan user_loader ---
-
 class User(UserMixin):
     """Kelas User sederhana untuk integrasi dengan Flask-Login."""
     def __init__(self, uid):
@@ -67,15 +65,11 @@ def load_user(user_id):
     objek user dari user ID (yaitu UID Firebase) yang disimpan di session.
     """
     try:
-        # Cukup verifikasi bahwa user ada di Firebase.
-        # Tidak perlu mengambil semua detail di sini, cukup konfirmasi keberadaannya.
         auth.get_user(user_id)
         return User(uid=user_id)
     except Exception as e:
         print(f"Gagal memuat user dengan ID {user_id}: {e}")
         return None
-
-# ---------------------------------------------------------
 
 @login_manager.unauthorized_handler
 def unauthorized_callback():
@@ -92,7 +86,27 @@ def unauthorized_callback():
 
 
 # ========================================================================
-# 4. Impor Rute (WAJIB DI BAGIAN PALING BAWAH)
-# Ini penting untuk menghindari circular import
+# 4. PENAMBAHAN: Context Processor untuk Firebase Config
+# ========================================================================
+@app.context_processor
+def inject_firebase_config():
+    """
+    Mengirim konfigurasi Firebase Frontend ke semua template secara otomatis.
+    Ini akan menyelesaikan error 'Undefined is not JSON serializable'.
+    """
+    config_str = os.getenv('FIREBASE_FRONTEND_CONFIG_JSON')
+    if config_str:
+        try:
+            firebase_config = json.loads(config_str)
+            return dict(firebase_config=firebase_config)
+        except json.JSONDecodeError:
+            print("Peringatan: FIREBASE_FRONTEND_CONFIG_JSON tidak valid.")
+            return dict(firebase_config={})
+    print("Peringatan: FIREBASE_FRONTEND_CONFIG_JSON tidak ditemukan di environment.")
+    return dict(firebase_config={})
+
+
+# ========================================================================
+# 5. Impor Rute (WAJIB DI BAGIAN PALING BAWAH)
 # ========================================================================
 from app import routes
