@@ -242,6 +242,7 @@
                 </div>
             </div>
             <div id="output-content" class="io-output prose max-w-none"></div>
+            <div id="references-content" class="io-output prose max-w-none pt-4 border-t border-border-panel"></div>
         </div>
     </div>
 </div>
@@ -261,15 +262,22 @@
 {% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Referensi Elemen DOM
+    // --- Referensi Elemen DOM ---
     const generateBtn = document.getElementById('generate-btn');
     const outputPanel = document.getElementById('output-panel');
     const outputContent = document.getElementById('output-content');
+    const referencesContent = document.getElementById('references-content');
     const loadingOverlay = document.getElementById('loading-overlay');
     const progressBar = document.getElementById('progress-bar');
     const loadingStatusText = document.getElementById('loading-status-text');
     
-    // Fungsi pembantu
+    // --- Variabel State untuk menyimpan hasil antar tahap ---
+    let researchInputs = {};
+    let generatedOutline = null;
+    let foundReferences = [];
+    let generatedChapters = {};
+
+    // --- Fungsi Pembantu ---
     const renderIcons = () => window.lucide && window.lucide.createIcons();
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
@@ -278,19 +286,26 @@ document.addEventListener('DOMContentLoaded', () => {
         notif.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'x-circle'}"></i><span>${message}</span>`;
         container.appendChild(notif);
         renderIcons();
-        setTimeout(() => notif.remove(), 4000);
+        setTimeout(() => notif.remove(), 5000);
     };
 
-    // Fungsi untuk memperbarui progress bar dan status
     const updateProgress = (percentage, text) => {
         progressBar.style.width = `${percentage}%`;
         loadingStatusText.textContent = text;
     };
 
-    // Fungsi sleep untuk simulasi
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const handleApiError = (error) => {
+        console.error('API Error:', error);
+        let errorMessage = 'Terjadi kesalahan pada server.';
+        if (error.error) {
+            errorMessage = error.error;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        showNotification(errorMessage, 'error');
+    };
 
-    // Fungsi Utama: Generate Kajian Teori (Versi Baru dengan Alur Bertahap)
+    // --- FUNGSI UTAMA: Alur Kerja Generasi Bertahap ---
     const handleGeneration = async () => {
         const title = document.getElementById('input-title').value.trim();
         if (!title) {
@@ -298,90 +313,104 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const selectedSources = Array.from(document.querySelectorAll('input[name="source"]:checked')).map(cb => cb.value);
-        if (selectedSources.length === 0) {
+        // 1. Kumpulkan semua input dari form
+        researchInputs = {
+            title: title,
+            mainKeywords: document.getElementById('input-keywords').value.trim(),
+            initialReferences: document.getElementById('input-references').value.trim(),
+            language: document.getElementById('input-language').value,
+            targetWords: document.getElementById('input-target-words').value,
+            minYear: document.getElementById('input-min-year').value,
+            citationFormat: document.getElementById('input-citation-format').value,
+            sources: Array.from(document.querySelectorAll('input[name="source"]:checked')).map(cb => cb.value)
+        };
+
+        if (researchInputs.sources.length === 0) {
             showNotification('Pilih minimal satu sumber referensi.', 'error');
             return;
         }
-        
-        const payload = {
-            title: title,
-            keywords: document.getElementById('input-keywords').value.trim(),
-            references: document.getElementById('input-references').value.trim(),
-            language: document.getElementById('input-language').value,
-            target_words: document.getElementById('input-target-words').value,
-            min_year: document.getElementById('input-min-year').value,
-            citation_format: document.getElementById('input-citation-format').value,
-            sources: selectedSources
-        };
 
-        // Mulai proses loading
+        // 2. Mulai UI loading
         loadingOverlay.style.display = 'flex';
         generateBtn.disabled = true;
         outputPanel.classList.add('hidden');
         outputContent.innerHTML = '';
+        referencesContent.innerHTML = '';
         updateProgress(0, 'Memulai...');
 
         try {
-            // --- SIMULASI ALUR KERJA BERTAHAP ---
-            // Tahap 1: Generate Outline
-            await sleep(1500);
-            updateProgress(10, 'Tahap 1/6: Membuat outline Bab 2 yang terstruktur...');
-            
-            // Tahap 2: Pencarian & Ekstraksi Referensi
-            await sleep(2500);
-            updateProgress(25, 'Tahap 2/6: Mencari & mengekstraksi referensi dari database...');
-
-            // Tahap 3: Generate Konten Per Subbab (Simulasi)
-            await sleep(2000);
-            updateProgress(40, 'Tahap 3/6: Menulis sub-bab "Landasan Teori"...');
-            
-            await sleep(2000);
-            updateProgress(60, 'Tahap 4/6: Menulis sub-bab "Penelitian Terdahulu"...');
-
-            await sleep(2000);
-            updateProgress(75, 'Tahap 5/6: Menyusun "Kerangka Pemikiran" dan "Hipotesis"...');
-
-            // Tahap 4: Integrasi Sitasi & Finalisasi
-            await sleep(2500);
-            updateProgress(90, 'Tahap 6/6: Mengintegrasikan sitasi & daftar pustaka...');
-
-            // --- PANGGILAN API SEBENARNYA ---
-            // Di implementasi nyata, Anda mungkin menggunakan WebSockets atau Server-Sent Events
-            // untuk mendapatkan update progresif. Di sini, kita panggil API sekali setelah simulasi.
-            const response = await fetch('/api/generate-powerful-theory', { // Gunakan endpoint API baru
+            // --- TAHAP 1: Generate Outline & Cari Referensi ---
+            updateProgress(10, 'Tahap 1: Membuat outline & mencari referensi...');
+            const outlineResponse = await fetch('/generator_kajian_teori/generate_outline', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(researchInputs)
             });
+            const outlineResult = await outlineResponse.json();
+            if (!outlineResponse.ok) throw outlineResult;
 
-            const result = await response.json();
-            if (!response.ok) {
-                if (result.redirect) {
-                    showNotification('Batas penggunaan tercapai. Anda akan dialihkan.', 'error');
-                    setTimeout(() => { window.location.href = result.redirect; }, 2000);
-                } else {
-                    throw new Error(result.error || 'Gagal mendapat respon dari server.');
-                }
-                return;
+            generatedOutline = outlineResult.outline; // Simpan outline
+            foundReferences = outlineResult.references; // Simpan referensi
+
+            if (!generatedOutline || generatedOutline.length === 0) {
+                throw new Error("Gagal membuat outline. Coba lagi dengan kata kunci yang berbeda.");
             }
 
-            updateProgress(100, 'Proses Selesai! Menampilkan hasil...');
-            await sleep(1000);
+            // --- TAHAP 2: Generate Konten per Sub-bab ---
+            const totalSubchapters = generatedOutline.length;
+            let completedSubchapters = 0;
+            
+            for (const subchapter of generatedOutline) {
+                const progress = 25 + (50 * (completedSubchapters / totalSubchapters));
+                updateProgress(progress, `Tahap 2: Menulis sub-bab "${subchapter.title}"...`);
 
-            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true, simplifiedAutoLink: true, strikethrough: true });
-            outputContent.innerHTML = converter.makeHtml(result.generated_text);
+                const subchapterResponse = await fetch('/generator_kajian_teori/generate_subchapter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        research_inputs: researchInputs,
+                        subchapter: subchapter,
+                        references: foundReferences
+                    })
+                });
+                const subchapterResult = await subchapterResponse.json();
+                if (!subchapterResponse.ok) throw subchapterResult;
+
+                generatedChapters[subchapter.title] = subchapterResult.content;
+                completedSubchapters++;
+            }
+
+            // --- TAHAP 3: Kompilasi & Review Final ---
+            updateProgress(85, 'Tahap 3: Finalisasi, review, & menyusun daftar pustaka...');
+            const compileResponse = await fetch('/generator_kajian_teori/compile_and_review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    research_inputs: researchInputs,
+                    chapters: generatedChapters,
+                    references: foundReferences
+                })
+            });
+            const compileResult = await compileResponse.json();
+            if (!compileResponse.ok) throw compileResult;
+
+            // --- TAHAP 4: Tampilkan Hasil ---
+            updateProgress(100, 'Proses Selesai!');
+            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true });
+            outputContent.innerHTML = converter.makeHtml(compileResult.final_content);
+            referencesContent.innerHTML = converter.makeHtml(compileResult.final_references);
+            
             outputPanel.classList.remove('hidden');
             outputPanel.classList.add('flex');
             showNotification('Draf Kajian Pustaka berhasil dibuat!', 'success');
 
         } catch (error) {
-            showNotification(error.message, 'error');
+            handleApiError(error);
         } finally {
-            // Reset UI setelah selesai
+            // Reset UI setelah selesai atau gagal
             loadingOverlay.style.display = 'none';
             generateBtn.disabled = false;
-            updateProgress(0, ''); // Reset progress bar
+            updateProgress(0, '');
         }
     };
     
@@ -393,101 +422,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     renderIcons();
-});
 
-// --- LOGIKA EKSPOR (TETAP SAMA, DITARUH DI LUAR AGAR RAPI) ---
-document.addEventListener('DOMContentLoaded', () => {
-    const exportPdfBtn = document.getElementById('export-pdf-btn');
-    const exportWordBtn = document.getElementById('export-word-btn');
-    const outputContent = document.getElementById('output-content');
-    
-    const showNotification = (message, type = 'success') => {
-        const container = document.getElementById('notification-container');
-        if (!container) return;
-        const notif = document.createElement('div');
-        notif.className = `toast-notification ${type}`;
-        notif.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'x-circle'}"></i><span>${message}</span>`;
-        container.appendChild(notif);
-        window.lucide && window.lucide.createIcons();
-        setTimeout(() => notif.remove(), 4000);
-    };
-    
-    const handleWordExport = async () => {
-        if (!outputContent.innerHTML.trim()) {
+    // --- LOGIKA EKSPOR BARU (Menggunakan Backend) ---
+    const handleExport = async (format) => {
+        const contentHtml = outputContent.innerHTML;
+        const referencesHtml = referencesContent.innerHTML;
+
+        if (!contentHtml.trim()) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
-        showNotification('Mempersiapkan file DOCX...', 'success');
-        exportWordBtn.disabled = true;
+        showNotification(`Mempersiapkan file ${format.toUpperCase()}...`, 'info');
+
+        const exportBtn = format === 'pdf' ? document.getElementById('export-pdf-btn') : document.getElementById('export-word-btn');
+        exportBtn.disabled = true;
 
         try {
-            const title = `<h1>BAB II: KAJIAN PUSTAKA</h1><br/><h2>${document.getElementById('input-title').value.trim()}</h2>`;
-            const finalHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${title}${outputContent.innerHTML}</body></html>`;
-            const converted = htmlDocx.asBlob(finalHtml);
-            saveAs(converted, `Kajian Pustaka - ${document.getElementById('input-title').value.trim() || 'Hasil'}.docx`);
-        } catch (error) {
-            console.error("Word export error:", error);
-            showNotification("Gagal mengekspor ke Word.", 'error');
-        } finally {
-            exportWordBtn.disabled = false;
-        }
-    };
+            const formData = new FormData();
+            formData.append('content', `<h2>${researchInputs.title}</h2>` + contentHtml);
+            formData.append('references', referencesHtml);
 
-    const handlePdfExport = async () => {
-        if (!outputContent.innerHTML.trim()) {
-            showNotification('Tidak ada konten untuk diekspor.', 'error');
-            return;
-        }
-        showNotification('Mempersiapkan file PDF...', 'info');
-        exportPdfBtn.disabled = true;
-
-        try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            
-            // Menggunakan html2canvas untuk merender konten HTML ke canvas
-            const canvas = await html2canvas(outputContent, {
-                scale: 2, // Meningkatkan resolusi
-                useCORS: true
+            const response = await fetch(`/generator_kajian_teori/export?format=${format}`, {
+                method: 'POST',
+                body: formData // Kirim sebagai FormData, bukan JSON
             });
-            
-            const imgData = canvas.toDataURL('image/png');
-            const imgProps = doc.getImageProperties(imgData);
-            const pdfWidth = doc.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            
-            let heightLeft = pdfHeight;
-            let position = 15; // Margin atas
-            const margin = 15;
 
-            // Menambahkan judul manual
-            doc.setFontSize(16).setFont('helvetica', 'bold');
-            doc.text("BAB II: KAJIAN PUSTAKA", margin, position);
-            position += 10;
-
-            doc.addImage(imgData, 'PNG', margin, position, pdfWidth - (margin * 2), pdfHeight - (margin * 2));
-            heightLeft -= (doc.internal.pageSize.getHeight() - margin);
-
-            while (heightLeft >= 0) {
-                position = heightLeft - pdfHeight;
-                doc.addPage();
-                doc.addImage(imgData, 'PNG', margin, position, pdfWidth - (margin * 2), pdfHeight- (margin * 2));
-                heightLeft -= doc.internal.pageSize.getHeight();
+            if (!response.ok) {
+                const errorResult = await response.json();
+                throw new Error(errorResult.error || `Gagal mengekspor ke ${format.toUpperCase()}`);
             }
-            
-            doc.save(`Kajian Pustaka - ${document.getElementById('input-title').value.trim() || 'Hasil'}.pdf`);
-            showNotification('PDF berhasil dibuat!', 'success');
+
+            const blob = await response.blob();
+            const fileName = `Kajian Pustaka - ${researchInputs.title || 'Hasil'}.${format}`;
+            saveAs(blob, fileName); // Menggunakan FileSaver.js
+            showNotification(`File ${format.toUpperCase()} berhasil diunduh!`, 'success');
 
         } catch (error) {
-            console.error("PDF export error:", error);
-            showNotification("Gagal mengekspor ke PDF. Coba ekspor ke Word.", 'error');
+            showNotification(error.message, 'error');
         } finally {
-            exportPdfBtn.disabled = false;
+            exportBtn.disabled = false;
         }
     };
     
-    if(exportPdfBtn) exportPdfBtn.addEventListener('click', handlePdfExport);
-    if(exportWordBtn) exportWordBtn.addEventListener('click', handleWordExport);
+    document.getElementById('export-pdf-btn').addEventListener('click', () => handleExport('pdf'));
+    document.getElementById('export-word-btn').addEventListener('click', () => handleExport('docx'));
 });
 </script>
 {% endblock %}
