@@ -5,8 +5,8 @@ import json
 from flask import Flask, jsonify, request, redirect, url_for
 from dotenv import load_dotenv
 import firebase_admin
-from firebase_admin import credentials, firestore
-from flask_login import LoginManager
+from firebase_admin import credentials, firestore, auth
+from flask_login import LoginManager, UserMixin
 
 # Memuat environment variables dari file .env
 load_dotenv()
@@ -52,6 +52,30 @@ except Exception as e:
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login' # Halaman login jika user belum terautentikasi
+
+# --- PERBAIKAN: Menambahkan User class dan user_loader ---
+
+class User(UserMixin):
+    """Kelas User sederhana untuk integrasi dengan Flask-Login."""
+    def __init__(self, uid):
+        self.id = uid # Flask-Login membutuhkan atribut 'id'
+
+@login_manager.user_loader
+def load_user(user_id):
+    """
+    Fungsi ini dipanggil oleh Flask-Login pada setiap request untuk memuat
+    objek user dari user ID (yaitu UID Firebase) yang disimpan di session.
+    """
+    try:
+        # Cukup verifikasi bahwa user ada di Firebase.
+        # Tidak perlu mengambil semua detail di sini, cukup konfirmasi keberadaannya.
+        auth.get_user(user_id)
+        return User(uid=user_id)
+    except Exception as e:
+        print(f"Gagal memuat user dengan ID {user_id}: {e}")
+        return None
+
+# ---------------------------------------------------------
 
 @login_manager.unauthorized_handler
 def unauthorized_callback():
