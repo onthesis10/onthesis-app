@@ -1,10 +1,11 @@
+# /app/routes.py
+
 import os
-from flask import (Flask, render_template, request, redirect, url_for, 
+from flask import (render_template, request, redirect, url_for, 
                    flash, session, jsonify, Response)
 from dotenv import load_dotenv
 import google.generativeai as genai
-import firebase_admin
-from firebase_admin import credentials, auth, firestore
+from firebase_admin import auth
 import markdown
 import json
 import pandas as pd
@@ -14,6 +15,11 @@ import statsmodels.api as sm
 from io import BytesIO
 import matplotlib.pyplot as plt
 import base64
+
+# ========================================================================
+# 1. Impor 'app' dari __init__.py (PERUBAHAN KUNCI)
+# ========================================================================
+from app import app, db # Impor app dan db yang sudah dibuat di __init__.py
 
 # Impor fungsi-fungsi dari utils.py
 from app.utils import (
@@ -25,44 +31,22 @@ from app.utils import (
     export_to_pdf
 )
 
-# --- Inisialisasi Aplikasi Flask dan Firebase ---
+# --- Inisialisasi Gemini API (cukup sekali di sini) ---
 load_dotenv()
-
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")
-
-# Inisialisasi Firebase
-try:
-    cred_path = 'ServiceAccountKey.json'
-    if os.path.exists(cred_path):
-        cred = credentials.Certificate(cred_path)
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        print("Firebase berhasil diinisialisasi.")
-    else:
-        print("Peringatan: File ServiceAccountKey.json tidak ditemukan.")
-        db = None
-except Exception as e:
-    print(f"Error initializing Firebase: {e}")
-    db = None
-
-# Inisialisasi Gemini API
 try:
     gemini_api_key = os.getenv("GEMINI_API_KEY")
-    if gemini_api_key:
-        genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('gemini-pro')
-        print("Gemini API berhasil diinisialisasi.")
-    else:
+    if not gemini_api_key:
         print("Peringatan: GEMINI_API_KEY tidak ditemukan di .env")
-        model = None
+    # Konfigurasi sudah dilakukan di utils.py, jadi tidak perlu lagi di sini
+    print("Konfigurasi Gemini API akan digunakan dari utils.py")
 except Exception as e:
-    print(f"Error initializing Gemini API: {e}")
-    model = None
+    print(f"Error terkait inisialisasi Gemini API di routes.py: {e}")
 
 
+# ========================================================================
 # --- Routes Utama dan Autentikasi ---
+# Semua @app.route(...) sekarang akan menempel ke aplikasi yang benar
+# ========================================================================
 @app.route('/')
 def index():
     if 'user' in session:
@@ -76,6 +60,7 @@ def login():
         try:
             decoded_token = auth.verify_id_token(id_token)
             session['user'] = decoded_token
+            session.permanent = True # Membuat sesi bertahan lebih lama
             return redirect(url_for('dashboard'))
         except Exception as e:
             flash(f"Login Gagal: {e}")
@@ -94,7 +79,9 @@ def dashboard():
         return redirect(url_for('login'))
     return render_template('dashboard.html')
 
+# ========================================================================
 # --- Routes Fitur-Fitur Statis Lainnya ---
+# ========================================================================
 @app.route('/projects')
 def projects():
     if 'user' not in session: return redirect(url_for('login'))
@@ -140,13 +127,15 @@ def upgrade():
     if 'user' not in session: return redirect(url_for('login'))
     return render_template('upgrade.html')
 
-# --- Routes Fitur Generator (Lama & Lengkap) ---
+# ========================================================================
+# --- Routes Fitur Generator (Lama) ---
+# ========================================================================
 @app.route('/generator_latar_belakang', methods=['GET', 'POST'])
 def generator_latar_belakang():
     if 'user' not in session:
         return redirect(url_for('login'))
     if request.method == 'POST':
-        # ... Logika lengkap untuk POST request ...
+        # Logika Anda untuk POST request akan tetap di sini
         pass
     return render_template('generator_latar_belakang.html')
 
@@ -155,11 +144,13 @@ def generator_rumusan_masalah():
     if 'user' not in session:
         return redirect(url_for('login'))
     if request.method == 'POST':
-        # ... Logika lengkap untuk POST request ...
+        # Logika Anda untuk POST request akan tetap di sini
         pass
     return render_template('generator_rumusan_masalah.html')
 
-# --- Routes Analisis Data (Lama & Lengkap) ---
+# ========================================================================
+# --- Routes Analisis Data (Lengkap) ---
+# ========================================================================
 @app.route('/descriptive_statistics', methods=['GET', 'POST'])
 def descriptive_statistics():
     if 'user' not in session: return redirect(url_for('login'))
@@ -230,9 +221,9 @@ def homogeneity_test():
                 return redirect(request.url)
     return render_template('homogeneity_test.html')
 
-
+# ========================================================================
 # --- FITUR GENERATOR KAJIAN TEORI YANG BARU ---
-
+# ========================================================================
 @app.route('/generator_kajian_teori')
 def new_generator_kajian_teori():
     """Menampilkan halaman utama Generator Kajian Teori yang baru."""
@@ -343,4 +334,3 @@ def export_document_route():
     except Exception as e:
         print(f"Error in export_document_route: {e}")
         return jsonify({"error": f"Terjadi kesalahan: {str(e)}"}), 500
-
