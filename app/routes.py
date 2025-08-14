@@ -64,27 +64,57 @@ def login():
 def verify_google_token():
     """
     Endpoint ini menangani verifikasi token dan MENGEMBALIKAN JSON.
-    Ini akan memperbaiki error 'ID token tidak ditemukan'.
+    Versi ini lebih robust untuk menangani berbagai format request.
     """
     id_token = None
-    # PERBAIKAN: Cek apakah data dikirim sebagai JSON
-    if request.is_json:
-        data = request.get_json()
-        id_token = data.get('id_token')
-    # Jika bukan JSON, cek sebagai form data (untuk jaga-jaga)
-    else:
-        id_token = request.form.get('id_token')
+    
+    # Menambahkan log untuk debugging
+    print(f"Request Headers: {request.headers}")
+    print(f"Request is_json: {request.is_json}")
 
-    # Jika token tetap tidak ditemukan setelah dicek di kedua format
+    # Metode 1: Cek jika request adalah JSON (cara yang benar)
+    if request.is_json:
+        try:
+            data = request.get_json()
+            id_token = data.get('id_token')
+            print("Mencoba mengambil token dari JSON body.")
+        except Exception as e:
+            print(f"Gagal mem-parsing JSON: {e}")
+            pass
+    
+    # Metode 2: Jika bukan JSON, cek sebagai form data
     if not id_token:
+        id_token = request.form.get('id_token')
+        if id_token:
+            print("Token ditemukan di form data.")
+
+    # Metode 3: Jika masih tidak ada, coba baca raw data (untuk kasus header salah)
+    if not id_token:
+        try:
+            print("Token tidak ditemukan, mencoba membaca raw data.")
+            raw_data = request.get_data(as_text=True)
+            print(f"Raw data received: {raw_data}")
+            data = json.loads(raw_data)
+            id_token = data.get('id_token')
+            if id_token:
+                print("Token ditemukan setelah parsing raw data.")
+        except Exception:
+            # Gagal parsing raw data, berarti formatnya aneh atau kosong
+            pass
+
+    # Final check: jika token tetap tidak ditemukan
+    if not id_token:
+        print("FINAL: ID Token tidak ditemukan di semua metode (JSON, Form, Raw).")
         return jsonify({"status": "error", "message": "ID token tidak ditemukan dalam request."}), 400
     
     try:
         # Verifikasi token dengan Firebase Admin SDK
+        print("Memverifikasi ID Token dengan Firebase...")
         decoded_token = auth.verify_id_token(id_token)
         # Simpan informasi user di session server
         session['user'] = decoded_token
         session.permanent = True
+        print("Verifikasi berhasil. Mengarahkan ke dashboard.")
         # Kirim respons sukses dalam format JSON
         return jsonify({
             "status": "success", 
