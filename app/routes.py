@@ -1,13 +1,13 @@
 # ========================================================================
 # File: app/routes.py
-# Deskripsi: Versi yang disempurnakan dengan instruksi AI yang lebih ketat
-#            untuk gaya penulisan dan penempatan sitasi yang akurat.
+# Deskripsi: Versi yang disempurnakan dengan logika AI yang lebih
+#            profesional untuk struktur, penomoran, dan sitasi.
 # Perubahan:
-# - Prompt AI diinstruksikan untuk menempatkan sitasi inline (langsung
-#   setelah klausa), bukan di akhir paragraf.
-# - AI diinstruksikan untuk menghindari kalimat pembuka yang generik.
-# - Logika ekspor dokumen di backend tidak lagi digunakan oleh halaman ini,
-#   digantikan oleh logika frontend yang lebih canggih.
+# - Prompt AI diubah untuk menghasilkan subjudul dengan format A, B, C.
+# - AI diinstruksikan untuk menyertakan poin-poin pembahasan di setiap subjudul.
+# - Aturan sitasi diperketat: Satu sumber hanya boleh dikutip sekali per paragraf.
+# - Backend disiapkan untuk menerima parameter 'length_preference' dan
+#   'citation_style' untuk pembaruan frontend di masa depan.
 # ========================================================================
 
 # --- Impor Library ---
@@ -683,7 +683,7 @@ def search_pubmed(keywords):
     return results
 
 # =========================================================================
-# API UTAMA GENERATOR KAJIAN TEORI (LOGIKA PENULISAN & SITASI DITINGKATKAN)
+# API UTAMA GENERATOR KAJIAN TEORI (LOGIKA PROFESIONAL DITINGKATKAN)
 # =========================================================================
 @app.route('/api/generate-theory', methods=['POST'])
 @login_required
@@ -698,7 +698,10 @@ def api_generate_theory():
     data = request.get_json()
     research_title = data.get('title', '')
     keywords = data.get('keywords', '')
-    citation_format = 'APA 7' 
+    # Mengambil preferensi dari request, dengan nilai default jika tidak ada
+    length_preference = data.get('length_preference', 'Normal') # Contoh: 'Ringkas', 'Normal', 'Detail'
+    citation_style = data.get('citation_style', 'APA 7') # Contoh: 'APA 7', 'IEEE'
+    
     min_year = 2018
 
     if not research_title:
@@ -710,47 +713,59 @@ def api_generate_theory():
         # --- LANGKAH 1: AI Membuat Outline & Kata Kunci Cerdas ---
         print("Langkah 1: Membuat outline dan kata kunci cerdas...")
         prompt_outline = f"""
-        Anda adalah seorang perencana penelitian ahli. Berdasarkan judul penelitian berikut, pecah menjadi konsep-konsep inti dan buat kata kunci pencarian yang efektif.
+        Anda adalah seorang perencana penelitian ahli. Berdasarkan judul penelitian berikut, buatlah struktur Bab 2 (Kajian Teori) yang profesional.
+
         Judul: "{research_title}"
-        Kata Kunci Tambahan dari Pengguna: "{keywords}"
+        Kata Kunci Tambahan: "{keywords}"
 
         Tugas Anda:
-        1.  Buat outline Bab 2 yang logis, mencakup Landasan Teori, Penelitian Terdahulu, dan Kerangka Pemikiran.
-        2.  Untuk setiap sub-bab, berikan 3-5 variasi kata kunci pencarian. Gunakan sinonim dan istilah yang lebih luas. Jangan hanya menerjemahkan judul.
-            Contoh: Untuk "karakteristik remaja", gunakan juga "perkembangan psikologis remaja", "pembentukan identitas remaja", "perilaku sosial remaja", "adolescent psychology".
-        
-        Berikan output HANYA dalam format JSON yang valid, seperti ini:
+        1.  Buat outline Bab 2 yang terdiri dari bagian utama seperti 'Landasan Teori', 'Penelitian Terdahulu', dan 'Kerangka Pemikiran'.
+        2.  Gunakan format penomoran huruf kapital untuk setiap sub-bab utama (Contoh: A. Konsep Media Sosial).
+        3.  Di bawah setiap sub-bab, sertakan array 'poin_pembahasan' yang berisi 3-4 poin kunci yang harus dijelaskan.
+        4.  Sertakan juga array 'kata_kunci_pencarian' yang relevan untuk setiap sub-bab.
+
+        Berikan output HANYA dalam format JSON yang valid, seperti contoh ini:
         {{
-          "landasan_teori": [
-            {{ "sub_bab": "Konsep Media Sosial", "keywords": "definisi media sosial, jenis platform media sosial, dampak psikologis media sosial" }},
-            {{ "sub_bab": "Teori Perkembangan Remaja", "keywords": "teori perkembangan erikson, psikologi remaja, pembentukan identitas remaja, adolescent development theories" }}
-          ],
-          "penelitian_terdahulu": [
-            {{ "sub_bab": "Studi tentang Penggunaan Media Sosial oleh Remaja", "keywords": "penggunaan media sosial remaja, social media usage adolescents, dampak media sosial pada kesehatan mental remaja" }},
-            {{ "sub_bab": "Hubungan Media Sosial dan Karakter", "keywords": "social media and character development, pengaruh media sosial terhadap perilaku, online identity formation" }}
-          ],
-          "kerangka_pemikiran": []
+          "outline": [
+            {{
+              "sub_bab": "A. Konsep Media Sosial",
+              "poin_pembahasan": [
+                "Definisi dan evolusi media sosial.",
+                "Klasifikasi dan karakteristik platform populer.",
+                "Peran media sosial dalam komunikasi modern."
+              ],
+              "kata_kunci_pencarian": "definisi media sosial, jenis platform media sosial, dampak psikologis media sosial"
+            }},
+            {{
+              "sub_bab": "B. Teori Perkembangan Remaja",
+              "poin_pembahasan": [
+                "Tahapan perkembangan psikososial menurut Erikson.",
+                "Perkembangan kognitif dan pembentukan identitas.",
+                "Pentingnya kelompok sebaya (peer group) di masa remaja."
+              ],
+              "kata_kunci_pencarian": "teori perkembangan erikson, psikologi remaja, pembentukan identitas remaja, adolescent development theories"
+            }}
+          ]
         }}
         """
         
         outline_response = model.generate_content(prompt_outline)
         clean_json_string = re.sub(r'```json\s*|\s*```', '', outline_response.text.strip(), flags=re.DOTALL)
-        research_plan = json.loads(clean_json_string)
+        research_plan = json.loads(clean_json_string).get('outline', [])
 
         # --- LANGKAH 2: Pencarian Referensi yang Diperluas ---
         print("Langkah 2: Mencari referensi dari berbagai sumber...")
         all_references = []
         search_tasks = []
-        all_sub_bab_sections = (research_plan.get('landasan_teori', []) + 
-                                research_plan.get('penelitian_terdahulu', []))
-
+        
         with ThreadPoolExecutor(max_workers=15) as executor:
-            for section in all_sub_bab_sections:
-                # Menggunakan lebih banyak sumber pencarian secara paralel
-                search_tasks.append(executor.submit(search_core, section['keywords']))
-                search_tasks.append(executor.submit(search_openalex, section['keywords']))
-                search_tasks.append(executor.submit(search_doaj, section['keywords']))
-                search_tasks.append(executor.submit(search_eric, section['keywords']))
+            for section in research_plan:
+                search_keywords = section.get('kata_kunci_pencarian', '')
+                if search_keywords:
+                    search_tasks.append(executor.submit(search_core, search_keywords))
+                    search_tasks.append(executor.submit(search_openalex, search_keywords))
+                    search_tasks.append(executor.submit(search_doaj, search_keywords))
+                    search_tasks.append(executor.submit(search_eric, search_keywords))
             
             for future in search_tasks:
                 try:
@@ -775,10 +790,7 @@ def api_generate_theory():
             
             title_lower = ref['title'].lower()
             if title_lower not in seen_titles:
-                ref['citation_apa'] = f"{ref.get('authors_str', 'N/A')} ({ref.get('year', 'n.d.')}). *{ref.get('title', 'N/A')}*."
-                if ref.get('doi'):
-                     ref['citation_apa'] += f" https://doi.org/{ref.get('doi')}"
-
+                # Pemformatan sitasi akan disesuaikan di langkah akhir
                 ref['citation_placeholder'] = f"[{ref.get('authors_str', 'N/A').split(' ')[0].replace(',', '')}, {ref.get('year', 'n.d.')}]"
                 unique_references.append(ref)
                 seen_titles.add(title_lower)
@@ -793,26 +805,35 @@ def api_generate_theory():
         sources_text = ""
         for i, ref in enumerate(processed_references):
             sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Penulis: {ref.get('authors_str')}\n- Tahun: {ref.get('year')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n\n"
+        
+        # Menentukan instruksi panjang tulisan
+        length_instruction = "Tulis pembahasan dengan detail yang seimbang untuk setiap poin."
+        if length_preference == 'Ringkas':
+            length_instruction = "Tulis pembahasan yang ringkas dan padat, sekitar 100-150 kata per sub-bab."
+        elif length_preference == 'Detail':
+            length_instruction = "Tulis pembahasan yang mendalam dan komprehensif, lebih dari 250 kata per sub-bab, jelaskan setiap poin secara rinci."
 
         prompt_draft = f"""
-        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis draf Bab 2 Kajian Teori yang komprehensif dalam Bahasa Indonesia dengan gaya profesional.
+        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis draf Bab 2 Kajian Teori yang komprehensif dan profesional dalam Bahasa Indonesia.
 
         KONTEKS PENELITIAN:
         - Judul: "{research_title}"
-        - Outline yang Harus Diikuti: {json.dumps(research_plan, indent=2, ensure_ascii=False)}
+        - Outline yang HARUS diikuti: {json.dumps(research_plan, indent=2, ensure_ascii=False)}
 
         SUMBER RUJUKAN (Gunakan HANYA informasi dari sumber-sumber ini):
         {sources_text}
 
         INSTRUKSI PENULISAN SANGAT PENTING:
-        1.  **Gaya Profesional**: Langsung ke pokok pembahasan. Hindari kalimat pembuka yang generik seperti "Media sosial adalah..." atau "Penelitian terdahulu menunjukkan...". Sintesis informasi dari beberapa sumber untuk membentuk argumen yang kuat.
-        2.  **Penempatan Sitasi (Inline Citation)**: Ini adalah aturan paling krusial. Tempatkan placeholder sitasi [NamaPenulis, Tahun] **LANGSUNG SETELAH KALIMAT ATAU KLAUSA** yang informasinya diambil dari sumber tersebut.
-            - **BENAR**: Penggunaan media sosial yang berlebihan dapat menyebabkan kecemasan [PenulisA, 2023]. Hal ini didukung oleh studi lain yang menemukan korelasi serupa [PenulisB, 2024].
-            - **SALAH**: Penggunaan media sosial yang berlebihan dapat menyebabkan kecemasan. Hal ini didukung oleh studi lain yang menemukan korelasi serupa [PenulisA, 2023; PenulisB, 2024].
-        3.  **JANGAN PERNAH** mengelompokkan semua sitasi di akhir sebuah paragraf. Setiap sitasi harus terikat pada informasinya.
-        4.  Gunakan Bahasa Indonesia yang formal, akademik, dan jelas.
-        5.  Setelah semua bagian selesai, buat bagian baru dengan judul `### Daftar Pustaka`.
-        6.  Tulis draf dalam format Markdown. Gunakan heading 2 (##) untuk judul bab dan heading 3 (###) untuk sub-bab.
+        1.  **Struktur dan Konten**: Ikuti outline yang diberikan. Bahas setiap 'poin_pembahasan' dalam sub-bab yang sesuai. Anda bisa menggunakan poin-poin tersebut sebagai daftar (bullet points) jika dirasa cocok untuk memperjelas.
+        2.  **Panjang Tulisan**: {length_instruction}
+        3.  **Gaya Profesional**: Langsung ke pokok pembahasan. Hindari kalimat pembuka generik. Sintesis informasi dari beberapa sumber untuk membentuk argumen yang kuat.
+        4.  **ATURAN SITASI PALING KRUSIAL**:
+            - Tempatkan placeholder sitasi [NamaPenulis, Tahun] **LANGSUNG SETELAH** kalimat atau klausa yang didukung oleh sumber tersebut.
+            - **JANGAN PERNAH MENGGUNAKAN SITASI DARI SUMBER YANG SAMA LEBIH DARI SATU KALI DALAM SATU PARAGRAF.** Jika beberapa kalimat dalam satu paragraf berasal dari sumber yang sama, gabungkan ide-idenya dan letakkan **SATU sitasi saja di akhir paragraf tersebut**.
+            - **Contoh BENAR**: Perkembangan identitas remaja sangat dipengaruhi oleh interaksi sosial mereka. Proses ini seringkali melibatkan eksperimen dengan berbagai peran dan nilai untuk menemukan jati diri yang koheren [PenulisA, 2023].
+            - **Contoh SALAH**: Perkembangan identitas remaja dipengaruhi interaksi sosial [PenulisA, 2023]. Mereka bereksperimen dengan berbagai peran [PenulisA, 2023].
+        5.  **Format**: Gunakan Markdown. Judul bab utama adalah `## BAB 2 KAJIAN TEORI`. Sub-bab utama menggunakan format `### A. Judul Sub-Bab`.
+        6.  **Daftar Pustaka**: Setelah semua bagian selesai, buat bagian baru dengan judul `### Daftar Pustaka`.
 
         Mulai penulisan draf Bab 2 sekarang, patuhi semua instruksi dengan ketat.
         """
@@ -835,9 +856,16 @@ def api_generate_theory():
             
             if matched_ref:
                 in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
-                # Ganti hanya satu per satu untuk menghindari penggantian ganda
                 final_text = final_text.replace(matched_ref['citation_placeholder'], in_text_citation, 1)
-                used_citations.add(matched_ref['citation_apa'])
+                
+                # Format Daftar Pustaka sesuai gaya yang dipilih
+                citation_entry = f"{matched_ref.get('authors_str', 'N/A')} ({matched_ref.get('year', 'n.d.')}). *{matched_ref.get('title', 'N/A')}*."
+                if citation_style == 'IEEE': # Contoh sederhana untuk gaya lain
+                    citation_entry = f"[X] {matched_ref.get('authors_str', 'N/A')}, \"{matched_ref.get('title', 'N/A')},\" {matched_ref.get('year', 'n.d.')}."
+
+                if matched_ref.get('doi'):
+                     citation_entry += f" doi: {matched_ref.get('doi')}"
+                used_citations.add(citation_entry)
         
         bibliography = "\n\n".join(sorted(list(used_citations)))
         main_content = final_text.split('### Daftar Pustaka')[0]
