@@ -1,36 +1,33 @@
-# /app/__init__.py
+# ========================================================================
+# File: app/__init__.py (Versi untuk Railway/Serverless)
+# Deskripsi: Menginisialisasi aplikasi dan membaca kredensial Firebase
+#            dari environment variable, bukan dari file.
+# ========================================================================
 
 import os
-import json
+import json # <-- Impor baru untuk membaca string JSON
 from flask import Flask, jsonify, request, redirect, url_for
 from dotenv import load_dotenv
 import firebase_admin
-from firebase_admin import credentials, firestore, auth
-from flask_login import LoginManager, UserMixin
+from firebase_admin import credentials, firestore
+from flask_login import LoginManager
 
-# Memuat environment variables dari file .env
+# --- Konfigurasi Awal ---
 load_dotenv()
 
-# ========================================================================
-# 1. Inisialisasi Aplikasi Flask (HANYA DI SINI)
-# ========================================================================
+# 1. Inisialisasi Aplikasi Flask
 app = Flask(__name__)
-# Kunci rahasia dipindahkan ke sini agar terpusat
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'kunci-rahasia-default-yang-aman')
 
-
-# ========================================================================
-# 2. Inisialisasi Firebase Admin SDK & Firestore
-# ========================================================================
-db = None # Definisikan db di luar try-except
+# 2. Inisialisasi Firebase Admin SDK & Firestore (CARA BARU)
 try:
     if not firebase_admin._apps:
-        # Mengambil kredensial dari environment variable (cara yang benar untuk server)
+        # Ambil kredensial dari environment variable FIREBASE_CREDENTIALS_JSON
         firebase_creds_json_str = os.getenv("FIREBASE_CREDENTIALS_JSON")
         if not firebase_creds_json_str:
             raise ValueError("Environment variable FIREBASE_CREDENTIALS_JSON tidak diatur.")
 
-        # Mengubah string JSON menjadi dictionary Python
+        # Ubah string JSON menjadi dictionary Python
         cred_dict = json.loads(firebase_creds_json_str)
 
         # Inisialisasi menggunakan dictionary
@@ -44,40 +41,23 @@ try:
 
 except Exception as e:
     print(f"!!! KRITIS: Gagal menginisialisasi Firebase Admin SDK atau Firestore: {e}")
+    db = None # Pastikan db ada meskipun gagal
 
-
-# ========================================================================
 # 3. Inisialisasi Flask-Login
-# ========================================================================
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Halaman login jika user belum terautentikasi
+login_manager.login_view = 'login'
 
-class User(UserMixin):
-    """Kelas User sederhana untuk integrasi dengan Flask-Login."""
-    def __init__(self, uid):
-        self.id = uid # Flask-Login membutuhkan atribut 'id'
-
-@login_manager.user_loader
-def load_user(user_id):
-    """
-    Fungsi ini dipanggil oleh Flask-Login pada setiap request untuk memuat
-    objek user dari user ID (yaitu UID Firebase) yang disimpan di session.
-    """
-    try:
-        auth.get_user(user_id)
-        return User(uid=user_id)
-    except Exception as e:
-        print(f"Gagal memuat user dengan ID {user_id}: {e}")
-        return None
-
+# ========================================================================
+# Menambahkan handler untuk permintaan API yang tidak sah
+# ========================================================================
 @login_manager.unauthorized_handler
 def unauthorized_callback():
     """
     Mengirim balasan JSON saat pengguna yang belum login mencoba mengakses
     rute API yang dilindungi.
     """
-    if request.path.startswith('/api/') or request.path.startswith('/generator_kajian_teori/'):
+    if request.path.startswith('/api/'):
         return jsonify({
             'status': 'error',
             'message': 'Sesi Anda telah berakhir. Silakan muat ulang halaman dan login kembali.'
@@ -85,28 +65,6 @@ def unauthorized_callback():
     return redirect(url_for('login'))
 
 
-# ========================================================================
-# 4. PENAMBAHAN: Context Processor untuk Firebase Config
-# ========================================================================
-@app.context_processor
-def inject_firebase_config():
-    """
-    Mengirim konfigurasi Firebase Frontend ke semua template secara otomatis.
-    Ini akan menyelesaikan error 'Undefined is not JSON serializable'.
-    """
-    config_str = os.getenv('FIREBASE_FRONTEND_CONFIG_JSON')
-    if config_str:
-        try:
-            firebase_config = json.loads(config_str)
-            return dict(firebase_config=firebase_config)
-        except json.JSONDecodeError:
-            print("Peringatan: FIREBASE_FRONTEND_CONFIG_JSON tidak valid.")
-            return dict(firebase_config={})
-    print("Peringatan: FIREBASE_FRONTEND_CONFIG_JSON tidak ditemukan di environment.")
-    return dict(firebase_config={})
-
-
-# ========================================================================
-# 5. Impor Rute (WAJIB DI BAGIAN PALING BAWAH)
-# ========================================================================
+# 4. Impor rute setelah semua inisialisasi selesai
+# Ini penting untuk menghindari circular import
 from app import routes
