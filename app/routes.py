@@ -1,10 +1,11 @@
 # ========================================================================
 # File: app/routes.py
-# Deskripsi: Versi yang disesuaikan untuk alur kerja Generator Kajian Teori baru.
+# Deskripsi: Versi yang disempurnakan dengan logika pencarian referensi
+#            yang lebih cerdas dan fleksibel.
 # Perubahan:
-# - Logika inti di /api/generate-theory dipertahankan karena sudah sesuai
-#   dengan alur multi-langkah yang diminta (outline -> search -> draft).
-# - Sedikit penyesuaian untuk memastikan robust parsing dan error handling.
+# - Prompt AI untuk membuat kata kunci diubah agar lebih umum dan mendasar.
+# - Mengaktifkan lebih banyak sumber pencarian (DOAJ, ERIC) secara paralel.
+# - Menambahkan lebih banyak variasi kata kunci pencarian secara otomatis.
 # ========================================================================
 
 # --- Impor Library ---
@@ -680,12 +681,11 @@ def search_pubmed(keywords):
     return results
 
 # =========================================================================
-# API UTAMA GENERATOR KAJIAN TEORI (ALUR BARU)
+# API UTAMA GENERATOR KAJIAN TEORI (LOGIKA PENCARIAN DITINGKATKAN)
 # =========================================================================
 @app.route('/api/generate-theory', methods=['POST'])
 @login_required
 def api_generate_theory():
-    # Pengecekan batas penggunaan untuk pengguna non-PRO
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'generate_theory')
         if not is_allowed:
@@ -693,13 +693,11 @@ def api_generate_theory():
                 return jsonify({'error': "Batas percobaan untuk fitur ini tercapai. Upgrade ke PRO untuk akses tanpa batas.", 'redirect': url_for('upgrade_page')}), 429
             return jsonify({'error': message}), 429
 
-    # Mengambil data dari request
     data = request.get_json()
     research_title = data.get('title', '')
     keywords = data.get('keywords', '')
-    # Set default values for simplicity as per the new flow
     citation_format = 'APA 7' 
-    min_year = 2018 # Default tahun minimal yang relevan
+    min_year = 2018
 
     if not research_title:
         return jsonify({"error": "Judul penelitian tidak boleh kosong."}), 400
@@ -707,26 +705,27 @@ def api_generate_theory():
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
 
-        # --- LANGKAH 1: AI Membuat Outline Bab 2 ---
-        print("Langkah 1: Membuat outline Bab 2...")
+        # --- LANGKAH 1: AI Membuat Outline & Kata Kunci Cerdas ---
+        print("Langkah 1: Membuat outline dan kata kunci cerdas...")
         prompt_outline = f"""
-        Anda adalah seorang perencana penelitian ahli. Berdasarkan judul penelitian berikut, buatlah outline Bab 2 Kajian Teori yang logis dan terstruktur.
+        Anda adalah seorang perencana penelitian ahli. Berdasarkan judul penelitian berikut, pecah menjadi konsep-konsep inti dan buat kata kunci pencarian yang efektif.
         Judul: "{research_title}"
-        Kata Kunci Tambahan: "{keywords}"
+        Kata Kunci Tambahan dari Pengguna: "{keywords}"
 
         Tugas Anda:
-        1.  Buat outline yang mencakup sub-bab seperti Landasan Teori, Penelitian Terdahulu, dan Kerangka Pemikiran.
-        2.  Untuk setiap sub-bab, berikan 3-5 kata kunci pencarian yang sangat spesifik untuk menemukan referensi yang relevan.
+        1.  Buat outline Bab 2 yang logis, mencakup Landasan Teori, Penelitian Terdahulu, dan Kerangka Pemikiran.
+        2.  Untuk setiap sub-bab, berikan 3-5 variasi kata kunci pencarian. Gunakan sinonim dan istilah yang lebih luas. Jangan hanya menerjemahkan judul.
+            Contoh: Untuk "karakteristik remaja", gunakan juga "perkembangan psikologis remaja", "pembentukan identitas remaja", "perilaku sosial remaja", "adolescent psychology".
         
-        Berikan output HANYA dalam format JSON yang valid, seperti contoh ini:
+        Berikan output HANYA dalam format JSON yang valid, seperti ini:
         {{
           "landasan_teori": [
-            {{ "sub_bab": "Definisi Media Sosial", "keywords": "definisi media sosial, jenis platform media sosial, karakteristik media sosial" }},
-            {{ "sub_bab": "Teori Produktivitas", "keywords": "teori produktivitas kerja, faktor yang mempengaruhi produktivitas, pengukuran produktivitas" }}
+            {{ "sub_bab": "Konsep Media Sosial", "keywords": "definisi media sosial, jenis platform media sosial, dampak psikologis media sosial" }},
+            {{ "sub_bab": "Teori Perkembangan Remaja", "keywords": "teori perkembangan erikson, psikologi remaja, pembentukan identitas remaja, adolescent development theories" }}
           ],
           "penelitian_terdahulu": [
-            {{ "sub_bab": "Pengaruh Media Sosial pada Mahasiswa", "keywords": "dampak media sosial mahasiswa, penggunaan media sosial di kalangan mahasiswa, social media academic performance" }},
-            {{ "sub_bab": "Hubungan Produktivitas dan Teknologi", "keywords": "technology impact on productivity, digital distraction, student productivity tools" }}
+            {{ "sub_bab": "Studi tentang Penggunaan Media Sosial oleh Remaja", "keywords": "penggunaan media sosial remaja, social media usage adolescents, dampak media sosial pada kesehatan mental remaja" }},
+            {{ "sub_bab": "Hubungan Media Sosial dan Karakter", "keywords": "social media and character development, pengaruh media sosial terhadap perilaku, online identity formation" }}
           ],
           "kerangka_pemikiran": []
         }}
@@ -736,55 +735,59 @@ def api_generate_theory():
         clean_json_string = re.sub(r'```json\s*|\s*```', '', outline_response.text.strip(), flags=re.DOTALL)
         research_plan = json.loads(clean_json_string)
 
-        # --- LANGKAH 2: Pencarian Referensi Otomatis ---
-        print("Langkah 2: Mencari referensi...")
+        # --- LANGKAH 2: Pencarian Referensi yang Diperluas ---
+        print("Langkah 2: Mencari referensi dari berbagai sumber...")
         all_references = []
         search_tasks = []
         all_sub_bab_sections = (research_plan.get('landasan_teori', []) + 
                                 research_plan.get('penelitian_terdahulu', []))
 
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=15) as executor:
             for section in all_sub_bab_sections:
-                # Menggunakan sumber pencarian yang paling umum dan andal
+                # Menggunakan lebih banyak sumber pencarian secara paralel
                 search_tasks.append(executor.submit(search_core, section['keywords']))
                 search_tasks.append(executor.submit(search_openalex, section['keywords']))
+                search_tasks.append(executor.submit(search_doaj, section['keywords']))
+                search_tasks.append(executor.submit(search_eric, section['keywords']))
             
             for future in search_tasks:
                 try:
                     all_references.extend(future.result())
                 except Exception as e:
-                    print(f"Gagal mencari dari salah satu sumber: {e}")
+                    print(f"Gagal saat mengambil hasil dari salah satu sumber: {e}")
 
         # --- LANGKAH 3: Filter, De-duplikasi, dan Format Referensi ---
-        print("Langkah 3: Memfilter dan memformat referensi...")
+        print(f"Langkah 3: Memfilter dari total {len(all_references)} referensi mentah...")
         unique_references = []
         seen_titles = set()
         for ref in all_references:
+            if not ref or not ref.get('title'):
+                continue
             try:
-                # Filter berdasarkan tahun minimal
-                ref_year = int(ref.get('year', 0))
+                ref_year_str = str(ref.get('year', '0'))
+                ref_year = int(re.search(r'\d{4}', ref_year_str).group()) if re.search(r'\d{4}', ref_year_str) else 0
                 if min_year and ref_year < int(min_year):
                     continue
-            except (ValueError, TypeError):
-                continue # Lewati jika tahun tidak valid
+            except (ValueError, TypeError, AttributeError):
+                continue
             
-            # De-duplikasi berdasarkan judul
-            if ref.get('title') and ref['title'].lower() not in seen_titles:
-                # Format sitasi APA 7 sederhana
+            title_lower = ref['title'].lower()
+            if title_lower not in seen_titles:
                 ref['citation_apa'] = f"{ref.get('authors_str', 'N/A')} ({ref.get('year', 'n.d.')}). *{ref.get('title', 'N/A')}*."
                 if ref.get('doi'):
                      ref['citation_apa'] += f" https://doi.org/{ref.get('doi')}"
 
                 ref['citation_placeholder'] = f"[{ref.get('authors_str', 'N/A').split(' ')[0].replace(',', '')}, {ref.get('year', 'n.d.')}]"
                 unique_references.append(ref)
-                seen_titles.add(ref['title'].lower())
+                seen_titles.add(title_lower)
 
+        print(f"Ditemukan {len(unique_references)} referensi unik setelah filter.")
         if len(unique_references) < 5:
-            return jsonify({"error": "Referensi yang ditemukan tidak cukup (kurang dari 5) untuk menghasilkan kajian teori yang baik. Coba dengan judul atau kata kunci yang lebih spesifik."}), 404
+            return jsonify({"error": f"Referensi yang ditemukan tidak cukup (hanya {len(unique_references)}). Coba dengan judul atau kata kunci yang lebih umum atau berbeda."}), 404
 
         # --- LANGKAH 4: AI Menulis Draf Bab 2 ---
         print("Langkah 4: Menulis draf Bab 2...")
-        processed_references = unique_references[:15] # Batasi 15 referensi terbaik untuk dikirim ke AI
+        processed_references = sorted(unique_references, key=lambda x: x.get('year', 0), reverse=True)[:15]
         sources_text = ""
         for i, ref in enumerate(processed_references):
             sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Penulis: {ref.get('authors_str')}\n- Tahun: {ref.get('year')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n\n"
@@ -818,11 +821,8 @@ def api_generate_theory():
         final_text = generated_text
         used_citations = set()
         
-        # Buat mapping dari placeholder ke referensi lengkap
-        # Kunci dibuat lowercase untuk pencocokan yang tidak sensitif huruf
         temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
         
-        # Cari semua placeholder dalam teks yang dihasilkan AI
         placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
 
         for author_match, year_match in placeholders_in_text:
@@ -830,21 +830,13 @@ def api_generate_theory():
             matched_ref = temp_ref_map.get(placeholder_key)
             
             if matched_ref:
-                # Buat format sitasi dalam teks yang benar (contoh: Author, Year)
                 in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
-                # Ganti placeholder dengan sitasi yang benar
                 final_text = final_text.replace(matched_ref['citation_placeholder'], in_text_citation)
-                # Tambahkan referensi lengkap ke daftar pustaka yang akan digunakan
                 used_citations.add(matched_ref['citation_apa'])
         
-        # Buat daftar pustaka dari referensi yang benar-benar dikutip
         bibliography = "\n\n".join(sorted(list(used_citations)))
-        
-        # Pisahkan konten utama dari bagian daftar pustaka yang mungkin dibuat AI
         main_content = final_text.split('### Daftar Pustaka')[0]
-        
-        # Gabungkan kembali dengan daftar pustaka yang sudah bersih dan terverifikasi
-        final_output = main_content + f"\n\n### Daftar Pustaka\n{bibliography}"
+        final_output = main_content.strip() + f"\n\n### Daftar Pustaka\n{bibliography}"
 
         return jsonify({"generated_text": final_output})
 
