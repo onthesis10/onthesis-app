@@ -64,11 +64,20 @@ def login():
 def verify_google_token():
     """
     Endpoint ini menangani verifikasi token dan MENGEMBALIKAN JSON.
-    Ini akan memperbaiki error 'Unexpected token <'.
+    Ini akan memperbaiki error 'ID token tidak ditemukan'.
     """
-    id_token = request.form.get('id_token')
+    id_token = None
+    # PERBAIKAN: Cek apakah data dikirim sebagai JSON
+    if request.is_json:
+        data = request.get_json()
+        id_token = data.get('id_token')
+    # Jika bukan JSON, cek sebagai form data (untuk jaga-jaga)
+    else:
+        id_token = request.form.get('id_token')
+
+    # Jika token tetap tidak ditemukan setelah dicek di kedua format
     if not id_token:
-        return jsonify({"status": "error", "message": "ID token tidak ditemukan."}), 400
+        return jsonify({"status": "error", "message": "ID token tidak ditemukan dalam request."}), 400
     
     try:
         # Verifikasi token dengan Firebase Admin SDK
