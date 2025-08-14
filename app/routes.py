@@ -1,11 +1,13 @@
 # ========================================================================
 # File: app/routes.py
-# Deskripsi: Versi yang disempurnakan dengan logika pencarian referensi
-#            yang lebih cerdas dan fleksibel.
+# Deskripsi: Versi yang disempurnakan dengan instruksi AI yang lebih ketat
+#            untuk gaya penulisan dan penempatan sitasi yang akurat.
 # Perubahan:
-# - Prompt AI untuk membuat kata kunci diubah agar lebih umum dan mendasar.
-# - Mengaktifkan lebih banyak sumber pencarian (DOAJ, ERIC) secara paralel.
-# - Menambahkan lebih banyak variasi kata kunci pencarian secara otomatis.
+# - Prompt AI diinstruksikan untuk menempatkan sitasi inline (langsung
+#   setelah klausa), bukan di akhir paragraf.
+# - AI diinstruksikan untuk menghindari kalimat pembuka yang generik.
+# - Logika ekspor dokumen di backend tidak lagi digunakan oleh halaman ini,
+#   digantikan oleh logika frontend yang lebih canggih.
 # ========================================================================
 
 # --- Impor Library ---
@@ -681,7 +683,7 @@ def search_pubmed(keywords):
     return results
 
 # =========================================================================
-# API UTAMA GENERATOR KAJIAN TEORI (LOGIKA PENCARIAN DITINGKATKAN)
+# API UTAMA GENERATOR KAJIAN TEORI (LOGIKA PENULISAN & SITASI DITINGKATKAN)
 # =========================================================================
 @app.route('/api/generate-theory', methods=['POST'])
 @login_required
@@ -793,7 +795,7 @@ def api_generate_theory():
             sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Penulis: {ref.get('authors_str')}\n- Tahun: {ref.get('year')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n\n"
 
         prompt_draft = f"""
-        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis draf Bab 2 Kajian Teori yang komprehensif dalam Bahasa Indonesia.
+        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis draf Bab 2 Kajian Teori yang komprehensif dalam Bahasa Indonesia dengan gaya profesional.
 
         KONTEKS PENELITIAN:
         - Judul: "{research_title}"
@@ -802,15 +804,17 @@ def api_generate_theory():
         SUMBER RUJUKAN (Gunakan HANYA informasi dari sumber-sumber ini):
         {sources_text}
 
-        INSTRUKSI PENULISAN:
-        1.  Tulis konten untuk setiap sub-bab dalam outline yang diberikan (Landasan Teori, Penelitian Terdahulu, Kerangka Pemikiran).
-        2.  Sintesis dan parafrase informasi dari sumber rujukan. JANGAN menyalin-tempel abstrak. Gabungkan beberapa ide dari sumber yang berbeda.
-        3.  **SANGAT PENTING**: Setiap kali Anda merujuk pada sebuah sumber, sisipkan sitasi dalam teks menggunakan format placeholder yang disediakan, contoh: [NamaPenulis, Tahun].
+        INSTRUKSI PENULISAN SANGAT PENTING:
+        1.  **Gaya Profesional**: Langsung ke pokok pembahasan. Hindari kalimat pembuka yang generik seperti "Media sosial adalah..." atau "Penelitian terdahulu menunjukkan...". Sintesis informasi dari beberapa sumber untuk membentuk argumen yang kuat.
+        2.  **Penempatan Sitasi (Inline Citation)**: Ini adalah aturan paling krusial. Tempatkan placeholder sitasi [NamaPenulis, Tahun] **LANGSUNG SETELAH KALIMAT ATAU KLAUSA** yang informasinya diambil dari sumber tersebut.
+            - **BENAR**: Penggunaan media sosial yang berlebihan dapat menyebabkan kecemasan [PenulisA, 2023]. Hal ini didukung oleh studi lain yang menemukan korelasi serupa [PenulisB, 2024].
+            - **SALAH**: Penggunaan media sosial yang berlebihan dapat menyebabkan kecemasan. Hal ini didukung oleh studi lain yang menemukan korelasi serupa [PenulisA, 2023; PenulisB, 2024].
+        3.  **JANGAN PERNAH** mengelompokkan semua sitasi di akhir sebuah paragraf. Setiap sitasi harus terikat pada informasinya.
         4.  Gunakan Bahasa Indonesia yang formal, akademik, dan jelas.
         5.  Setelah semua bagian selesai, buat bagian baru dengan judul `### Daftar Pustaka`.
         6.  Tulis draf dalam format Markdown. Gunakan heading 2 (##) untuk judul bab dan heading 3 (###) untuk sub-bab.
 
-        Mulai penulisan draf Bab 2 sekarang.
+        Mulai penulisan draf Bab 2 sekarang, patuhi semua instruksi dengan ketat.
         """
         
         draft_response = model.generate_content(prompt_draft)
@@ -831,7 +835,8 @@ def api_generate_theory():
             
             if matched_ref:
                 in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
-                final_text = final_text.replace(matched_ref['citation_placeholder'], in_text_citation)
+                # Ganti hanya satu per satu untuk menghindari penggantian ganda
+                final_text = final_text.replace(matched_ref['citation_placeholder'], in_text_citation, 1)
                 used_citations.add(matched_ref['citation_apa'])
         
         bibliography = "\n\n".join(sorted(list(used_citations)))
