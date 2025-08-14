@@ -63,19 +63,30 @@ def login():
 @app.route('/verify-token', methods=['POST'])
 def verify_google_token():
     """
-    Endpoint ini yang dicari oleh `url_for('verify_google_token')`.
-    Fungsi ini menangani verifikasi token setelah user menekan tombol login.
+    Endpoint ini menangani verifikasi token dan MENGEMBALIKAN JSON.
+    Ini akan memperbaiki error 'Unexpected token <'.
     """
     id_token = request.form.get('id_token')
+    if not id_token:
+        return jsonify({"status": "error", "message": "ID token tidak ditemukan."}), 400
+    
     try:
+        # Verifikasi token dengan Firebase Admin SDK
         decoded_token = auth.verify_id_token(id_token)
+        # Simpan informasi user di session server
         session['user'] = decoded_token
         session.permanent = True
-        return redirect(url_for('dashboard'))
+        # Kirim respons sukses dalam format JSON
+        return jsonify({
+            "status": "success", 
+            "message": "Login berhasil!",
+            "redirect_url": url_for('dashboard')
+        })
     except Exception as e:
-        flash(f"Login Gagal: {e}")
-        # Mengarahkan kembali ke halaman login jika gagal
-        return redirect(url_for('login'))
+        error_message = f"Verifikasi token gagal: {str(e)}"
+        print(error_message) # Log error di server untuk debugging
+        # Kirim respons error dalam format JSON
+        return jsonify({"status": "error", "message": error_message}), 401
 
 @app.route('/logout')
 def logout():
