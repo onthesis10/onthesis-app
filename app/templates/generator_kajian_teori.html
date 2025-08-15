@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Generator Kajian Teori - Opsi Profesional{% endblock %}
+{% block title %}Generator Kajian Teori - Alur Interaktif{% endblock %}
 
 {% block page_styles %}
 <!-- Pustaka Ikon & Markdown -->
@@ -14,7 +14,7 @@
 
 
 <style>
-    /* Menggunakan gaya yang konsisten dengan halaman lain */
+    /* Gaya konsisten dengan halaman lain */
     .io-panel {
         background-color: var(--bg-panel);
         border: 1px solid var(--border-panel);
@@ -30,10 +30,6 @@
         border-radius: 0.5rem;
         padding: 0.75rem 1rem;
         transition: all 0.2s ease;
-    }
-    .io-textarea {
-        min-height: 80px;
-        resize: vertical;
     }
     .io-textarea:focus, .control-input:focus, .control-select:focus {
         outline: none;
@@ -53,65 +49,40 @@
         margin-top: -0.5rem;
         margin-bottom: 0.75rem;
     }
-    #output-panel {
-        background-color: var(--bg-panel);
-    }
-    .io-output {
-        width: 100%;
-        min-height: 300px;
-        overflow-y: auto;
-        color: var(--text-secondary);
-    }
-    /* Styling untuk konten yang di-generate dari markdown */
-    .io-output .prose p, .io-output .prose li { color: var(--text-secondary); }
-    .io-output .prose strong, .io-output .prose h1, .io-output .prose h2, .io-output .prose h3, .io-output .prose code { color: var(--text-primary); }
     
-    /* Gaya Loading Overlay Baru dengan Progress Bar */
+    /* Gaya untuk panel interaktif */
+    #interactive-panel .subchapter-item {
+        padding: 1.5rem;
+        border: 1px solid var(--border-panel);
+        border-radius: 0.75rem;
+        background-color: var(--bg-canvas);
+        transition: all 0.2s ease;
+    }
+    #interactive-panel .subchapter-content {
+        display: none;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px dashed var(--border-panel);
+    }
+    .prose p, .prose li { color: var(--text-secondary); }
+    .prose strong, .prose h1, .prose h2, .prose h3, .prose code { color: var(--text-primary); }
+
+    /* Gaya Loading Overlay */
     #loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: var(--glass-bg, rgba(13, 17, 23, 0.8));
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        z-index: 100;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        color: var(--text-primary);
-        transition: opacity 0.3s ease;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(13, 17, 23, 0.8);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        z-index: 100; display: none; justify-content: center; align-items: center;
+        flex-direction: column; color: var(--text-primary); transition: opacity 0.3s ease;
     }
-    .loading-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1.5rem;
-        width: 90%;
-        max-width: 400px;
+    .loading-spinner {
+        width: 48px; height: 48px;
+        border: 4px solid var(--border-panel);
+        border-top-color: var(--accent-cyan);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
     }
-    .progress-bar-container {
-        width: 100%;
-        height: 8px;
-        background-color: var(--border-panel);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    .progress-bar {
-        width: 0%;
-        height: 100%;
-        background-color: var(--accent-cyan);
-        border-radius: 4px;
-        transition: width 0.5s ease-out;
-    }
-    #loading-status-text {
-        font-size: 1rem;
-        color: var(--text-secondary);
-        text-align: center;
-        min-height: 20px;
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 {% endblock %}
 
@@ -119,125 +90,111 @@
 <div class="h-full w-full p-4 sm:p-6 lg:p-8 overflow-y-auto">
     <header class="w-full max-w-4xl mx-auto mb-8">
         <div class="flex items-center gap-4">
-            <a href="{{ url_for('writing_assistant') }}" class="btn-secondary !p-2" title="Kembali ke Menu">
-                <i data-lucide="arrow-left"></i>
-            </a>
+            <a href="{{ url_for('writing_assistant') }}" class="btn-secondary !p-2" title="Kembali ke Menu"><i data-lucide="arrow-left"></i></a>
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Kajian Teori (Bab 2)</h1>
-                <p class="text-md text-secondary mt-1">Cukup masukkan judul, AI akan merancang, meneliti, dan menulis draf Bab 2 untuk Anda.</p>
+                <h1 class="text-2xl md:text-3xl font-bold text-primary">Generator Kajian Teori (Alur Interaktif)</h1>
+                <p class="text-md text-secondary mt-1">Buat kerangka, lalu generate konten per sub-bab untuk kontrol penuh.</p>
             </div>
         </div>
     </header>
 
     <div class="w-full flex flex-col items-center gap-8">
-        <!-- Panel Input (Dengan Opsi Baru) -->
-        <div class="io-panel w-full max-w-4xl">
+        <!-- Panel Input -->
+        <div id="input-panel" class="io-panel w-full max-w-4xl">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <!-- Judul Penelitian -->
                 <div class="control-group md:col-span-2">
                     <label for="input-title">Judul Penelitian (Wajib)</label>
-                    <p>Masukkan judul selengkap dan sespesifik mungkin untuk hasil terbaik.</p>
                     <textarea id="input-title" class="io-textarea" placeholder="Contoh: Pengaruh Media Sosial terhadap Produktivitas Mahasiswa"></textarea>
                 </div>
-
-                <!-- Kata Kunci -->
                 <div class="control-group md:col-span-2">
                     <label for="input-keywords">Kata Kunci (Opsional)</label>
-                    <p>Pisahkan dengan koma. Ini membantu AI fokus pada teori yang paling relevan.</p>
-                    <textarea id="input-keywords" class="io-textarea !min-h-[60px]" placeholder="Contoh: media sosial, produktivitas, mahasiswa, dampak teknologi"></textarea>
+                    <textarea id="input-keywords" class="io-textarea !min-h-[60px]" placeholder="Contoh: media sosial, produktivitas, mahasiswa"></textarea>
                 </div>
-
-                <!-- Opsi Tingkat Detail -->
                 <div class="control-group">
                     <label for="length-preference">Tingkat Detail Tulisan</label>
                     <select id="length-preference" class="control-select">
-                        <option value="Ringkas">Ringkas (~1000 kata)</option>
-                        <option value="Normal" selected>Normal (~2000 kata)</option>
-                        <option value="Detail">Detail (~3000+ kata)</option>
+                        <option value="Ringkas">Ringkas</option>
+                        <option value="Normal" selected>Normal</option>
+                        <option value="Detail">Detail</option>
                     </select>
                 </div>
-
-                <!-- Opsi Gaya Sitasi -->
                 <div class="control-group">
                     <label for="citation-style">Gaya Sitasi</label>
                     <select id="citation-style" class="control-select">
                         <option value="APA 7" selected>APA 7</option>
                         <option value="IEEE">IEEE</option>
-                        <option value="MLA">MLA</option>
-                        <option value="Chicago">Chicago</option>
                     </select>
                 </div>
             </div>
-
             <div class="text-center mt-8 pt-8 border-t border-border-panel">
-                <button id="generate-btn" class="btn-primary">
-                    <i data-lucide="wand-2" class="w-5 h-5 mr-2"></i>
-                    Generate Draf Bab 2
+                <button id="generate-outline-btn" class="btn-primary">
+                    <i data-lucide="layout-list" class="w-5 h-5 mr-2"></i>
+                    Langkah 1: Buat Kerangka & Cari Referensi
                 </button>
             </div>
         </div>
 
-        <!-- Panel Output -->
-        <div id="output-panel" class="io-panel w-full max-w-5xl hidden flex-col gap-4">
-            <div class="flex flex-wrap justify-between items-center pb-4 border-b border-[var(--border-panel)] gap-4">
-                <h2 class="text-xl font-bold text-primary">Hasil Draf Kajian Teori (Bab 2)</h2>
+        <!-- Panel Interaktif untuk Generate per Sub-bab -->
+        <div id="interactive-panel" class="io-panel w-full max-w-5xl hidden flex-col gap-4">
+            <h2 class="text-xl font-bold text-primary pb-4 border-b border-border-panel">Langkah 2: Generate Konten per Sub-bab</h2>
+            <div id="subchapter-list" class="space-y-4">
+                <!-- Daftar sub-bab akan muncul di sini -->
+            </div>
+            <div class="text-center mt-4 pt-4 border-t border-border-panel">
+                <button id="compile-btn" class="btn-primary hidden">
+                    <i data-lucide="file-check-2" class="w-5 h-5 mr-2"></i>
+                    Langkah 3: Gabungkan & Selesaikan
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel Output Final -->
+        <div id="final-output-panel" class="io-panel w-full max-w-5xl hidden flex-col gap-4">
+            <div class="flex flex-wrap justify-between items-center pb-4 border-b border-border-panel gap-4">
+                <h2 class="text-xl font-bold text-primary">Hasil Final Bab 2</h2>
                 <div class="flex items-center gap-2">
-                    <button id="export-word-btn" class="btn-secondary" title="Ekspor ke Word">
-                        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>Ekspor Word
-                    </button>
-                    <button id="export-pdf-btn" class="btn-secondary" title="Ekspor ke PDF">
-                        <i data-lucide="file-type-2" class="w-4 h-4 mr-2"></i>Ekspor PDF
-                    </button>
+                    <button id="export-word-btn" class="btn-secondary" title="Ekspor ke Word"><i data-lucide="file-text" class="w-4 h-4 mr-2"></i>Ekspor Word</button>
+                    <button id="export-pdf-btn" class="btn-secondary" title="Ekspor ke PDF"><i data-lucide="file-type-2" class="w-4 h-4 mr-2"></i>Ekspor PDF</button>
                 </div>
             </div>
-            <div id="output-content" class="io-output prose max-w-none prose-invert"></div>
+            <div id="final-output-content" class="io-output prose max-w-none prose-invert"></div>
         </div>
     </div>
 </div>
 
-<!-- Container Notifikasi -->
 <div id="notification-container"></div>
-
-<!-- Overlay Loading -->
-<div id="loading-overlay" style="display: none;">
-    <div class="loading-content">
-        <h3 id="loading-title" class="text-2xl font-semibold">AI Sedang Bekerja...</h3>
-        <div class="progress-bar-container">
-            <div id="progress-bar" class="progress-bar"></div>
-        </div>
-        <p id="loading-status-text">Memulai proses...</p>
-    </div>
-</div>
+<div id="loading-overlay"><div class="loading-spinner"></div><p id="loading-status-text" class="mt-4 text-secondary">Memproses...</p></div>
 {% endblock %}
 
 {% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Referensi Elemen DOM ---
-    const generateBtn = document.getElementById('generate-btn');
-    const outputPanel = document.getElementById('output-panel');
-    const outputContent = document.getElementById('output-content');
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const progressBar = document.getElementById('progress-bar');
-    const loadingStatusText = document.getElementById('loading-status-text');
-    const inputTitle = document.getElementById('input-title');
-    const inputKeywords = document.getElementById('input-keywords');
-    const lengthPreference = document.getElementById('length-preference');
-    const citationStyle = document.getElementById('citation-style');
-
-    const exportPdfBtn = document.getElementById('export-pdf-btn');
-    const exportWordBtn = document.getElementById('export-word-btn');
-
-    // --- Fungsi Pembantu ---
-    const renderIcons = () => {
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
+    // --- State Global ---
+    let researchData = {
+        outline: [],
+        references: [],
+        generatedContent: {}
     };
 
+    // --- Referensi Elemen DOM ---
+    const generateOutlineBtn = document.getElementById('generate-outline-btn');
+    const interactivePanel = document.getElementById('interactive-panel');
+    const subchapterList = document.getElementById('subchapter-list');
+    const compileBtn = document.getElementById('compile-btn');
+    const finalOutputPanel = document.getElementById('final-output-panel');
+    const finalOutputContent = document.getElementById('final-output-content');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingStatusText = document.getElementById('loading-status-text');
+
+    // --- Fungsi Pembantu ---
+    const renderIcons = () => window.lucide && window.lucide.createIcons();
+    const showLoading = (text = "Memproses...") => {
+        loadingStatusText.textContent = text;
+        loadingOverlay.style.display = 'flex';
+    };
+    const hideLoading = () => { loadingOverlay.style.display = 'none'; };
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
-        if (!container) return;
         const notif = document.createElement('div');
         notif.className = `toast-notification ${type}`;
         notif.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'x-circle'}"></i><span>${message}</span>`;
@@ -249,110 +206,130 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 5000);
     };
 
-    // --- Logika Progress Bar (Simulasi) ---
-    let progressInterval;
-    const updateProgress = (percentage, text) => {
-        progressBar.style.width = `${percentage}%`;
-        loadingStatusText.textContent = text;
-    };
-
-    const startSimulatedProgress = () => {
-        let progress = 0;
-        const stages = [
-            { percent: 10, text: 'Menganalisis judul dan kata kunci...', duration: 2000 },
-            { percent: 30, text: 'AI membuat kerangka Bab 2...', duration: 5000 },
-            { percent: 60, text: 'Mencari referensi dari berbagai sumber...', duration: 10000 },
-            { percent: 90, text: 'Menulis draf konten untuk setiap sub-bab...', duration: 15000 },
-            { percent: 95, text: 'Finalisasi dan menyusun daftar pustaka...', duration: 5000 }
-        ];
-
-        let currentStage = 0;
-        const runStage = () => {
-            if (currentStage >= stages.length) {
-                clearInterval(progressInterval);
-                return;
-            }
-            const stage = stages[currentStage];
-            updateProgress(stage.percent, stage.text);
-            currentStage++;
-            progressInterval = setTimeout(runStage, stage.duration);
-        };
-        runStage();
-    };
-    
-    const stopSimulatedProgress = () => {
-        clearInterval(progressInterval);
-    };
-
-    // --- FUNGSI UTAMA: Alur Kerja Generator ---
-    const handleGeneration = async () => {
-        const title = inputTitle.value.trim();
-        const keywords = inputKeywords.value.trim();
-        const lengthPref = lengthPreference.value;
-        const citation = citationStyle.value;
-
+    // --- TAHAP 1: Generate Kerangka & Cari Referensi ---
+    generateOutlineBtn.addEventListener('click', async () => {
+        const title = document.getElementById('input-title').value.trim();
         if (!title) {
             showNotification('Judul Penelitian tidak boleh kosong.', 'error');
             return;
         }
 
-        // Reset UI
-        generateBtn.disabled = true;
-        outputPanel.classList.add('hidden');
-        outputContent.innerHTML = '';
-        loadingOverlay.style.display = 'flex';
-        
-        // Mulai simulasi progress
-        startSimulatedProgress();
-
+        showLoading("Membuat kerangka & mencari referensi...");
         try {
-            // Panggil API dengan payload yang diperbarui
-            const response = await fetch('/api/generate-theory', {
+            const response = await fetch('/api/generate-outline-and-refs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    title: title, 
-                    keywords: keywords,
-                    length_preference: lengthPref,
-                    citation_style: citation
-                })
+                body: JSON.stringify({ title: title, keywords: document.getElementById('input-keywords').value.trim() })
             });
-
             const result = await response.json();
-            stopSimulatedProgress(); // Hentikan simulasi saat respons diterima
+            if (!response.ok) throw new Error(result.error);
 
-            if (!response.ok) {
-                if (result.redirect) {
-                    showNotification('Batas penggunaan tercapai. Mengarahkan ke halaman upgrade...', 'error');
-                    setTimeout(() => window.location.href = result.redirect, 2000);
-                }
-                throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui');
-            }
-            
-            // Tampilkan hasil
-            updateProgress(100, 'Proses Selesai!');
-            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true, simplifiedAutoLink: true });
-            const htmlOutput = converter.makeHtml(result.generated_text);
-            
-            outputContent.innerHTML = htmlOutput;
-            outputPanel.classList.remove('hidden');
-            outputPanel.classList.add('flex');
-            
-            outputPanel.scrollIntoView({ behavior: 'smooth' });
-            
-            showNotification('Draf Kajian Teori berhasil dibuat!', 'success');
-
+            researchData.outline = result.outline;
+            researchData.references = result.references;
+            displaySubchapters();
+            interactivePanel.classList.remove('hidden');
+            interactivePanel.classList.add('flex');
+            document.getElementById('input-panel').classList.add('hidden');
+            showNotification('Kerangka berhasil dibuat. Silakan generate konten per sub-bab.', 'success');
         } catch (error) {
-            console.error('API Error:', error);
             showNotification(error.message, 'error');
         } finally {
-            loadingOverlay.style.display = 'none';
-            generateBtn.disabled = false;
-            updateProgress(0, '');
+            hideLoading();
         }
+    });
+
+    // --- Menampilkan Daftar Sub-bab ---
+    const displaySubchapters = () => {
+        subchapterList.innerHTML = '';
+        researchData.outline.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'subchapter-item';
+            div.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-primary">${item.sub_bab}</h3>
+                    <button class="btn-secondary generate-sub-btn" data-index="${index}">
+                        <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>Generate Isi
+                    </button>
+                </div>
+                <div class="subchapter-content prose max-w-none prose-invert"></div>
+            `;
+            subchapterList.appendChild(div);
+        });
+        renderIcons();
     };
 
-    generateBtn.addEventListener('click', handleGeneration);
+    // --- TAHAP 2: Generate Konten per Sub-bab (Event Delegation) ---
+    subchapterList.addEventListener('click', async (e) => {
+        const button = e.target.closest('.generate-sub-btn');
+        if (!button) return;
+
+        button.disabled = true;
+        button.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 mr-2 animate-spin"></i>Menulis...`;
+        renderIcons();
+
+        const index = parseInt(button.dataset.index);
+        const subchapterItem = researchData.outline[index];
+        const contentDiv = button.closest('.subchapter-item').querySelector('.subchapter-content');
+
+        try {
+            const response = await fetch('/api/generate-subchapter-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subchapter: subchapterItem,
+                    references: researchData.references,
+                    title: document.getElementById('input-title').value.trim(),
+                    length_preference: document.getElementById('length-preference').value,
+                    citation_style: document.getElementById('citation-style').value
+                })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            
+            const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true });
+            contentDiv.innerHTML = converter.makeHtml(result.generated_text);
+            contentDiv.style.display = 'block';
+            researchData.generatedContent[subchapterItem.sub_bab] = result.generated_text;
+            
+            button.innerHTML = `<i data-lucide="check" class="w-4 h-4 mr-2"></i>Selesai`;
+            renderIcons();
+            compileBtn.classList.remove('hidden');
+
+        } catch (error) {
+            showNotification(error.message, 'error');
+            button.disabled = false;
+            button.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>Generate Ulang`;
+            renderIcons();
+        }
+    });
+
+    // --- TAHAP 3: Kompilasi Dokumen Final ---
+    compileBtn.addEventListener('click', () => {
+        let fullText = `## BAB 2 KAJIAN TEORI\n\n`;
+        let bibliography = new Set();
+
+        researchData.outline.forEach(item => {
+            const content = researchData.generatedContent[item.sub_bab];
+            if (content) {
+                const parts = content.split('### Daftar Pustaka');
+                fullText += `### ${item.sub_bab}\n\n${parts[0].trim()}\n\n`;
+                if (parts[1]) {
+                    parts[1].trim().split('\n\n').forEach(ref => bibliography.add(ref.trim()));
+                }
+            }
+        });
+
+        if (bibliography.size > 0) {
+            fullText += `### Daftar Pustaka\n\n` + [...bibliography].sort().join('\n\n');
+        }
+
+        const converter = new showdown.Converter({ tables: true, openLinksInNewWindow: true });
+        finalOutputContent.innerHTML = converter.makeHtml(fullText);
+        finalOutputPanel.classList.remove('hidden');
+        finalOutputPanel.classList.add('flex');
+        finalOutputPanel.scrollIntoView({ behavior: 'smooth' });
+        showNotification('Dokumen berhasil digabungkan!', 'success');
+    });
 
     // --- Logika Ekspor Profesional ---
     const loadImageAsBase64 = (url) => {
@@ -361,8 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             img.crossOrigin = 'Anonymous';
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
+                canvas.width = img.width; canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
                 resolve(canvas.toDataURL('image/png'));
@@ -373,15 +349,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const handleExport = async (format) => {
-        const contentHtml = outputContent.innerHTML;
-        const title = inputTitle.value.trim() || "Kajian Teori";
-
+        const contentHtml = finalOutputContent.innerHTML;
+        const title = document.getElementById('input-title').value.trim() || "Kajian Teori";
         if (!contentHtml.trim()) {
             showNotification('Tidak ada konten untuk diekspor.', 'error');
             return;
         }
 
-        const btn = format === 'pdf' ? exportPdfBtn : exportWordBtn;
+        const btn = format === 'pdf' ? document.getElementById('export-pdf-btn') : document.getElementById('export-word-btn');
         btn.disabled = true;
         btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4 mr-2"></i>Mengekspor...`;
         renderIcons();
@@ -392,47 +367,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const doc = new jsPDF('p', 'pt', 'a4');
                 const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
                 const logoData = await loadImageAsBase64(logoUrl);
-
                 doc.addImage(logoData, 'PNG', doc.internal.pageSize.width - 120, 40, 80, 22);
-
                 doc.autoTable({
-                    html: outputContent,
-                    startY: 80,
-                    theme: 'plain',
-                    styles: {
-                        font: 'Times-Roman',
-                        fontSize: 12,
-                        lineColor: [44, 62, 80],
-                        lineWidth: 0.5,
-                    },
-                    headStyles: {
-                        fontStyle: 'bold',
-                        fontSize: 14,
-                        halign: 'left'
-                    },
-                    didParseCell: function(data) {
-                        if (data.cell.raw.tagName === 'H2') {
-                            data.cell.styles.fontSize = 16;
-                            data.cell.styles.fontStyle = 'bold';
-                        }
-                        if (data.cell.raw.tagName === 'H3') {
-                            data.cell.styles.fontSize = 14;
-                            data.cell.styles.fontStyle = 'bold';
-                        }
+                    html: finalOutputContent, startY: 80, theme: 'plain',
+                    styles: { font: 'Times-Roman', fontSize: 12 },
+                    headStyles: { fontStyle: 'bold', fontSize: 14, halign: 'left' },
+                    didParseCell: (data) => {
+                        if (data.cell.raw.tagName === 'H2') { data.cell.styles.fontSize = 16; data.cell.styles.fontStyle = 'bold'; }
+                        if (data.cell.raw.tagName === 'H3') { data.cell.styles.fontSize = 14; data.cell.styles.fontStyle = 'bold'; }
                     }
                 });
-
                 doc.save(`Bab_2_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
             } else if (format === 'doc') {
-                let content = `
-                    <style>
-                        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
-                        h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; }
-                        p { margin-bottom: 12pt; line-height: 1.5; }
-                        ul { margin-left: 40px; }
-                    </style>
-                    ${outputContent.innerHTML}
-                `;
+                let content = `<style>body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; } h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; } p { margin-bottom: 12pt; line-height: 1.5; } ul { margin-left: 40px; }</style>${finalOutputContent.innerHTML}`;
                 var converted = htmlDocx.asBlob(content, {orientation: 'portrait', margins: {top: 720}});
                 saveAs(converted, `Bab_2_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`);
             }
@@ -448,8 +395,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    exportPdfBtn.addEventListener('click', () => handleExport('pdf'));
-    exportWordBtn.addEventListener('click', () => handleExport('doc'));
+    document.getElementById('export-pdf-btn').addEventListener('click', () => handleExport('pdf'));
+    document.getElementById('export-word-btn').addEventListener('click', () => handleExport('doc'));
 
     renderIcons();
 });

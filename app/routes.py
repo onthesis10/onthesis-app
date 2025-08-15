@@ -1,13 +1,7 @@
 # ========================================================================
 # File: app/routes.py
-# Deskripsi: Versi yang disempurnakan dengan logika AI yang lebih
-#            profesional untuk struktur, penomoran, dan sitasi.
-# Perubahan:
-# - Prompt AI diubah untuk menghasilkan subjudul dengan format A, B, C.
-# - AI diinstruksikan untuk menyertakan poin-poin pembahasan di setiap subjudul.
-# - Aturan sitasi diperketat: Satu sumber hanya boleh dikutip sekali per paragraf.
-# - Backend disiapkan untuk menerima parameter 'length_preference' dan
-#   'citation_style' untuk pembaruan frontend di masa depan.
+# Deskripsi: Versi LENGKAP dengan alur kerja interaktif untuk Generator Kajian Teori.
+# Termasuk semua fungsi helper dan rute yang diperlukan dari file asli.
 # ========================================================================
 
 # --- Impor Library ---
@@ -683,25 +677,20 @@ def search_pubmed(keywords):
     return results
 
 # =========================================================================
-# API UTAMA GENERATOR KAJIAN TEORI (LOGIKA PROFESIONAL DITINGKATKAN)
+# API BARU UNTUK GENERATOR KAJIAN TEORI (ALUR INTERAKTIF)
 # =========================================================================
-@app.route('/api/generate-theory', methods=['POST'])
+
+@app.route('/api/generate-outline-and-refs', methods=['POST'])
 @login_required
-def api_generate_theory():
+def generate_outline_and_refs():
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'generate_theory')
         if not is_allowed:
-            if message == "UPGRADE_REQUIRED":
-                return jsonify({'error': "Batas percobaan untuk fitur ini tercapai. Upgrade ke PRO untuk akses tanpa batas.", 'redirect': url_for('upgrade_page')}), 429
-            return jsonify({'error': message}), 429
+            return jsonify({'error': "Batas percobaan tercapai. Upgrade ke PRO."}), 429
 
     data = request.get_json()
     research_title = data.get('title', '')
     keywords = data.get('keywords', '')
-    # Mengambil preferensi dari request, dengan nilai default jika tidak ada
-    length_preference = data.get('length_preference', 'Normal') # Contoh: 'Ringkas', 'Normal', 'Detail'
-    citation_style = data.get('citation_style', 'APA 7') # Contoh: 'APA 7', 'IEEE'
-    
     min_year = 2018
 
     if not research_title:
@@ -709,55 +698,34 @@ def api_generate_theory():
 
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
-
-        # --- LANGKAH 1: AI Membuat Outline & Kata Kunci Cerdas ---
-        print("Langkah 1: Membuat outline dan kata kunci cerdas...")
         prompt_outline = f"""
         Anda adalah seorang perencana penelitian ahli. Berdasarkan judul penelitian berikut, buatlah struktur Bab 2 (Kajian Teori) yang profesional.
-
         Judul: "{research_title}"
-        Kata Kunci Tambahan: "{keywords}"
-
         Tugas Anda:
-        1.  Buat outline Bab 2 yang terdiri dari bagian utama seperti 'Landasan Teori', 'Penelitian Terdahulu', dan 'Kerangka Pemikiran'.
-        2.  Gunakan format penomoran huruf kapital untuk setiap sub-bab utama (Contoh: A. Konsep Media Sosial).
-        3.  Di bawah setiap sub-bab, sertakan array 'poin_pembahasan' yang berisi 3-4 poin kunci yang harus dijelaskan.
-        4.  Sertakan juga array 'kata_kunci_pencarian' yang relevan untuk setiap sub-bab.
-
-        Berikan output HANYA dalam format JSON yang valid, seperti contoh ini:
+        1. Buat outline Bab 2 yang terdiri dari bagian utama seperti 'Landasan Teori', 'Penelitian Terdahulu', dan 'Kerangka Pemikiran'.
+        2. Gunakan format penomoran huruf kapital untuk setiap sub-bab utama (Contoh: A. Konsep Media Sosial).
+        3. Di bawah setiap sub-bab, sertakan array 'poin_pembahasan' yang berisi 3-4 poin kunci yang harus dijelaskan.
+        4. Sertakan juga array 'kata_kunci_pencarian' yang relevan untuk setiap sub-bab.
+        Berikan output HANYA dalam format JSON.
+        Contoh:
         {{
           "outline": [
             {{
               "sub_bab": "A. Konsep Media Sosial",
-              "poin_pembahasan": [
-                "Definisi dan evolusi media sosial.",
-                "Klasifikasi dan karakteristik platform populer.",
-                "Peran media sosial dalam komunikasi modern."
-              ],
-              "kata_kunci_pencarian": "definisi media sosial, jenis platform media sosial, dampak psikologis media sosial"
-            }},
-            {{
-              "sub_bab": "B. Teori Perkembangan Remaja",
-              "poin_pembahasan": [
-                "Tahapan perkembangan psikososial menurut Erikson.",
-                "Perkembangan kognitif dan pembentukan identitas.",
-                "Pentingnya kelompok sebaya (peer group) di masa remaja."
-              ],
-              "kata_kunci_pencarian": "teori perkembangan erikson, psikologi remaja, pembentukan identitas remaja, adolescent development theories"
+              "poin_pembahasan": ["Definisi dan evolusi.", "Klasifikasi platform.", "Peran dalam komunikasi."],
+              "kata_kunci_pencarian": "definisi media sosial, jenis platform media sosial"
             }}
           ]
         }}
         """
-        
         outline_response = model.generate_content(prompt_outline)
         clean_json_string = re.sub(r'```json\s*|\s*```', '', outline_response.text.strip(), flags=re.DOTALL)
         research_plan = json.loads(clean_json_string).get('outline', [])
+        if not research_plan:
+            raise ValueError("AI gagal membuat outline yang valid.")
 
-        # --- LANGKAH 2: Pencarian Referensi yang Diperluas ---
-        print("Langkah 2: Mencari referensi dari berbagai sumber...")
         all_references = []
         search_tasks = []
-        
         with ThreadPoolExecutor(max_workers=15) as executor:
             for section in research_plan:
                 search_keywords = section.get('kata_kunci_pencarian', '')
@@ -766,122 +734,105 @@ def api_generate_theory():
                     search_tasks.append(executor.submit(search_openalex, search_keywords))
                     search_tasks.append(executor.submit(search_doaj, search_keywords))
                     search_tasks.append(executor.submit(search_eric, search_keywords))
-            
+        
             for future in search_tasks:
-                try:
-                    all_references.extend(future.result())
-                except Exception as e:
-                    print(f"Gagal saat mengambil hasil dari salah satu sumber: {e}")
+                try: all_references.extend(future.result())
+                except Exception as e: print(f"Gagal mengambil hasil pencarian: {e}")
 
-        # --- LANGKAH 3: Filter, De-duplikasi, dan Format Referensi ---
-        print(f"Langkah 3: Memfilter dari total {len(all_references)} referensi mentah...")
         unique_references = []
         seen_titles = set()
         for ref in all_references:
-            if not ref or not ref.get('title'):
-                continue
+            if not ref or not ref.get('title'): continue
             try:
                 ref_year_str = str(ref.get('year', '0'))
                 ref_year = int(re.search(r'\d{4}', ref_year_str).group()) if re.search(r'\d{4}', ref_year_str) else 0
-                if min_year and ref_year < int(min_year):
-                    continue
-            except (ValueError, TypeError, AttributeError):
-                continue
+                if min_year and ref_year < int(min_year): continue
+            except: continue
             
             title_lower = ref['title'].lower()
             if title_lower not in seen_titles:
-                # Pemformatan sitasi akan disesuaikan di langkah akhir
-                ref['citation_placeholder'] = f"[{ref.get('authors_str', 'N/A').split(' ')[0].replace(',', '')}, {ref.get('year', 'n.d.')}]"
                 unique_references.append(ref)
                 seen_titles.add(title_lower)
 
-        print(f"Ditemukan {len(unique_references)} referensi unik setelah filter.")
         if len(unique_references) < 5:
-            return jsonify({"error": f"Referensi yang ditemukan tidak cukup (hanya {len(unique_references)}). Coba dengan judul atau kata kunci yang lebih umum atau berbeda."}), 404
+            return jsonify({"error": f"Referensi yang ditemukan tidak cukup (hanya {len(unique_references)}). Coba dengan judul yang lebih umum."}), 404
 
-        # --- LANGKAH 4: AI Menulis Draf Bab 2 ---
-        print("Langkah 4: Menulis draf Bab 2...")
-        processed_references = sorted(unique_references, key=lambda x: x.get('year', 0), reverse=True)[:15]
+        return jsonify({"outline": research_plan, "references": unique_references})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Terjadi kesalahan internal: {str(e)}"}), 500
+
+
+@app.route('/api/generate-subchapter-content', methods=['POST'])
+@login_required
+def generate_subchapter_content():
+    data = request.get_json()
+    subchapter = data.get('subchapter')
+    references = data.get('references', [])
+    research_title = data.get('title', '')
+    length_preference = data.get('length_preference', 'Normal')
+    citation_style = data.get('citation_style', 'APA 7')
+
+    if not subchapter or not references:
+        return jsonify({"error": "Data sub-bab dan referensi diperlukan."}), 400
+
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        processed_references = sorted(references, key=lambda x: x.get('year', 0), reverse=True)[:25]
         sources_text = ""
         for i, ref in enumerate(processed_references):
-            sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Penulis: {ref.get('authors_str')}\n- Tahun: {ref.get('year')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n\n"
+            ref['citation_placeholder'] = f"[{ref.get('authors_str', 'N/A').split(' ')[0].replace(',', '')}, {ref.get('year', 'n.d.')}]"
+            sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n\n"
         
-        # Menentukan instruksi panjang tulisan
-        length_instruction = "Tulis pembahasan dengan detail yang seimbang untuk setiap poin."
-        if length_preference == 'Ringkas':
-            length_instruction = "Tulis pembahasan yang ringkas dan padat, sekitar 100-150 kata per sub-bab."
-        elif length_preference == 'Detail':
-            length_instruction = "Tulis pembahasan yang mendalam dan komprehensif, lebih dari 250 kata per sub-bab, jelaskan setiap poin secara rinci."
+        length_instruction = {
+            'Ringkas': "Tulis pembahasan yang ringkas dan padat, sekitar 1-2 paragraf.",
+            'Normal': "Tulis pembahasan dengan detail yang seimbang, sekitar 2-4 paragraf.",
+            'Detail': "Tulis pembahasan yang mendalam dan komprehensif, lebih dari 4 paragraf, jelaskan setiap poin secara rinci."
+        }.get(length_preference, "Tulis pembahasan dengan detail yang seimbang.")
 
         prompt_draft = f"""
-        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis draf Bab 2 Kajian Teori yang komprehensif dan profesional dalam Bahasa Indonesia.
-
-        KONTEKS PENELITIAN:
-        - Judul: "{research_title}"
-        - Outline yang HARUS diikuti: {json.dumps(research_plan, indent=2, ensure_ascii=False)}
-
-        SUMBER RUJUKAN (Gunakan HANYA informasi dari sumber-sumber ini):
+        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis konten HANYA untuk satu sub-bab berikut.
+        Judul Penelitian Utama: "{research_title}"
+        Sub-bab yang Harus Ditulis: "{subchapter.get('sub_bab')}"
+        Poin-Poin Kunci untuk Dibahas: {json.dumps(subchapter.get('poin_pembahasan', []), ensure_ascii=False)}
+        Sumber Rujukan yang Tersedia:
         {sources_text}
-
         INSTRUKSI PENULISAN SANGAT PENTING:
-        1.  **Struktur dan Konten**: Ikuti outline yang diberikan. Bahas setiap 'poin_pembahasan' dalam sub-bab yang sesuai. Anda bisa menggunakan poin-poin tersebut sebagai daftar (bullet points) jika dirasa cocok untuk memperjelas.
-        2.  **Panjang Tulisan**: {length_instruction}
-        3.  **Gaya Profesional**: Langsung ke pokok pembahasan. Hindari kalimat pembuka generik. Sintesis informasi dari beberapa sumber untuk membentuk argumen yang kuat.
-        4.  **ATURAN SITASI PALING KRUSIAL**:
-            - Tempatkan placeholder sitasi [NamaPenulis, Tahun] **LANGSUNG SETELAH** kalimat atau klausa yang didukung oleh sumber tersebut.
-            - **JANGAN PERNAH MENGGUNAKAN SITASI DARI SUMBER YANG SAMA LEBIH DARI SATU KALI DALAM SATU PARAGRAF.** Jika beberapa kalimat dalam satu paragraf berasal dari sumber yang sama, gabungkan ide-idenya dan letakkan **SATU sitasi saja di akhir paragraf tersebut**.
-            - **Contoh BENAR**: Perkembangan identitas remaja sangat dipengaruhi oleh interaksi sosial mereka. Proses ini seringkali melibatkan eksperimen dengan berbagai peran dan nilai untuk menemukan jati diri yang koheren [PenulisA, 2023].
-            - **Contoh SALAH**: Perkembangan identitas remaja dipengaruhi interaksi sosial [PenulisA, 2023]. Mereka bereksperimen dengan berbagai peran [PenulisA, 2023].
-        5.  **Format**: Gunakan Markdown. Judul bab utama adalah `## BAB 2 KAJIAN TEORI`. Sub-bab utama menggunakan format `### A. Judul Sub-Bab`.
-        6.  **Daftar Pustaka**: Setelah semua bagian selesai, buat bagian baru dengan judul `### Daftar Pustaka`.
-
-        Mulai penulisan draf Bab 2 sekarang, patuhi semua instruksi dengan ketat.
+        1. Fokus dan Relevansi: Tulis konten yang relevan HANYA untuk sub-bab dan poin-poin yang diberikan.
+        2. Panjang Tulisan: {length_instruction}
+        3. ATURAN SITASI KRUSIAL: Tempatkan placeholder sitasi [NamaPenulis, Tahun] LANGSUNG SETELAH kalimat yang didukung oleh sumber tersebut. JANGAN PERNAH MENGGUNAKAN SITASI DARI SUMBER YANG SAMA LEBIH DARI SATU KALI DALAM SATU PARAGRAF.
+        4. Format: JANGAN tulis judul sub-bab. Langsung tulis konten paragrafnya dalam format Markdown.
+        5. Daftar Pustaka: Buat bagian `### Daftar Pustaka` di akhir, berisi HANYA referensi yang Anda kutip dalam tulisan ini.
+        Mulai penulisan konten untuk sub-bab ini sekarang.
         """
         
         draft_response = model.generate_content(prompt_draft)
         generated_text = draft_response.text
 
-        # --- LANGKAH 5: Finalisasi dan Penggantian Sitasi ---
-        print("Langkah 5: Finalisasi hasil...")
         final_text = generated_text
-        used_citations = set()
-        
         temp_ref_map = {ref['citation_placeholder'].lower(): ref for ref in processed_references}
         
         placeholders_in_text = re.findall(r'\[([\w\s&.,]+),\s*(\d{4}|n\.d\.)\]', generated_text)
-
         for author_match, year_match in placeholders_in_text:
             placeholder_key = f"[{author_match}, {year_match}]".lower()
             matched_ref = temp_ref_map.get(placeholder_key)
-            
             if matched_ref:
                 in_text_citation = f"({matched_ref['authors_str']}, {matched_ref['year']})"
                 final_text = final_text.replace(matched_ref['citation_placeholder'], in_text_citation, 1)
-                
-                # Format Daftar Pustaka sesuai gaya yang dipilih
-                citation_entry = f"{matched_ref.get('authors_str', 'N/A')} ({matched_ref.get('year', 'n.d.')}). *{matched_ref.get('title', 'N/A')}*."
-                if citation_style == 'IEEE': # Contoh sederhana untuk gaya lain
-                    citation_entry = f"[X] {matched_ref.get('authors_str', 'N/A')}, \"{matched_ref.get('title', 'N/A')},\" {matched_ref.get('year', 'n.d.')}."
 
-                if matched_ref.get('doi'):
-                     citation_entry += f" doi: {matched_ref.get('doi')}"
-                used_citations.add(citation_entry)
-        
-        bibliography = "\n\n".join(sorted(list(used_citations)))
-        main_content = final_text.split('### Daftar Pustaka')[0]
-        final_output = main_content.strip() + f"\n\n### Daftar Pustaka\n{bibliography}"
+        return jsonify({"generated_text": final_text})
 
-        return jsonify({"generated_text": final_output})
-
-    except json.JSONDecodeError:
-        return jsonify({"error": "AI gagal membuat outline penelitian. Coba dengan judul yang lebih spesifik."}), 500
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Gagal menghubungi API eksternal. Coba lagi nanti. Detail: {e}"}), 503
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"error": f"Terjadi kesalahan internal yang tidak terduga: {str(e)}"}), 500
+        return jsonify({"error": f"Terjadi kesalahan saat generate konten: {str(e)}"}), 500
 
+# =========================================================================
+# API LAINNYA (TETAP ADA)
+# =========================================================================
 
 @app.route('/api/export-document', methods=['POST'])
 @login_required
