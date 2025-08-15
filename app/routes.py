@@ -2,8 +2,8 @@
 # File: app/routes.py
 # Deskripsi: Versi LENGKAP dengan alur kerja interaktif untuk Generator Kajian Teori.
 # Perubahan:
-# - Prompt AI untuk generate sub-bab diubah secara signifikan untuk
-#   memaksa penggunaan penomoran (1., 2., 3.) sesuai pokok pembahasan.
+# - PROMPT AI DIROMBAK TOTAL untuk memaksa sitasi di setiap klaim,
+#   menghasilkan tulisan minimal 6 paragraf per poin, dan menyertakan DOI.
 # ========================================================================
 
 # --- Impor Library ---
@@ -787,33 +787,37 @@ def generate_subchapter_content():
         sources_text = ""
         for i, ref in enumerate(processed_references):
             ref['citation_placeholder'] = f"[{ref.get('authors_str', 'N/A').split(' ')[0].replace(',', '')}, {ref.get('year', 'n.d.')}]"
-            sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n\n"
+            sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n- DOI: {ref.get('doi')}\n\n"
         
-        length_instruction = {
-            'Ringkas': "Tulis pembahasan yang ringkas dan padat, sekitar 1-2 paragraf.",
-            'Normal': "Tulis pembahasan dengan detail yang seimbang, sekitar 2-4 paragraf.",
-            'Detail': "Tulis pembahasan yang mendalam dan komprehensif, lebih dari 4 paragraf, jelaskan setiap poin secara rinci."
-        }.get(length_preference, "Tulis pembahasan dengan detail yang seimbang.")
+        # PERUBAHAN UTAMA: Instruksi panjang tulisan yang lebih tegas
+        length_instruction = "Tulis pembahasan yang sangat mendalam dan komprehensif, minimal 6 paragraf untuk setiap poin pembahasan. Uraikan setiap aspek secara detail, berikan contoh, dan sintesis informasi dari berbagai sumber untuk membangun argumen yang kuat."
+        if length_preference == 'Normal':
+            length_instruction = "Tulis pembahasan dengan detail yang seimbang, sekitar 2-4 paragraf untuk setiap poin."
+        elif length_preference == 'Ringkas':
+            length_instruction = "Tulis pembahasan yang ringkas dan padat, sekitar 1-2 paragraf untuk setiap poin."
 
+        # PERUBAHAN UTAMA: Prompt yang dirombak total
         prompt_draft = f"""
-        Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis konten HANYA untuk satu sub-bab berikut.
-        
+        Anda adalah seorang penulis akademik ahli dengan standar tertinggi. Tugas Anda adalah menulis konten HANYA untuk satu sub-bab berikut dengan sangat teliti.
+
         Judul Penelitian Utama: "{research_title}"
         Sub-bab yang Harus Ditulis: "{subchapter.get('sub_bab')}"
-        Poin-Poin Kunci untuk Dibahas: {json.dumps(subchapter.get('poin_pembahasan', []), ensure_ascii=False)}
+        Poin-Poin Kunci yang WAJIB Dibahas: {json.dumps(subchapter.get('poin_pembahasan', []), ensure_ascii=False)}
 
-        Sumber Rujukan yang Tersedia:
+        Sumber Rujukan yang Tersedia (Gunakan ini sebagai satu-satunya sumber kebenaran):
         {sources_text}
 
-        INSTRUKSI PENULISAN SANGAT PENTING:
-        1.  **Struktur Tulisan**: Strukturkan jawaban Anda dengan membahas setiap 'poin_pembahasan' secara berurutan. **Gunakan penomoran angka (1., 2., 3., dst.)** untuk setiap poin di dalam tulisan Anda untuk menciptakan sub-bagian yang jelas di dalam sub-bab ini. Setiap nomor harus diikuti dengan paragraf penjelasannya.
-        2.  **Fokus dan Relevansi**: Pastikan setiap poin yang dinomori membahas secara langsung poin pembahasan yang sesuai dari daftar.
-        3.  **Panjang Tulisan**: {length_instruction}
-        4.  **ATURAN SITASI KRUSIAL**: Tempatkan placeholder sitasi [NamaPenulis, Tahun] LANGSUNG SETELAH kalimat yang didukung oleh sumber tersebut. JANGAN PERNAH MENGGUNAKAN SITASI DARI SUMBER YANG SAMA LEBIH DARI SATU KALI DALAM SATU PARAGRAF.
-        5.  **Format**: JANGAN tulis judul sub-bab (seperti 'A. Landasan Teori'). Langsung mulai dengan penomoran poin (1., 2., dst.) dan konten paragrafnya dalam format Markdown.
-        6.  **Daftar Pustaka**: Buat bagian `### Daftar Pustaka` di akhir, berisi HANYA referensi yang Anda kutip dalam tulisan ini.
+        INSTRUKSI PENULISAN SANGAT PENTING DAN TIDAK BOLEH DILANGGAR:
+        1.  **Struktur Tulisan**: Strukturkan jawaban Anda dengan membahas setiap 'poin_pembahasan' secara berurutan. **WAJIB GUNAKAN PENOMORAN ANGKA (1., 2., 3., dst.)** untuk setiap poin di dalam tulisan Anda. Setiap nomor HARUS diikuti dengan penjelasan mendalam.
+        2.  **Panjang dan Kedalaman**: {length_instruction}
+        3.  **ATURAN SITASI MUTLAK**:
+            - SETIAP KLAIM, DEFINISI, ATAU DATA HARUS DIDUKUNG OLEH SITASI. JANGAN PERNAH menulis kalimat atau paragraf tanpa menyertakan setidaknya satu placeholder sitasi [NamaPenulis, Tahun] dari sumber yang relevan.
+            - **JANGAN PERNAH MENGGUNAKAN SITASI DARI SUMBER YANG SAMA LEBIH DARI SATU KALI DALAM SATU PARAGRAF.** Gabungkan ide dari sumber yang sama, lalu letakkan SATU sitasi di akhir paragraf tersebut.
+            - Jika Anda benar-benar tidak menemukan informasi untuk suatu poin dari daftar sumber yang diberikan, dan HANYA jika demikian, tulis: "Tidak ditemukan pembahasan spesifik mengenai poin ini dalam referensi yang tersedia." JANGAN PERNAH mengarang informasi.
+        4.  **Format**: JANGAN tulis judul sub-bab (seperti 'A. Landasan Teori'). Langsung mulai dengan penomoran poin (1., 2., dst.) dan konten paragrafnya dalam format Markdown.
+        5.  **Daftar Pustaka**: Buat bagian `### Daftar Pustaka` di akhir. Cantumkan HANYA referensi yang Anda kutip, dan WAJIB sertakan DOI jika tersedia dari daftar sumber.
 
-        Mulai penulisan konten untuk sub-bab ini sekarang.
+        Mulai penulisan konten yang detail dan penuh sitasi untuk sub-bab ini sekarang.
         """
         
         draft_response = model.generate_content(prompt_draft)
