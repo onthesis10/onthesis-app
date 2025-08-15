@@ -1,7 +1,9 @@
 # ========================================================================
 # File: app/routes.py
 # Deskripsi: Versi LENGKAP dengan alur kerja interaktif untuk Generator Kajian Teori.
-# Termasuk semua fungsi helper dan rute yang diperlukan dari file asli.
+# Perubahan:
+# - Prompt AI untuk generate sub-bab diubah secara signifikan untuk
+#   memaksa penggunaan penomoran (1., 2., 3.) sesuai pokok pembahasan.
 # ========================================================================
 
 # --- Impor Library ---
@@ -795,17 +797,22 @@ def generate_subchapter_content():
 
         prompt_draft = f"""
         Anda adalah seorang penulis akademik ahli. Tugas Anda adalah menulis konten HANYA untuk satu sub-bab berikut.
+        
         Judul Penelitian Utama: "{research_title}"
         Sub-bab yang Harus Ditulis: "{subchapter.get('sub_bab')}"
         Poin-Poin Kunci untuk Dibahas: {json.dumps(subchapter.get('poin_pembahasan', []), ensure_ascii=False)}
+
         Sumber Rujukan yang Tersedia:
         {sources_text}
+
         INSTRUKSI PENULISAN SANGAT PENTING:
-        1. Fokus dan Relevansi: Tulis konten yang relevan HANYA untuk sub-bab dan poin-poin yang diberikan.
-        2. Panjang Tulisan: {length_instruction}
-        3. ATURAN SITASI KRUSIAL: Tempatkan placeholder sitasi [NamaPenulis, Tahun] LANGSUNG SETELAH kalimat yang didukung oleh sumber tersebut. JANGAN PERNAH MENGGUNAKAN SITASI DARI SUMBER YANG SAMA LEBIH DARI SATU KALI DALAM SATU PARAGRAF.
-        4. Format: JANGAN tulis judul sub-bab. Langsung tulis konten paragrafnya dalam format Markdown.
-        5. Daftar Pustaka: Buat bagian `### Daftar Pustaka` di akhir, berisi HANYA referensi yang Anda kutip dalam tulisan ini.
+        1.  **Struktur Tulisan**: Strukturkan jawaban Anda dengan membahas setiap 'poin_pembahasan' secara berurutan. **Gunakan penomoran angka (1., 2., 3., dst.)** untuk setiap poin di dalam tulisan Anda untuk menciptakan sub-bagian yang jelas di dalam sub-bab ini. Setiap nomor harus diikuti dengan paragraf penjelasannya.
+        2.  **Fokus dan Relevansi**: Pastikan setiap poin yang dinomori membahas secara langsung poin pembahasan yang sesuai dari daftar.
+        3.  **Panjang Tulisan**: {length_instruction}
+        4.  **ATURAN SITASI KRUSIAL**: Tempatkan placeholder sitasi [NamaPenulis, Tahun] LANGSUNG SETELAH kalimat yang didukung oleh sumber tersebut. JANGAN PERNAH MENGGUNAKAN SITASI DARI SUMBER YANG SAMA LEBIH DARI SATU KALI DALAM SATU PARAGRAF.
+        5.  **Format**: JANGAN tulis judul sub-bab (seperti 'A. Landasan Teori'). Langsung mulai dengan penomoran poin (1., 2., dst.) dan konten paragrafnya dalam format Markdown.
+        6.  **Daftar Pustaka**: Buat bagian `### Daftar Pustaka` di akhir, berisi HANYA referensi yang Anda kutip dalam tulisan ini.
+
         Mulai penulisan konten untuk sub-bab ini sekarang.
         """
         
