@@ -80,6 +80,40 @@
         padding-bottom: 0.5rem;
         border-bottom: 1px solid var(--border-panel);
     }
+    /* PERUBAHAN: Gaya untuk Loading Overlay Futuristik */
+    #loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(10, 14, 25, 0.8);
+        backdrop-filter: blur(4px);
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.75rem; /* Menyesuaikan dengan radius apex-card */
+        color: var(--text-primary);
+    }
+    .dots-container {
+        display: flex;
+        gap: 10px;
+    }
+    .dot {
+        width: 12px;
+        height: 12px;
+        background-color: var(--accent-cyan);
+        border-radius: 50%;
+        animation: pulse 1.4s infinite ease-in-out both;
+    }
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes pulse {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1.0); }
+    }
 </style>
 {% endblock %}
 
@@ -93,7 +127,17 @@
     <div class="max-w-5xl mx-auto space-y-8">
         
         <!-- Kartu Input -->
-        <div class="apex-card p-6">
+        <div class="apex-card p-6 relative"> <!-- PERUBAHAN: Tambahkan 'position: relative' -->
+            <!-- PERUBAHAN: Tambahkan elemen Loading Overlay -->
+            <div id="loading-overlay" class="hidden">
+                <div class="dots-container">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <p class="mt-4 font-semibold text-lg">Menganalisis Data...</p>
+            </div>
+
             <div class="border-b border-border-panel mb-6">
                 <nav class="flex justify-center -mb-px">
                     <button class="tab-btn active" data-tab="independent">Independent Samples</button>
@@ -224,8 +268,8 @@ $(document).ready(function() {
         $('textarea').removeClass('input-error');
         let hasError = false;
         let payload = {};
-        const button = $(this);
         const confidenceLevel = $('#confidence-level').val();
+        const loadingOverlay = $('#loading-overlay');
 
         if (activeTest === 'independent') {
             const group1_data = $('#group1_data').val().trim().split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
@@ -260,11 +304,12 @@ $(document).ready(function() {
             return;
         }
 
-        button.prop('disabled', true).text('Menganalisis...');
+        loadingOverlay.removeClass('hidden').addClass('flex');
         $('#interpretationOutput').hide().empty();
         $('#professional-report').empty();
 
         try {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulasi loading
             const response = await fetch(`/api/${activeTest}-ttest`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -283,7 +328,7 @@ $(document).ready(function() {
         } catch (e) {
             alert('Error: ' + e.message);
         } finally {
-            button.prop('disabled', false).text('Jalankan Analisis Uji T');
+            loadingOverlay.addClass('hidden').removeClass('flex');
         }
     });
 
@@ -296,8 +341,7 @@ $(document).ready(function() {
             const group1Name = $('#group1_name').val() || 'Grup 1';
             const group2Name = $('#group2_name').val() || 'Grup 2';
             const levene = data.independent_test.levene;
-            const t_test_result = levene.p > 0.05 ? data.independent_test.ttest_equal_variances : data.independent_test.ttest_unequal_variances;
-
+            
             reportHtml = `
                 <div class="report-section">
                     <h4>Ringkasan Hasil</h4>
@@ -417,6 +461,23 @@ $(document).ready(function() {
                         </table>
                     </div>
                 </div>
+                 <div class="report-section">
+                    <h4>Korelasi Antar Variabel</h4>
+                    <div class="overflow-x-auto">
+                        <table class="spss-table">
+                            <thead><tr class="spss-title-row"><th colspan="4">Paired Samples Correlations</th></tr>
+                            <tr class="spss-header-row"><th>Pasangan</th><th>N</th><th>Correlation</th><th>Sig.</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>${pair1Name} & ${pair2Name}</td>
+                                    <td>${data.paired_stats[0].N}</td>
+                                    <td>${corr.r.toFixed(3)}</td>
+                                    <td class="${corr.p < 0.05 ? 'highlight' : ''}">${corr.p.toFixed(3)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 <div class="report-section">
                     <h4>Hasil Uji Paired Samples T-Test</h4>
                     <div class="overflow-x-auto">
@@ -462,10 +523,57 @@ $(document).ready(function() {
     // --- Logika Interpretasi & Ekspor (DIPERBARUI) ---
     $('#interpretBtn').click(function() {
         if (!analysisResult) return;
-        // ... (Fungsi ini akan disempurnakan untuk menggunakan data terstruktur)
+        const btn = $(this);
+        const btnText = btn.find('.btn-text');
+        const spinner = btn.find('.spinner');
+
+        btnText.text('Menganalisis...');
+        spinner.removeClass('hidden');
+        btn.prop('disabled', true);
+
+        // Membuat ringkasan teks yang bersih untuk AI
+        let analysisSummaryForAI = `Jenis Uji: ${activeTest} Samples T-Test.\n`;
+        analysisSummaryForAI += `Kesimpulan Awal: ${analysisResult.summary}\n\n`;
+        if (activeTest === 'independent') {
+            analysisSummaryForAI += "Statistik Grup:\n";
+            analysisResult.group_stats.forEach(s => {
+                analysisSummaryForAI += `- ${s.group}: N=${s.N}, Mean=${s.mean.toFixed(3)}, Std.Dev=${s.std.toFixed(3)}\n`;
+            });
+            analysisSummaryForAI += "\nHasil Uji T Independent:\n";
+            const t_test = analysisResult.independent_test.levene.p > 0.05 ? analysisResult.independent_test.ttest_equal_variances : analysisResult.independent_test.ttest_unequal_variances;
+            analysisSummaryForAI += `- Levene's Test p-value: ${analysisResult.independent_test.levene.p.toFixed(3)}\n`;
+            analysisSummaryForAI += `- t-value: ${t_test.t.toFixed(3)}, df: ${t_test.df.toFixed(3)}, p-value: ${t_test.p.toFixed(3)}\n`;
+            analysisSummaryForAI += `- Mean Difference: ${t_test.mean_diff.toFixed(3)}\n`;
+            analysisSummaryForAI += `- ${$('#confidence-level').val()}% CI: [${t_test.ci_lower.toFixed(3)}, ${t_test.ci_upper.toFixed(3)}]\n`;
+        } else {
+            analysisSummaryForAI += "Statistik Berpasangan:\n";
+            analysisResult.paired_stats.forEach(s => {
+                analysisSummaryForAI += `- ${s.variable}: N=${s.N}, Mean=${s.mean.toFixed(3)}, Std.Dev=${s.std.toFixed(3)}\n`;
+            });
+            const test = analysisResult.paired_test;
+            analysisSummaryForAI += "\nHasil Uji T Berpasangan:\n";
+            analysisSummaryForAI += `- t-value: ${test.t.toFixed(3)}, df: ${test.df}, p-value: ${test.p.toFixed(3)}\n`;
+            analysisSummaryForAI += `- Mean Difference: ${test.mean_diff.toFixed(3)}\n`;
+            analysisSummaryForAI += `- ${$('#confidence-level').val()}% CI: [${test.ci_lower.toFixed(3)}, ${test.ci_upper.toFixed(3)}]\n`;
+        }
+        
+        const prompt = `Anda adalah seorang ahli statistik. Berikan interpretasi profesional untuk ringkasan hasil Uji T berikut dalam format HTML (gunakan <h4>, <p>, <ul>, <li>, <strong>). Jelaskan statistik deskriptif, hasil uji asumsi (jika ada), dan hasil uji T utama. Fokus pada arti nilai p-value (Sig.), nilai t, dan confidence interval. Tarik kesimpulan akhir apakah ada perbedaan yang signifikan atau tidak. Berikut adalah ringkasan hasilnya:\n\n${analysisSummaryForAI}`;
+
+        $.ajax({
+            url: "{{ url_for('interpret_analysis') }}",
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ stats: prompt }),
+            success: (res) => $('#interpretationOutput').html(res.interpretation).show(),
+            error: (err) => $('#interpretationOutput').html(`<p class="text-red-400">Gagal mendapatkan interpretasi: ${err.responseJSON ? err.responseJSON.error : 'Error'}</p>`).show(),
+            complete: () => {
+                btnText.text('Jelaskan Laporan Ini');
+                spinner.addClass('hidden');
+                btn.prop('disabled', false);
+            }
+        });
     });
 
-    // PERBAIKAN: Fungsi untuk memuat logo
     const loadImageAsBase64 = (url) => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -498,7 +606,6 @@ $(document).ready(function() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 let yPos = 25;
-                const ci_level = $('#confidence-level').val();
                 const title = `Laporan ${activeTest === 'independent' ? 'Independent' : 'Paired'} Samples T-Test`;
 
                 const addHeader = (docInstance) => {
@@ -510,26 +617,43 @@ $(document).ready(function() {
                 doc.setFontSize(18);
                 doc.text(title, 105, 25, { align: 'center' });
                 yPos = 40;
-
-                doc.setFontSize(12);
-                const summary = $(`#professional-report .report-section:first-child p`).text();
-                const splitSummary = doc.splitTextToSize(summary, 180);
-                doc.text(splitSummary, 15, yPos);
-                yPos += (splitSummary.length * 5) + 10;
                 
-                const tables = $('#professional-report .spss-table');
-                tables.each(function() {
-                    const title = $(this).closest('.report-section').find('h4').text();
+                const sections = $('#professional-report .report-section');
+                sections.each(function() {
+                    if (yPos > 250) { doc.addPage(); addHeader(doc); yPos = 25; }
+                    const sectionTitle = $(this).find('h4').text();
+                    const contentP = $(this).find('p').text();
+                    const contentUl = $(this).find('ul li');
+                    const table = $(this).find('table').get(0);
+
                     doc.setFontSize(14);
-                    doc.text(title, 15, yPos);
+                    doc.text(sectionTitle, 15, yPos);
                     yPos += 8;
-                    doc.autoTable({ 
-                        html: this, 
-                        startY: yPos,
-                        theme: 'grid',
-                        headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] }
-                    });
-                    yPos = doc.autoTable.previous.finalY + 10;
+
+                    if (contentP) {
+                        const splitText = doc.splitTextToSize(contentP, 180);
+                        doc.setFontSize(10);
+                        doc.text(splitText, 15, yPos);
+                        yPos += (splitText.length * 4) + 5;
+                    }
+                    if (contentUl.length > 0) {
+                        contentUl.each(function() {
+                            const liText = $(this).text();
+                            doc.setFontSize(10);
+                            doc.text(`- ${liText}`, 18, yPos);
+                            yPos += 5;
+                        });
+                        yPos += 5;
+                    }
+                    if (table) {
+                        doc.autoTable({ 
+                            html: table, 
+                            startY: yPos,
+                            theme: 'grid',
+                            headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] }
+                        });
+                        yPos = doc.autoTable.previous.finalY + 10;
+                    }
                 });
                 
                 const plotImg = await Plotly.toImage('plot', {format: 'png', width: 800, height: 450});

@@ -9,7 +9,8 @@
 # - EDIT BARU: Menambahkan endpoint untuk Uji T (Independent & Paired).
 # - EDIT TERAKHIR: Menambahkan penanganan error (try-except) pada API Uji T
 #   untuk mencegah crash dan memastikan respons selalu JSON.
-# - EDIT TERBARU: Menambahkan fungsionalitas Confidence Interval (CI) dinamis.
+# - EDIT FINAL: Memperbaiki bug NaN pada Paired Samples T-Test dan memastikan
+#   backend sepenuhnya mendukung laporan profesional.
 # ========================================================================
 
 # --- Impor Library ---
@@ -153,6 +154,16 @@ def make_api_request_with_retry(url, headers, params=None, timeout=25, retries=3
             else:
                 raise
     return None
+
+def sanitize_nan(data):
+    """Recursively converts NaN/inf values to None for JSON compatibility."""
+    if isinstance(data, dict):
+        return {k: sanitize_nan(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_nan(i) for i in data]
+    elif isinstance(data, float) and (np.isnan(data) or np.isinf(data)):
+        return None  # JSON standard for null
+    return data
 
 # =========================================================================
 # MODEL PENGGUNA & LOADER
@@ -1544,7 +1555,7 @@ def api_independent_ttest():
         conclusion = "terdapat perbedaan rata-rata yang signifikan" if p_to_check < 0.05 else "tidak terdapat perbedaan rata-rata yang signifikan"
         summary = f"Berdasarkan hasil uji T (p = {p_to_check:.3f}), dapat disimpulkan bahwa {conclusion} antara kedua kelompok."
 
-        return jsonify({
+        result = {
             'summary': summary,
             'group_stats': [
                 {'group': 'Grup 1', **stats1, 'ci_lower': stats.t.interval(confidence_level, len(group1)-1, loc=np.mean(group1), scale=stats.sem(group1))[0], 'ci_upper': stats.t.interval(confidence_level, len(group1)-1, loc=np.mean(group1), scale=stats.sem(group1))[1]},
@@ -1555,7 +1566,8 @@ def api_independent_ttest():
                 'ttest_equal_variances': {'t': t_stat_equal, 'df': df_equal, 'p': p_equal, 'mean_diff': mean_diff, 'ci_lower': ci_equal[0], 'ci_upper': ci_equal[1]},
                 'ttest_unequal_variances': {'t': t_stat_unequal, 'df': df_unequal, 'p': p_unequal, 'mean_diff': mean_diff, 'ci_lower': ci_unequal[0], 'ci_upper': ci_unequal[1]}
             }
-        })
+        }
+        return jsonify(sanitize_nan(result))
     except Exception as e:
         print(f"Error di api_independent_ttest: {e}")
         return jsonify({'error': 'Terjadi kesalahan saat memproses data. Pastikan format data benar.'}), 500
@@ -1600,13 +1612,17 @@ def api_paired_ttest():
         df = len(pair1) - 1
         
         # Confidence Interval
-        ci = stats.t.interval(confidence_level, df, loc=mean_diff, scale=stats.sem(diff))
+        # Handle case where std_diff is 0 to avoid division by zero -> NaN
+        if std_diff > 0:
+            ci = stats.t.interval(confidence_level, df, loc=mean_diff, scale=stats.sem(diff))
+        else:
+            ci = (mean_diff, mean_diff) # If no deviation, CI is just the mean difference
 
         # Summary
         conclusion = "terdapat perbedaan rata-rata yang signifikan" if p_value < 0.05 else "tidak terdapat perbedaan rata-rata yang signifikan"
         summary = f"Berdasarkan hasil uji T berpasangan (p = {p_value:.3f}), dapat disimpulkan bahwa {conclusion} antara kedua pengukuran."
 
-        return jsonify({
+        result = {
             'summary': summary,
             'paired_stats': [
                 {'variable': 'Variabel 1', **stats1},
@@ -1627,7 +1643,8 @@ def api_paired_ttest():
                 'ci_lower': ci[0],
                 'ci_upper': ci[1]
             }
-        })
+        }
+        return jsonify(sanitize_nan(result))
     except Exception as e:
         print(f"Error di api_paired_ttest: {e}")
         return jsonify({'error': 'Terjadi kesalahan saat memproses data. Pastikan format data benar.'}), 500
