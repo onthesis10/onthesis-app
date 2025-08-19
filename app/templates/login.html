@@ -88,7 +88,7 @@
             </div>
         </div>
 
-        <!-- KOLOM KANAN: Form Login -->
+        <!-- KOLOM KANAN: Form Login & Sign Up -->
         <div class="right-panel flex flex-col items-center justify-center p-8">
             <div class="w-full max-w-sm">
                 <!-- Header untuk mobile -->
@@ -97,41 +97,71 @@
                 </div>
 
                 <div class="apex-card w-full !p-8">
-                    <h3 class="text-2xl font-bold text-text-primary mb-2">Selamat Datang Bor!</h3>
-                    <p class="text-text-secondary mb-6">Login dan buktikan kalau kamu bisa lulus.</p>
-                    <form id="login-form" method="POST" action="{{ url_for('login') }}">
-                        <div class="mb-4">
-                            <input type="text" id="username" name="username" required class="feedback-form-input w-full py-3 px-4" placeholder="Username">
-                        </div>
-                        <div class="mb-4">
-                            <input type="password" id="password" name="password" required class="feedback-form-input w-full py-3 px-4" placeholder="Password">
-                        </div>
+                    <!-- TAMPILAN LOGIN -->
+                    <div id="login-view">
+                        <h3 class="text-2xl font-bold text-text-primary mb-2">Selamat Datang Bor!</h3>
+                        <p class="text-text-secondary mb-6">Login dan buktikan kalau kamu bisa lulus.</p>
+                        
+                        <form id="login-form">
+                            <div class="mb-4">
+                                <input type="email" id="email" name="email" required class="feedback-form-input w-full py-3 px-4" placeholder="Alamat Email">
+                            </div>
+                            <div class="mb-4">
+                                <input type="password" id="password" name="password" required class="feedback-form-input w-full py-3 px-4" placeholder="Password">
+                            </div>
 
-                        {% with messages = get_flashed_messages(with_categories=true) %}
-                          {% if messages %}
-                            {% for category, message in messages %}
-                              <div class="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg relative mb-4 text-sm" role="alert">
-                                <span>{{ message }}</span>
-                              </div>
-                            {% endfor %}
-                          {% endif %}
-                        {% endwith %}
-
-                        <button id="login-btn" type="submit" class="btn-primary w-full flex items-center justify-center py-3 disabled:opacity-50">
-                            <span class="btn-text">Masuk</span>
-                            <div class="spinner hidden ml-2"></div>
+                            <button id="login-btn" type="submit" class="btn-primary w-full flex items-center justify-center py-3 disabled:opacity-50">
+                                <span class="btn-text">Masuk</span>
+                                <div class="spinner hidden ml-2"></div>
+                            </button>
+                        </form>
+                        <div class="flex items-center my-6">
+                            <div class="flex-grow border-t border-border-panel"></div>
+                            <span class="flex-shrink mx-4 text-text-secondary text-sm">ATAU</span>
+                            <div class="flex-grow border-t border-border-panel"></div>
+                        </div>
+                        <button id="google-login-btn" class="btn-secondary w-full flex items-center justify-center !py-3 disabled:opacity-75">
+                            <!-- PERUBAHAN: Mengganti gambar logo Google dengan SVG agar lebih stylish -->
+                            <svg class="btn-icon w-5 h-5 mr-3" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                                <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.718,36.214,44,30.561,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                            </svg>
+                            <span class="btn-text">Masuk dengan Google</span>
+                            <div class="spinner spinner-secondary hidden ml-3"></div>
                         </button>
-                    </form>
-                    <div class="flex items-center my-6">
-                        <div class="flex-grow border-t border-border-panel"></div>
-                        <span class="flex-shrink mx-4 text-text-secondary text-sm">ATAU</span>
-                        <div class="flex-grow border-t border-border-panel"></div>
+                        <p class="text-center text-sm text-text-secondary mt-6">
+                            Belum punya akun? <a href="#" id="show-signup-link" class="font-semibold text-accent-cyan hover:underline">Daftar di sini</a>
+                        </p>
                     </div>
-                    <button id="google-login-btn" class="btn-secondary w-full flex items-center justify-center !py-3 disabled:opacity-75">
-                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="btn-icon w-5 h-5 mr-3">
-                        <span class="btn-text">Masuk dengan Google</span>
-                        <div class="spinner spinner-secondary hidden ml-3"></div>
-                    </button>
+
+                    <!-- TAMPILAN SIGN UP (AWALNYA DISEMBUNYIKAN) -->
+                    <div id="signup-view" class="hidden">
+                        <h3 class="text-2xl font-bold text-text-primary mb-2">Buat Akun Baru</h3>
+                        <p class="text-text-secondary mb-6">Satu langkah lagi menuju kelulusan.</p>
+                        
+                        <form id="signup-form">
+                            <div class="mb-4">
+                                <input type="email" id="signup-email" name="signup-email" required class="feedback-form-input w-full py-3 px-4" placeholder="Alamat Email">
+                            </div>
+                            <div class="mb-4">
+                                <input type="password" id="signup-password" name="signup-password" required class="feedback-form-input w-full py-3 px-4" placeholder="Password (min. 6 karakter)">
+                            </div>
+                             <div class="mb-4">
+                                <input type="password" id="signup-confirm-password" name="signup-confirm-password" required class="feedback-form-input w-full py-3 px-4" placeholder="Konfirmasi Password">
+                            </div>
+
+                            <button id="signup-btn" type="submit" class="btn-primary w-full flex items-center justify-center py-3 disabled:opacity-50">
+                                <span class="btn-text">Daftar</span>
+                                <div class="spinner hidden ml-2"></div>
+                            </button>
+                        </form>
+                        <p class="text-center text-sm text-text-secondary mt-6">
+                            Sudah punya akun? <a href="#" id="show-login-link" class="font-semibold text-accent-cyan hover:underline">Masuk di sini</a>
+                        </p>
+                    </div>
+                    
                     <div id="login-error" class="text-red-400 text-sm text-center mt-4"></div>
                 </div>
             </div>
@@ -143,8 +173,9 @@
         {{ firebase_config|tojson|safe }}
     </script>
     <script type="module">
+        // Impor semua fungsi yang dibutuhkan
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         
         document.addEventListener('DOMContentLoaded', function() {
             const configDataElement = document.getElementById('firebase-config-data');
@@ -160,9 +191,31 @@
                 } catch (e) { console.error("Gagal inisialisasi Firebase:", e); }
             }
 
+            const loginError = document.getElementById('login-error');
+            const loginView = document.getElementById('login-view');
+            const signupView = document.getElementById('signup-view');
+            const showSignupLink = document.getElementById('show-signup-link');
+            const showLoginLink = document.getElementById('show-login-link');
+
+            // --- Logika untuk beralih antara Login dan Sign Up ---
+            showSignupLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginView.classList.add('hidden');
+                signupView.classList.remove('hidden');
+                loginError.textContent = '';
+            });
+
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                signupView.classList.add('hidden');
+                loginView.classList.remove('hidden');
+                loginError.textContent = '';
+            });
+
+            // --- Logika Form Login Email/Password (Tidak Diubah) ---
             const loginForm = document.getElementById('login-form');
             const loginBtn = document.getElementById('login-btn');
-            if(loginForm && loginBtn) {
+            if(loginForm && loginBtn && auth) {
                 const setLoadingState = (isLoading) => {
                     const text = loginBtn.querySelector('.btn-text');
                     const spinner = loginBtn.querySelector('.spinner');
@@ -170,11 +223,108 @@
                     text.classList.toggle('hidden', isLoading);
                     spinner.classList.toggle('hidden', !isLoading);
                 };
-                loginForm.addEventListener('submit', () => setLoadingState(true));
+
+                loginForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    loginError.textContent = '';
+                    setLoadingState(true);
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    signInWithEmailAndPassword(auth, email, password)
+                        .then(result => result.user.getIdToken())
+                        .then(idToken => fetch("{{ url_for('verify_email_token') }}", {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token: idToken }),
+                        }))
+                        .then(response => {
+                            if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Verifikasi server gagal.') });
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.status === 'success' && data.redirect_url) {
+                                window.location.href = data.redirect_url;
+                            } else {
+                                throw new Error(data.message || 'Terjadi kesalahan tidak diketahui.');
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error saat login dengan Email:", error);
+                            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                                loginError.textContent = 'Email atau password salah.';
+                            } else {
+                                loginError.textContent = `Gagal login. Silakan coba lagi.`;
+                            }
+                        })
+                        .finally(() => setLoadingState(false));
+                });
             }
 
+            // --- Logika BARU untuk Form Sign Up ---
+            const signupForm = document.getElementById('signup-form');
+            const signupBtn = document.getElementById('signup-btn');
+            if(signupForm && signupBtn && auth) {
+                const setSignupLoadingState = (isLoading) => {
+                    const text = signupBtn.querySelector('.btn-text');
+                    const spinner = signupBtn.querySelector('.spinner');
+                    signupBtn.disabled = isLoading;
+                    text.classList.toggle('hidden', isLoading);
+                    spinner.classList.toggle('hidden', !isLoading);
+                };
+
+                signupForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    loginError.textContent = '';
+                    setSignupLoadingState(true);
+
+                    const email = document.getElementById('signup-email').value;
+                    const password = document.getElementById('signup-password').value;
+                    const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+                    if (password !== confirmPassword) {
+                        loginError.textContent = 'Konfirmasi password tidak cocok.';
+                        setSignupLoadingState(false);
+                        return;
+                    }
+
+                    createUserWithEmailAndPassword(auth, email, password)
+                        .then(result => result.user.getIdToken())
+                        .then(idToken => {
+                            // Sama seperti login, kita kirim token ke backend untuk membuat profil user
+                            // Nanti kita perlu buat route 'verify_signup_token' di backend
+                            return fetch("{{ url_for('verify_google_token') }}", { // SEMENTARA PAKAI ROUTE GOOGLE, NANTI DIGANTI
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ token: idToken }),
+                            });
+                        })
+                        .then(response => {
+                            if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Verifikasi server gagal.') });
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.status === 'success' && data.redirect_url) {
+                                window.location.href = data.redirect_url;
+                            } else {
+                                throw new Error(data.message || 'Terjadi kesalahan tidak diketahui.');
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error saat mendaftar:", error);
+                            if (error.code === 'auth/email-already-in-use') {
+                                loginError.textContent = 'Alamat email ini sudah terdaftar.';
+                            } else if (error.code === 'auth/weak-password') {
+                                loginError.textContent = 'Password terlalu lemah. Gunakan minimal 6 karakter.';
+                            } else {
+                                loginError.textContent = 'Gagal mendaftar. Silakan coba lagi.';
+                            }
+                        })
+                        .finally(() => setSignupLoadingState(false));
+                });
+            }
+
+            // --- Logika Google Login (Tidak Diubah) ---
             const googleLoginBtn = document.getElementById('google-login-btn');
-            const loginError = document.getElementById('login-error');
             if (googleLoginBtn && auth) {
                  const setGoogleLoadingState = (isLoading) => {
                     googleLoginBtn.disabled = isLoading;

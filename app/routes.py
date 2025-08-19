@@ -4,6 +4,8 @@
 # Perubahan:
 # - PROMPT AI DIROMBAK TOTAL untuk memaksa sitasi di setiap klaim,
 #   menghasilkan tulisan minimal 6 paragraf per poin, dan menyertakan DOI.
+# - EDIT: Mengimplementasikan alur otentikasi berbasis token Firebase
+#   untuk login/sign-up email dan Google.
 # ========================================================================
 
 # --- Impor Library ---
@@ -171,6 +173,7 @@ class User(UserMixin):
         return False
 
     def check_password(self, password):
+        # This is for legacy password check, new flow uses Firebase directly
         if self.password_hash is None: return False
         return check_password_hash(self.password_hash, password)
 
@@ -244,24 +247,23 @@ def check_and_update_pro_trial(user_id, feature_name):
     return True, "OK"
 
 # =========================================================================
-# RUTE-RUTE HALAMAN
+# RUTE-RUTE OTENTIKASI DAN HALAMAN
 # =========================================================================
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET']) # PERUBAHAN: Hanya handle GET request
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    if request.method == 'POST':
-        username_input = request.form.get('username')
-        password = request.form.get('password')
-        users_ref = db.collection('users').where('displayName', '==', username_input).limit(1).stream()
-        user_doc = next(users_ref, None)
-        if user_doc:
-            user = load_user(user_doc.id)
-            if user and user.check_password(password):
-                login_user(user)
-                return redirect(request.args.get('next') or url_for('dashboard'))
-        flash('Username atau password salah.', 'danger')
-    firebase_config = { "apiKey": os.getenv("FIREBASE_API_KEY"), "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"), "projectId": os.getenv("FIREBASE_PROJECT_ID"), "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"), "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"), "appId": os.getenv("FIREBASE_APP_ID"), "measurementId": os.getenv("FIREBASE_MEASUREMENT_ID") }
+    
+    # Konfigurasi Firebase dikirim ke template untuk digunakan oleh JavaScript frontend
+    firebase_config = { 
+        "apiKey": os.getenv("FIREBASE_API_KEY"), 
+        "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"), 
+        "projectId": os.getenv("FIREBASE_PROJECT_ID"), 
+        "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"), 
+        "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"), 
+        "appId": os.getenv("FIREBASE_APP_ID"), 
+        "measurementId": os.getenv("FIREBASE_MEASUREMENT_ID") 
+    }
     firebase_config_filtered = {k: v for k, v in firebase_config.items() if v is not None}
     return render_template('login.html', firebase_config=firebase_config_filtered)
 
@@ -272,6 +274,7 @@ def logout():
     flash('Anda telah berhasil logout.', 'success')
     return redirect(url_for('login'))
 
+# RUTE HALAMAN LAINNYA (TIDAK DIUBAH)
 @app.route('/')
 @app.route('/dashboard')
 @login_required
@@ -360,8 +363,66 @@ def upgrade_page():
     return render_template('upgrade.html', client_key=client_key)
 
 # =========================================================================
-# RUTE API
+# RUTE API BARU UNTUK OTENTIKASI & LAINNYA
 # =========================================================================
+
+# PERUBAHAN: Route ini sekarang menangani login & sign-up baru dari Google DAN email/password
+@app.route('/api/verify-google-token', methods=['POST'])
+def verify_google_token():
+    try:
+        token = request.json['token']
+        decoded_token = auth.verify_id_token(token)
+        uid = decoded_token['uid']
+        user_ref = db.collection('users').document(uid)
+        user_doc = user_ref.get()
+
+        if user_doc.exists:
+            # Pengguna sudah ada, langsung login
+            user = load_user(uid)
+        else:
+            # Pengguna baru, buat dokumen di Firestore
+            user_data = {
+                'displayName': decoded_token.get('name', decoded_token.get('email')),
+                'email': decoded_token.get('email'),
+                'picture': decoded_token.get('picture'),
+                'isPro': False, 
+                'password_hash': None, # Tidak ada password hash untuk login sosial/email
+                'proExpiryDate': None
+            }
+            user_ref.set(user_data)
+            user = load_user(uid)
+        
+        login_user(user)
+        return jsonify({'status': 'success', 'redirect_url': url_for('dashboard')})
+    except Exception as e:
+        print(f"Error verifikasi token: {e}")
+        return jsonify({'status': 'error', 'message': f'Verifikasi token gagal: {e}'}), 401
+
+# PERUBAHAN: Route BARU khusus untuk verifikasi login email/password yang sudah ada
+@app.route('/api/verify-email-token', methods=['POST'])
+def verify_email_token():
+    try:
+        token = request.json.get('token')
+        if not token:
+            return jsonify({'status': 'error', 'message': 'Token tidak ditemukan.'}), 400
+
+        decoded_token = auth.verify_id_token(token)
+        uid = decoded_token['uid']
+        
+        # Cukup load user dan login, karena user pasti sudah ada di database
+        user = load_user(uid)
+        if user:
+            login_user(user)
+            return jsonify({'status': 'success', 'redirect_url': url_for('dashboard')})
+        else:
+            return jsonify({'status': 'error', 'message': 'Pengguna tidak ditemukan di database.'}), 404
+            
+    except auth.InvalidIdTokenError:
+        return jsonify({'status': 'error', 'message': 'Token tidak valid atau kedaluwarsa.'}), 401
+    except Exception as e:
+        print(f"Error verifikasi token email: {e}")
+        return jsonify({'status': 'error', 'message': 'Terjadi kesalahan di server.'}), 500
+
 
 @app.route('/api/check-pro-trial-usage', methods=['POST'])
 @login_required
@@ -1359,32 +1420,6 @@ def submit_feedback():
     except Exception as e:
         print(f"Error saat menyimpan feedback: {e}")
         return jsonify({'status': 'error', 'message': 'Terjadi kesalahan di server.'}), 500
-
-@app.route('/api/verify-google-token', methods=['POST'])
-def verify_google_token():
-    try:
-        token = request.json['token']
-        decoded_token = auth.verify_id_token(token)
-        uid = decoded_token['uid']
-        user_ref = db.collection('users').document(uid)
-        user_doc = user_ref.get()
-        if user_doc.exists:
-            user = load_user(uid)
-        else:
-            user_data = {
-                'displayName': decoded_token.get('name', decoded_token.get('email')),
-                'email': decoded_token.get('email'),
-                'picture': decoded_token.get('picture'),
-                'isPro': False, 
-                'password_hash': None,
-                'proExpiryDate': None
-            }
-            user_ref.set(user_data)
-            user = load_user(uid)
-        login_user(user)
-        return jsonify({'status': 'success', 'redirect_url': url_for('dashboard')})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Verifikasi token gagal: {e}'}), 401
 
 @app.route('/api/create-transaction', methods=['POST'])
 @login_required
