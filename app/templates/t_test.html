@@ -288,7 +288,6 @@ $(document).ready(function() {
         }
     });
 
-    // PERBAIKAN: Fungsi untuk memformat angka dengan aman (menghindari error 'toFixed' of null)
     const formatNumber = (num, digits = 3) => (num !== null && num !== undefined) ? num.toFixed(digits) : 'N/A';
 
     function displayProfessionalResults(data) {
