@@ -82,7 +82,6 @@
         padding-bottom: 0.5rem;
         border-bottom: 1px solid var(--border-panel);
     }
-    /* PERUBAHAN: Menghapus semua style untuk loading overlay */
 </style>
 {% endblock %}
 
@@ -97,8 +96,6 @@
         
         <!-- Kartu Input -->
         <div class="apex-card p-6 relative"> 
-            <!-- PERUBAHAN: Menghapus elemen HTML loading overlay -->
-
             <div class="border-b border-border-panel mb-6">
                 <nav class="flex justify-center -mb-px">
                     <button class="tab-btn active" data-tab="independent">Independent Samples</button>
@@ -291,6 +288,9 @@ $(document).ready(function() {
         }
     });
 
+    // PERBAIKAN: Fungsi untuk memformat angka dengan aman (menghindari error 'toFixed' of null)
+    const formatNumber = (num, digits = 3) => (num !== null && num !== undefined) ? num.toFixed(digits) : 'N/A';
+
     function displayProfessionalResults(data) {
         const container = $('#professional-report');
         const ci_level = $('#confidence-level').val();
@@ -322,8 +322,8 @@ $(document).ready(function() {
                             <thead><tr class="spss-title-row"><th colspan="4">Group Statistics</th></tr>
                             <tr class="spss-header-row"><th>Grup</th><th>N</th><th>Mean</th><th>Std. Deviation</th></tr></thead>
                             <tbody>
-                                <tr><td>${group1Name}</td><td>${data.group_stats[0].N}</td><td>${data.group_stats[0].mean.toFixed(3)}</td><td>${data.group_stats[0].std.toFixed(3)}</td></tr>
-                                <tr><td>${group2Name}</td><td>${data.group_stats[1].N}</td><td>${data.group_stats[1].mean.toFixed(3)}</td><td>${data.group_stats[1].std.toFixed(3)}</td></tr>
+                                <tr><td>${group1Name}</td><td>${data.group_stats[0].N}</td><td>${formatNumber(data.group_stats[0].mean)}</td><td>${formatNumber(data.group_stats[0].std)}</td></tr>
+                                <tr><td>${group2Name}</td><td>${data.group_stats[1].N}</td><td>${formatNumber(data.group_stats[1].mean)}</td><td>${formatNumber(data.group_stats[1].std)}</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -349,24 +349,24 @@ $(document).ready(function() {
                             <tbody>
                                 <tr>
                                     <td>Equal variances assumed</td>
-                                    <td>${levene.F.toFixed(3)}</td>
-                                    <td>${levene.p.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_equal_variances.t.toFixed(3)}</td>
+                                    <td>${formatNumber(levene.F)}</td>
+                                    <td>${formatNumber(levene.p)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_equal_variances.t)}</td>
                                     <td>${data.independent_test.ttest_equal_variances.df}</td>
-                                    <td class="${data.independent_test.ttest_equal_variances.p < 0.05 ? 'highlight' : ''}">${data.independent_test.ttest_equal_variances.p.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_equal_variances.mean_diff.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_equal_variances.ci_lower.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_equal_variances.ci_upper.toFixed(3)}</td>
+                                    <td class="${data.independent_test.ttest_equal_variances.p < 0.05 ? 'highlight' : ''}">${formatNumber(data.independent_test.ttest_equal_variances.p)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_equal_variances.mean_diff)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_equal_variances.ci_lower)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_equal_variances.ci_upper)}</td>
                                 </tr>
                                 <tr>
                                     <td>Equal variances not assumed</td>
                                     <td></td><td></td>
-                                    <td>${data.independent_test.ttest_unequal_variances.t.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_unequal_variances.df.toFixed(3)}</td>
-                                    <td class="${data.independent_test.ttest_unequal_variances.p < 0.05 ? 'highlight' : ''}">${data.independent_test.ttest_unequal_variances.p.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_unequal_variances.mean_diff.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_unequal_variances.ci_lower.toFixed(3)}</td>
-                                    <td>${data.independent_test.ttest_unequal_variances.ci_upper.toFixed(3)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_unequal_variances.t)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_unequal_variances.df)}</td>
+                                    <td class="${data.independent_test.ttest_unequal_variances.p < 0.05 ? 'highlight' : ''}">${formatNumber(data.independent_test.ttest_unequal_variances.p)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_unequal_variances.mean_diff)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_unequal_variances.ci_lower)}</td>
+                                    <td>${formatNumber(data.independent_test.ttest_unequal_variances.ci_upper)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -414,8 +414,8 @@ $(document).ready(function() {
                             <thead><tr class="spss-title-row"><th colspan="4">Paired Samples Statistics</th></tr>
                             <tr class="spss-header-row"><th>Variabel</th><th>N</th><th>Mean</th><th>Std. Deviation</th></tr></thead>
                             <tbody>
-                                <tr><td>${pair1Name}</td><td>${data.paired_stats[0].N}</td><td>${data.paired_stats[0].mean.toFixed(3)}</td><td>${data.paired_stats[0].std.toFixed(3)}</td></tr>
-                                <tr><td>${pair2Name}</td><td>${data.paired_stats[1].N}</td><td>${data.paired_stats[1].mean.toFixed(3)}</td><td>${data.paired_stats[1].std.toFixed(3)}</td></tr>
+                                <tr><td>${pair1Name}</td><td>${data.paired_stats[0].N}</td><td>${formatNumber(data.paired_stats[0].mean)}</td><td>${formatNumber(data.paired_stats[0].std)}</td></tr>
+                                <tr><td>${pair2Name}</td><td>${data.paired_stats[1].N}</td><td>${formatNumber(data.paired_stats[1].mean)}</td><td>${formatNumber(data.paired_stats[1].std)}</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -430,8 +430,8 @@ $(document).ready(function() {
                                 <tr>
                                     <td>${pair1Name} & ${pair2Name}</td>
                                     <td>${data.paired_stats[0].N}</td>
-                                    <td>${corr.r.toFixed(3)}</td>
-                                    <td class="${corr.p < 0.05 ? 'highlight' : ''}">${corr.p.toFixed(3)}</td>
+                                    <td>${formatNumber(corr.r)}</td>
+                                    <td class="${corr.p < 0.05 ? 'highlight' : ''}">${formatNumber(corr.p)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -456,12 +456,12 @@ $(document).ready(function() {
                             </thead>
                             <tbody><tr>
                                 <td>${pair1Name} - ${pair2Name}</td>
-                                <td>${test.mean_diff.toFixed(3)}</td>
-                                <td>${test.std_diff.toFixed(3)}</td>
-                                <td>${test.ci_lower.toFixed(3)} - ${test.ci_upper.toFixed(3)}</td>
-                                <td>${test.t.toFixed(3)}</td>
+                                <td>${formatNumber(test.mean_diff)}</td>
+                                <td>${formatNumber(test.std_diff)}</td>
+                                <td>${formatNumber(test.ci_lower)} - ${formatNumber(test.ci_upper)}</td>
+                                <td>${formatNumber(test.t)}</td>
                                 <td>${test.df}</td>
-                                <td class="${test.p < 0.05 ? 'highlight' : ''}">${test.p.toFixed(3)}</td>
+                                <td class="${test.p < 0.05 ? 'highlight' : ''}">${formatNumber(test.p)}</td>
                             </tr></tbody>
                         </table>
                     </div>
@@ -496,24 +496,24 @@ $(document).ready(function() {
         if (activeTest === 'independent') {
             analysisSummaryForAI += "Statistik Grup:\n";
             analysisResult.group_stats.forEach(s => {
-                analysisSummaryForAI += `- ${s.group}: N=${s.N}, Mean=${s.mean.toFixed(3)}, Std.Dev=${s.std.toFixed(3)}\n`;
+                analysisSummaryForAI += `- ${s.group}: N=${s.N}, Mean=${formatNumber(s.mean)}, Std.Dev=${formatNumber(s.std)}\n`;
             });
             analysisSummaryForAI += "\nHasil Uji T Independent:\n";
             const t_test = analysisResult.independent_test.levene.p > 0.05 ? analysisResult.independent_test.ttest_equal_variances : analysisResult.independent_test.ttest_unequal_variances;
-            analysisSummaryForAI += `- Levene's Test p-value: ${analysisResult.independent_test.levene.p.toFixed(3)}\n`;
-            analysisSummaryForAI += `- t-value: ${t_test.t.toFixed(3)}, df: ${t_test.df.toFixed(3)}, p-value: ${t_test.p.toFixed(3)}\n`;
-            analysisSummaryForAI += `- Mean Difference: ${t_test.mean_diff.toFixed(3)}\n`;
-            analysisSummaryForAI += `- ${$('#confidence-level').val()}% CI: [${t_test.ci_lower.toFixed(3)}, ${t_test.ci_upper.toFixed(3)}]\n`;
+            analysisSummaryForAI += `- Levene's Test p-value: ${formatNumber(analysisResult.independent_test.levene.p)}\n`;
+            analysisSummaryForAI += `- t-value: ${formatNumber(t_test.t)}, df: ${formatNumber(t_test.df)}, p-value: ${formatNumber(t_test.p)}\n`;
+            analysisSummaryForAI += `- Mean Difference: ${formatNumber(t_test.mean_diff)}\n`;
+            analysisSummaryForAI += `- ${$('#confidence-level').val()}% CI: [${formatNumber(t_test.ci_lower)}, ${formatNumber(t_test.ci_upper)}]\n`;
         } else {
             analysisSummaryForAI += "Statistik Berpasangan:\n";
             analysisResult.paired_stats.forEach(s => {
-                analysisSummaryForAI += `- ${s.variable}: N=${s.N}, Mean=${s.mean.toFixed(3)}, Std.Dev=${s.std.toFixed(3)}\n`;
+                analysisSummaryForAI += `- ${s.variable}: N=${s.N}, Mean=${formatNumber(s.mean)}, Std.Dev=${formatNumber(s.std)}\n`;
             });
             const test = analysisResult.paired_test;
             analysisSummaryForAI += "\nHasil Uji T Berpasangan:\n";
-            analysisSummaryForAI += `- t-value: ${test.t.toFixed(3)}, df: ${test.df}, p-value: ${test.p.toFixed(3)}\n`;
-            analysisSummaryForAI += `- Mean Difference: ${test.mean_diff.toFixed(3)}\n`;
-            analysisSummaryForAI += `- ${$('#confidence-level').val()}% CI: [${test.ci_lower.toFixed(3)}, ${test.ci_upper.toFixed(3)}]\n`;
+            analysisSummaryForAI += `- t-value: ${formatNumber(test.t)}, df: ${test.df}, p-value: ${formatNumber(test.p)}\n`;
+            analysisSummaryForAI += `- Mean Difference: ${formatNumber(test.mean_diff)}\n`;
+            analysisSummaryForAI += `- ${$('#confidence-level').val()}% CI: [${formatNumber(test.ci_lower)}, ${formatNumber(test.ci_upper)}]\n`;
         }
         
         const prompt = `Anda adalah seorang ahli statistik. Berikan interpretasi profesional untuk ringkasan hasil Uji T berikut dalam format HTML (gunakan <h4>, <p>, <ul>, <li>, <strong>). Jelaskan statistik deskriptif, hasil uji asumsi (jika ada), dan hasil uji T utama. Fokus pada arti nilai p-value (Sig.), nilai t, dan confidence interval. Tarik kesimpulan akhir apakah ada perbedaan yang signifikan atau tidak. Berikut adalah ringkasan hasilnya:\n\n${analysisSummaryForAI}`;
