@@ -13,9 +13,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
-    /* Gaya Tabel SPSS yang disempurnakan */
+    /* PERBAIKAN: Mengatur lebar tabel agar auto fit dan tidak terlalu meregang */
     .spss-table {
-        width: 100%;
+        width: auto; /* Biarkan lebar menyesuaikan konten */
+        min-width: 600px; /* Lebar minimum agar tidak terlalu sempit */
+        margin-left: auto; /* Pusatkan tabel */
+        margin-right: auto; /* Pusatkan tabel */
         border-collapse: collapse;
         margin-bottom: 1.5rem;
         font-size: 0.875rem;
@@ -80,7 +83,7 @@
         padding-bottom: 0.5rem;
         border-bottom: 1px solid var(--border-panel);
     }
-    /* PERUBAHAN: Gaya untuk Loading Overlay Futuristik */
+    /* Gaya untuk Loading Overlay Futuristik */
     #loading-overlay {
         position: absolute;
         top: 0;
@@ -127,8 +130,7 @@
     <div class="max-w-5xl mx-auto space-y-8">
         
         <!-- Kartu Input -->
-        <div class="apex-card p-6 relative"> <!-- PERUBAHAN: Tambahkan 'position: relative' -->
-            <!-- PERUBAHAN: Tambahkan elemen Loading Overlay -->
+        <div class="apex-card p-6 relative"> 
             <div id="loading-overlay" class="hidden">
                 <div class="dots-container">
                     <div class="dot"></div>
@@ -211,7 +213,6 @@
                     </div>
                 </div>
                 
-                <!-- KONTEN HASIL YANG BARU DAN PROFESIONAL -->
                 <div id="professional-report">
                     <!-- Akan diisi oleh JavaScript -->
                 </div>
@@ -303,7 +304,7 @@ $(document).ready(function() {
             alert('Setiap grup harus memiliki minimal 3 data poin. Grup yang bermasalah telah ditandai.');
             return;
         }
-
+        
         loadingOverlay.removeClass('hidden').addClass('flex');
         $('#interpretationOutput').hide().empty();
         $('#professional-report').empty();
