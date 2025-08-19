@@ -9,6 +9,7 @@
 # - EDIT BARU: Menambahkan endpoint untuk Uji T (Independent & Paired).
 # - EDIT TERAKHIR: Menambahkan penanganan error (try-except) pada API Uji T
 #   untuk mencegah crash dan memastikan respons selalu JSON.
+# - EDIT TERBARU: Menambahkan fungsionalitas Confidence Interval (CI) dinamis.
 # ========================================================================
 
 # --- Impor Library ---
@@ -1498,6 +1499,8 @@ def api_independent_ttest():
     try:
         data = request.get_json()
         groups = data.get('groups')
+        confidence_level = float(data.get('confidence_level', 95)) / 100.0
+
         if not groups or len(groups) != 2:
             return jsonify({'error': 'Dibutuhkan tepat dua grup data.'}), 400
 
@@ -1531,10 +1534,10 @@ def api_independent_ttest():
         
         # Confidence Intervals
         se_diff_equal = np.sqrt( ( (n1-1)*v1 + (n2-1)*v2 ) / df_equal * (1/n1 + 1/n2) )
-        ci_equal = stats.t.interval(0.95, df_equal, loc=mean_diff, scale=se_diff_equal)
+        ci_equal = stats.t.interval(confidence_level, df_equal, loc=mean_diff, scale=se_diff_equal)
 
         se_diff_unequal = np.sqrt(v1/n1 + v2/n2)
-        ci_unequal = stats.t.interval(0.95, df_unequal, loc=mean_diff, scale=se_diff_unequal)
+        ci_unequal = stats.t.interval(confidence_level, df_unequal, loc=mean_diff, scale=se_diff_unequal)
         
         # Summary
         p_to_check = levene_p > 0.05 and p_equal or p_unequal
@@ -1544,8 +1547,8 @@ def api_independent_ttest():
         return jsonify({
             'summary': summary,
             'group_stats': [
-                {'group': 'Grup 1', **stats1, 'ci_lower': stats.t.interval(0.95, len(group1)-1, loc=np.mean(group1), scale=stats.sem(group1))[0], 'ci_upper': stats.t.interval(0.95, len(group1)-1, loc=np.mean(group1), scale=stats.sem(group1))[1]},
-                {'group': 'Grup 2', **stats2, 'ci_lower': stats.t.interval(0.95, len(group2)-1, loc=np.mean(group2), scale=stats.sem(group2))[0], 'ci_upper': stats.t.interval(0.95, len(group2)-1, loc=np.mean(group2), scale=stats.sem(group2))[1]}
+                {'group': 'Grup 1', **stats1, 'ci_lower': stats.t.interval(confidence_level, len(group1)-1, loc=np.mean(group1), scale=stats.sem(group1))[0], 'ci_upper': stats.t.interval(confidence_level, len(group1)-1, loc=np.mean(group1), scale=stats.sem(group1))[1]},
+                {'group': 'Grup 2', **stats2, 'ci_lower': stats.t.interval(confidence_level, len(group2)-1, loc=np.mean(group2), scale=stats.sem(group2))[0], 'ci_upper': stats.t.interval(confidence_level, len(group2)-1, loc=np.mean(group2), scale=stats.sem(group2))[1]}
             ],
             'independent_test': {
                 'levene': {'F': levene_stat, 'p': levene_p},
@@ -1570,6 +1573,8 @@ def api_paired_ttest():
     try:
         data = request.get_json()
         pairs = data.get('pairs')
+        confidence_level = float(data.get('confidence_level', 95)) / 100.0
+
         if not pairs or len(pairs) != 2:
             return jsonify({'error': 'Dibutuhkan tepat dua set data berpasangan.'}), 400
 
@@ -1595,7 +1600,7 @@ def api_paired_ttest():
         df = len(pair1) - 1
         
         # Confidence Interval
-        ci = stats.t.interval(0.95, df, loc=mean_diff, scale=stats.sem(diff))
+        ci = stats.t.interval(confidence_level, df, loc=mean_diff, scale=stats.sem(diff))
 
         # Summary
         conclusion = "terdapat perbedaan rata-rata yang signifikan" if p_value < 0.05 else "tidak terdapat perbedaan rata-rata yang signifikan"
