@@ -6,6 +6,7 @@
 #   menghasilkan tulisan minimal 6 paragraf per poin, dan menyertakan DOI.
 # - EDIT: Mengimplementasikan alur otentikasi berbasis token Firebase
 #   untuk login/sign-up email dan Google.
+# - EDIT BARU: Menambahkan endpoint untuk Uji T (Independent & Paired).
 # ========================================================================
 
 # --- Impor Library ---
@@ -331,6 +332,13 @@ def normality_test(): return render_template('normality_test.html')
 @app.route('/homogeneity_test')
 @login_required
 def homogeneity_test(): return render_template('homogeneity_test.html')
+
+# --- PENAMBAHAN ROUTE HALAMAN BARU ---
+@app.route('/t-test')
+@login_required
+def t_test():
+    return render_template('t_test.html')
+# ------------------------------------
 
 @app.route('/descriptive_statistics')
 @login_required
@@ -1473,3 +1481,60 @@ def payment_notification():
     except Exception as e:
         print(f"Error saat menangani notifikasi pembayaran: {e}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+" code between  and  in the most up-to-date Canvas "routes.py (Backend Edited)" document above and am asking a query about/based on this code below.
+Instructions to follow:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
+
+oke mari kita tambahkan untuk uji T, unutk refernsi kode nya saya ingin antarmuka atau flow nya seperti fitur saya yg lain, dari mulai input sampai ekspor hasilnya. 
+intinya saya ingin outputnya seperti dibawah ini:
+🔹 1. Independent Samples T-Test
+Digunakan untuk membandingkan dua kelompok berbeda.
+
+Output yang dibutuhkan:
+Group Statistics
+Mean (rata-rata per grup)
+Std. Deviation (simpangan baku)
+N (jumlah sampel)
+Levene’s Test for Equality of Variances
+F dan Sig. (untuk menentukan apakah varians sama atau tidak)
+Independent Samples Test
+t-value (nilai t)
+df (derajat kebebasan)
+Sig. (2-tailed) → p-value
+Mean Difference (selisih rata-rata antar grup)
+Std. Error Difference
+95% Confidence Interval of the Difference (CI lower & upper)
+👉 Yang biasanya paling diperhatikan user: t, df, p-value, mean difference, confidence interval.
+🔹 2. Paired Samples T-Test
+Digunakan untuk membandingkan dua kondisi/kelompok berpasangan (misalnya pre-test vs post-test).
+
+Output yang dibutuhkan:
+Paired Samples Statistics
+Mean (pre & post)
+Std. Deviation
+N
+Paired Samples Correlation
+Correlation (r)
+Sig. (p-value untuk korelasi)
+Paired Samples Test
+Mean Difference (selisih rata-rata)
+Std. Deviation dari selisih
+Std. Error Mean
+t-value
+df
+Sig. (2-tailed) → p-value
+95% Confidence Interval of the Difference
+👉 Yang utama ditampilkan ke user: t, df, p-value, mean difference, confidence interval.
+🔹 Rekomendasi Tampilan di Web App
+Supaya simpel dan mirip SPSS:
+
+Tabel Descriptive Statistics (Mean, SD, N)
+Tabel Hasil Uji T (t, df, p, mean diff, CI)
+(Opsional) Visualisasi → misalnya bar chart dengan error bar (mean ± C

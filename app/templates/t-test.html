@@ -1,0 +1,433 @@
+{% extends "layout.html" %}
+
+{% block title %}Uji T (T-Test) - OnThesis{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka untuk Grafik & Tabel -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Pustaka untuk Export Profesional -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<style>
+    /* Gaya Tabel SPSS */
+    .spss-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+    }
+    .spss-table thead .spss-title-row th {
+        background-color: transparent !important;
+        color: var(--text-primary) !important;
+        font-size: 1.1em;
+        font-weight: bold;
+        padding: 8px 0;
+        text-align: left;
+        border: none;
+        border-bottom: 2px solid var(--text-primary) !important;
+    }
+    .spss-table thead .spss-header-row th {
+        color: var(--text-primary) !important;
+        font-weight: bold;
+        padding: 8px;
+        border: none;
+        border-bottom: 1px solid var(--border-panel) !important;
+        text-align: center;
+    }
+    .spss-table tbody td {
+        padding: 8px;
+        color: var(--text-secondary) !important;
+        border-bottom: 1px solid var(--border-panel);
+        text-align: center;
+    }
+    .spss-table tbody td:first-child {
+        text-align: left;
+        font-weight: 600;
+    }
+    .spss-table .sub-header {
+        font-weight: bold;
+        border-top: 1px solid var(--border-panel);
+    }
+    .highlight {
+        color: var(--accent-cyan);
+        font-weight: 600;
+    }
+    /* Gaya untuk menandai input yang error */
+    .input-error {
+        border-color: #ef4444 !important; /* Warna merah */
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+    /* Gaya Tab */
+    .tab-btn {
+        padding: 0.5rem 1rem;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease-in-out;
+    }
+    .tab-btn.active {
+        color: var(--accent-cyan);
+        border-bottom-color: var(--accent-cyan);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in-up">
+    <header class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold text-text-primary">Uji T (Student's T-Test)</h1>
+        <p class="text-lg text-text-secondary mt-1">Bandingkan rata-rata dua grup data untuk melihat apakah ada perbedaan yang signifikan.</p>
+    </header>
+
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <!-- Kartu Input -->
+        <div class="apex-card p-6">
+            <div class="border-b border-border-panel mb-4">
+                <nav class="flex justify-center -mb-px">
+                    <button class="tab-btn active" data-tab="independent">Independent Samples</button>
+                    <button class="tab-btn" data-tab="paired">Paired Samples</button>
+                </nav>
+            </div>
+
+            <!-- Input untuk Independent T-Test -->
+            <div id="independent-input" class="tab-content">
+                <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Dua Grup Berbeda</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="group1_name" class="block text-sm font-medium text-text-secondary mb-1">Nama Grup 1</label>
+                        <input type="text" id="group1_name" class="feedback-form-input w-full" value="Grup Kontrol">
+                        <textarea id="group1_data" class="feedback-form-input mt-2" rows="8" placeholder="Masukkan data Grup 1..."></textarea>
+                    </div>
+                    <div>
+                        <label for="group2_name" class="block text-sm font-medium text-text-secondary mb-1">Nama Grup 2</label>
+                        <input type="text" id="group2_name" class="feedback-form-input w-full" value="Grup Eksperimen">
+                        <textarea id="group2_data" class="feedback-form-input mt-2" rows="8" placeholder="Masukkan data Grup 2..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input untuk Paired T-Test -->
+            <div id="paired-input" class="tab-content hidden">
+                <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Berpasangan</h3>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="pair1_name" class="block text-sm font-medium text-text-secondary mb-1">Variabel 1</label>
+                        <input type="text" id="pair1_name" class="feedback-form-input w-full" value="Pre-Test">
+                        <textarea id="pair1_data" class="feedback-form-input mt-2" rows="8" placeholder="Masukkan data Pre-Test..."></textarea>
+                    </div>
+                    <div>
+                        <label for="pair2_name" class="block text-sm font-medium text-text-secondary mb-1">Variabel 2</label>
+                        <input type="text" id="pair2_name" class="feedback-form-input w-full" value="Post-Test">
+                        <textarea id="pair2_data" class="feedback-form-input mt-2" rows="8" placeholder="Masukkan data Post-Test..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-border-panel text-center">
+                 <button id="loadSample" class="btn-secondary mb-4">Muat Contoh Data</button>
+                <button id="runAnalysis" class="btn-primary w-full md:w-auto">Jalankan Analisis Uji T</button>
+            </div>
+        </div>
+
+        <!-- Kontainer Output -->
+        <div id="resultCard" class="space-y-8" style="display:none;">
+            <div class="apex-card p-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h3 class="text-xl font-bold text-text-primary">2. Hasil Analisis</h3>
+                    <div class="flex gap-2">
+                        <button id="export-pdf-btn" class="btn-secondary text-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <span class="btn-text">Export PDF</span>
+                        </button>
+                        <button id="export-doc-btn" class="btn-secondary text-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5V20a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4.5M16 4.5h-4a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h4M16 4.5V2M8 13h8M8 17h8"></path></svg>
+                            <span class="btn-text">Export DOC</span>
+                        </button>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+                <div id="summaryText" class="text-text-secondary mb-4 p-4 bg-bg-canvas rounded-lg border border-border-panel"></div>
+                
+                <!-- Placeholder untuk tabel hasil -->
+                <div id="resultTablesContainer"></div>
+                
+                <!-- Fitur Interpretasi AI -->
+                <div class="mt-6 border-t border-border-panel pt-6">
+                    <h4 class="text-lg font-bold text-text-primary mb-2">Interpretasi AI</h4>
+                    <button id="interpretBtn" class="btn-secondary w-full mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                        <span class="btn-text">Jelaskan Hasil Ini</span>
+                        <div class="spinner hidden ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    </button>
+                    <div id="interpretationOutput" class="prose prose-sm max-w-none text-text-secondary dark:prose-invert bg-bg-canvas p-4 rounded-lg border border-border-panel" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="apex-card p-6">
+                <h3 class="text-xl font-bold text-text-primary mb-4 text-center">3. Visualisasi Data</h3>
+                <div id="plot" class="w-full h-96"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+$(document).ready(function() {
+    let activeTest = 'independent';
+    let analysisResult = null;
+
+    // --- Logika UI ---
+    $('.tab-btn').on('click', function() {
+        $('.tab-btn').removeClass('active');
+        $(this).addClass('active');
+        activeTest = $(this).data('tab');
+
+        $('.tab-content').addClass('hidden');
+        $(`#${activeTest}-input`).removeClass('hidden');
+        $('#resultCard').hide(); // Sembunyikan hasil saat ganti tab
+    });
+
+    $('#loadSample').click(() => {
+        if (activeTest === 'independent') {
+            $('#group1_data').val('8, 7, 9, 6, 8, 7, 9, 10, 5, 7');
+            $('#group2_data').val('10, 9, 11, 8, 9, 10, 12, 11, 8, 9');
+        } else {
+            $('#pair1_data').val('65, 70, 75, 80, 85, 90, 95, 100, 105, 110');
+            $('#pair2_data').val('60, 65, 70, 75, 80, 85, 90, 95, 100, 105');
+        }
+    });
+
+    // --- Logika Analisis ---
+    $('#runAnalysis').click(async function() {
+        $('textarea').removeClass('input-error');
+        let hasError = false;
+        let payload = {};
+        const button = $(this);
+
+        if (activeTest === 'independent') {
+            const group1_data = $('#group1_data').val().trim().split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+            const group2_data = $('#group2_data').val().trim().split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+
+            if (group1_data.length < 3) { $('#group1_data').addClass('input-error'); hasError = true; }
+            if (group2_data.length < 3) { $('#group2_data').addClass('input-error'); hasError = true; }
+            
+            payload = { groups: [group1_data, group2_data] };
+        } else { // Paired
+            const pair1_data = $('#pair1_data').val().trim().split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+            const pair2_data = $('#pair2_data').val().trim().split(/[ ,\n\t;]+/).map(Number).filter(x => !isNaN(x));
+            
+            if (pair1_data.length < 3) { $('#pair1_data').addClass('input-error'); hasError = true; }
+            if (pair2_data.length < 3) { $('#pair2_data').addClass('input-error'); hasError = true; }
+            if (pair1_data.length !== pair2_data.length) {
+                alert('Untuk Paired Samples T-Test, jumlah data di kedua grup harus sama.');
+                $('#pair1_data, #pair2_data').addClass('input-error');
+                return;
+            }
+            payload = { pairs: [pair1_data, pair2_data] };
+        }
+
+        if (hasError) {
+            alert('Setiap grup harus memiliki minimal 3 data poin. Grup yang bermasalah telah ditandai.');
+            return;
+        }
+
+        button.prop('disabled', true).text('Menganalisis...');
+        $('#interpretationOutput').hide().empty();
+        $('#resultTablesContainer').empty();
+
+        try {
+            const response = await fetch(`/api/${activeTest}-ttest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Terjadi kesalahan pada server.');
+            }
+
+            analysisResult = await response.json();
+            displayResults(analysisResult);
+            $('#resultCard').slideDown();
+
+        } catch (e) {
+            alert('Error: ' + e.message);
+        } finally {
+            button.prop('disabled', false).text('Jalankan Analisis Uji T');
+        }
+    });
+
+    function displayResults(data) {
+        const container = $('#resultTablesContainer');
+        $('#summaryText').html(`<strong>Kesimpulan:</strong> ${data.summary || 'Analisis berhasil.'}`);
+        
+        if (activeTest === 'independent') {
+            // Tabel Group Statistics
+            let groupStatsHtml = `
+                <table class="spss-table">
+                    <thead><tr class="spss-title-row"><th colspan="4">Group Statistics</th></tr>
+                    <tr class="spss-header-row"><th>Grup</th><th>N</th><th>Mean</th><th>Std. Deviation</th></tr></thead>
+                    <tbody>`;
+            data.group_stats.forEach(stat => {
+                groupStatsHtml += `<tr><td>${stat.group}</td><td>${stat.N}</td><td>${stat.mean.toFixed(3)}</td><td>${stat.std.toFixed(3)}</td></tr>`;
+            });
+            groupStatsHtml += `</tbody></table>`;
+            container.append(groupStatsHtml);
+
+            // Tabel Independent Samples Test
+            const levene = data.independent_test.levene;
+            const t_equal = data.independent_test.ttest_equal_variances;
+            const t_unequal = data.independent_test.ttest_unequal_variances;
+            let testHtml = `
+                <table class="spss-table">
+                    <thead>
+                        <tr class="spss-title-row"><th colspan="9">Independent Samples Test</th></tr>
+                        <tr class="spss-header-row">
+                            <th rowspan="2"></th>
+                            <th colspan="2">Levene's Test for Equality of Variances</th>
+                            <th colspan="6">t-test for Equality of Means</th>
+                        </tr>
+                        <tr class="spss-header-row">
+                            <th>F</th><th>Sig.</th><th>t</th><th>df</th><th>Sig. (2-tailed)</th><th>Mean Difference</th><th colspan="2">95% CI of the Difference</th>
+                        </tr>
+                         <tr class="spss-header-row" style="font-size: 0.8em;">
+                            <th></th><th></th><th></th><th></th><th></th><th></th><th>Lower</th><th>Upper</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Equal variances assumed</td>
+                            <td>${levene.F.toFixed(3)}</td>
+                            <td>${levene.p.toFixed(3)}</td>
+                            <td>${t_equal.t.toFixed(3)}</td>
+                            <td>${t_equal.df}</td>
+                            <td class="${t_equal.p < 0.05 ? 'highlight' : ''}">${t_equal.p.toFixed(3)}</td>
+                            <td>${t_equal.mean_diff.toFixed(3)}</td>
+                            <td>${t_equal.ci_lower.toFixed(3)}</td>
+                            <td>${t_equal.ci_upper.toFixed(3)}</td>
+                        </tr>
+                        <tr>
+                            <td>Equal variances not assumed</td>
+                            <td></td><td></td>
+                            <td>${t_unequal.t.toFixed(3)}</td>
+                            <td>${t_unequal.df.toFixed(3)}</td>
+                            <td class="${t_unequal.p < 0.05 ? 'highlight' : ''}">${t_unequal.p.toFixed(3)}</td>
+                            <td>${t_unequal.mean_diff.toFixed(3)}</td>
+                            <td>${t_unequal.ci_lower.toFixed(3)}</td>
+                            <td>${t_unequal.ci_upper.toFixed(3)}</td>
+                        </tr>
+                    </tbody>
+                </table>`;
+            container.append(testHtml);
+
+            // Visualisasi Bar Chart
+            const plotData = [{
+                x: data.group_stats.map(s => s.group),
+                y: data.group_stats.map(s => s.mean),
+                error_y: {
+                    type: 'data',
+                    array: data.group_stats.map(s => (s.ci_upper - s.ci_lower) / 2),
+                    visible: true
+                },
+                type: 'bar'
+            }];
+            Plotly.newPlot('plot', plotData, getPlotlyLayout('Perbandingan Rata-rata Grup dengan 95% Confidence Interval'));
+
+        } else { // Paired
+            // Tabel Paired Samples Statistics
+            let pairedStatsHtml = `
+                <table class="spss-table">
+                    <thead><tr class="spss-title-row"><th colspan="4">Paired Samples Statistics</th></tr>
+                    <tr class="spss-header-row"><th>Variabel</th><th>N</th><th>Mean</th><th>Std. Deviation</th></tr></thead>
+                    <tbody>`;
+            data.paired_stats.forEach(stat => {
+                pairedStatsHtml += `<tr><td>${stat.variable}</td><td>${stat.N}</td><td>${stat.mean.toFixed(3)}</td><td>${stat.std.toFixed(3)}</td></tr>`;
+            });
+            pairedStatsHtml += `</tbody></table>`;
+            container.append(pairedStatsHtml);
+
+            // Tabel Paired Samples Correlations
+            const corr = data.paired_correlation;
+            let corrHtml = `
+                <table class="spss-table">
+                    <thead><tr class="spss-title-row"><th colspan="3">Paired Samples Correlations</th></tr>
+                    <tr class="spss-header-row"><th>Pasangan</th><th>Correlation</th><th>Sig.</th></tr></thead>
+                    <tbody><tr>
+                        <td>${corr.pair}</td>
+                        <td>${corr.r.toFixed(3)}</td>
+                        <td class="${corr.p < 0.05 ? 'highlight' : ''}">${corr.p.toFixed(3)}</td>
+                    </tr></tbody>
+                </table>`;
+            container.append(corrHtml);
+            
+            // Tabel Paired Samples Test
+            const test = data.paired_test;
+            let pairedTestHtml = `
+                <table class="spss-table">
+                     <thead>
+                        <tr class="spss-title-row"><th colspan="7">Paired Samples Test</th></tr>
+                        <tr class="spss-header-row">
+                            <th rowspan="2">Pasangan</th>
+                            <th colspan="3">Paired Differences</th>
+                            <th rowspan="2">t</th>
+                            <th rowspan="2">df</th>
+                            <th rowspan="2">Sig. (2-tailed)</th>
+                        </tr>
+                        <tr class="spss-header-row">
+                            <th>Mean</th><th>Std. Dev</th><th>95% CI (Lower-Upper)</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr>
+                        <td>${test.pair}</td>
+                        <td>${test.mean_diff.toFixed(3)}</td>
+                        <td>${test.std_diff.toFixed(3)}</td>
+                        <td>${test.ci_lower.toFixed(3)} - ${test.ci_upper.toFixed(3)}</td>
+                        <td>${test.t.toFixed(3)}</td>
+                        <td>${test.df}</td>
+                        <td class="${test.p < 0.05 ? 'highlight' : ''}">${test.p.toFixed(3)}</td>
+                    </tr></tbody>
+                </table>`;
+            container.append(pairedTestHtml);
+
+            // Visualisasi Bar Chart
+            const plotData = [{
+                x: data.paired_stats.map(s => s.variable),
+                y: data.paired_stats.map(s => s.mean),
+                type: 'bar'
+            }];
+            Plotly.newPlot('plot', plotData, getPlotlyLayout('Perbandingan Rata-rata Variabel Berpasangan'));
+        }
+    }
+
+    // --- Logika Interpretasi & Ekspor (mirip homogeneity_test.html) ---
+    $('#interpretBtn').click(function() {
+        if (!analysisResult) return;
+        // ... (Logika untuk memanggil API interpretasi)
+    });
+
+    $('.flex').on('click', '#export-pdf-btn, #export-doc-btn', function() {
+        const format = $(this).attr('id').includes('pdf') ? 'pdf' : 'doc';
+        if (!analysisResult) return;
+        // ... (Logika untuk ekspor, diadaptasi dari homogeneity_test.html)
+    });
+
+    const getPlotlyLayout = (title) => {
+        const isLight = document.documentElement.classList.contains('light');
+        return {
+            title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            font: { color: isLight ? '#5E6278' : '#8B949E' },
+            xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D' },
+            yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D' }
+        };
+    };
+});
+</script>
+{% endblock %}

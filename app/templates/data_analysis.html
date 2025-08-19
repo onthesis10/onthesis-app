@@ -10,7 +10,7 @@
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Card Statistik Deskriptif (BARU) -->
+        <!-- Card Statistik Deskriptif -->
         <a href="{{ url_for('descriptive_statistics') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
@@ -29,7 +29,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
                     <!-- Icon: Bar Chart -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                    <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
                         <line x1="12" y1="20" x2="12" y2="10"></line>
                         <line x1="18" y1="20" x2="18" y2="4"></line>
                         <line x1="6" y1="20" x2="6" y2="16"></line>
@@ -47,7 +47,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
                     <!-- Icon: Layers -->
-                     <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
                         <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                         <polyline points="2 17 12 22 22 17"></polyline>
                         <polyline points="2 12 12 17 22 12"></polyline>
@@ -56,6 +56,25 @@
                 <div>
                     <h3 class="font-bold text-text-primary">Uji Homogenitas</h3>
                     <p class="text-sm text-text-secondary">Bandingkan varians antar grup data.</p>
+                </div>
+            </div>
+        </a>
+
+        <!-- PERUBAHAN: Menambahkan Card untuk Uji T (T-Test) -->
+        <a href="{{ url_for('t_test') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
+                    <!-- Icon: Users -->
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-primary">Uji T (T-Test)</h3>
+                    <p class="text-sm text-text-secondary">Bandingkan rata-rata dua grup data.</p>
                 </div>
             </div>
         </a>
