@@ -10,8 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- Pustaka untuk Ekspor Profesional (PDF & DOCX) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -20,8 +20,6 @@
     .file-drop-area { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; padding: 2rem; border: 2px dashed var(--border-panel); border-radius: 0.75rem; transition: all 0.2s ease-in-out; background-color: var(--bg-canvas); }
     .file-drop-area.is-active { border-color: var(--accent-cyan); background-color: var(--accent-cyan-glow); }
     .file-input { position: absolute; left: 0; top: 0; height: 100%; width: 100%; cursor: pointer; opacity: 0; }
-    /* Gaya untuk tab yang aktif */
-    .tab-button.active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); font-weight: 600; }
     /* Gaya untuk badge status */
     .badge { display: inline-flex; align-items: center; padding: 0.25em 0.6em; font-size: 0.75em; font-weight: 600; border-radius: 9999px; }
     .badge-success { background-color: rgba(34, 211, 238, 0.1); color: var(--accent-cyan); }
@@ -61,7 +59,6 @@
     </header>
 
     <div class="max-w-4xl mx-auto space-y-8">
-        <!-- Kartu Input -->
         <div class="apex-card p-6">
             <form id="anova-form" class="space-y-6">
                 <!-- Pilihan Metode Input -->
@@ -86,7 +83,7 @@
                     </div>
                 </div>
 
-                <!-- Kontainer Input Manual (DIPERBARUI) -->
+                <!-- Kontainer Input Manual -->
                 <div id="manual-input-container" style="display: none;">
                     <!-- Input One-Way -->
                     <div id="manual-oneway-container">
@@ -97,7 +94,7 @@
                             <button type="button" id="remove-group" class="btn-secondary text-sm flex-grow">- Hapus Grup</button>
                         </div>
                     </div>
-                    <!-- Input Two-Way BARU -->
+                    <!-- Input Two-Way -->
                     <div id="manual-twoway-container" style="display: none;">
                         <p class="text-sm text-text-secondary mb-4">Masukkan setiap baris data beserta kategori grupnya.</p>
                         <table id="manual-twoway-table">
@@ -118,7 +115,7 @@
                     <div class="mt-4"><button type="button" id="load-sample" class="btn-secondary text-sm w-full">Muat Contoh Data</button></div>
                 </div>
                 
-                <!-- PENGATURAN ANALISIS -->
+                <!-- Pengaturan Analisis -->
                 <div class="space-y-6 pt-6 border-t border-border-panel">
                     <h3 class="text-xl font-bold text-text-primary">Pengaturan Analisis</h3>
                     <div>
@@ -172,49 +169,51 @@
                         <button id="export-doc-btn" class="btn-secondary text-sm">Export DOC</button>
                     </div>
                 </div>
-                <div class="border-b border-border-panel mb-6">
-                    <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                        <button class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-text-secondary hover:text-text-primary" data-tab="summary-tab">Ringkasan</button>
-                        <button class="tab-button whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-text-secondary hover:text-text-primary" data-tab="stats-tab">Tabel Statistik</button>
-                        <button class="tab-button whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-text-secondary hover:text-text-primary" data-tab="plot-tab">Visualisasi</button>
-                    </nav>
-                </div>
-                <div id="tab-content" class="prose max-w-none prose-sm text-text-secondary">
-                    <div id="summary-tab" class="tab-pane">
-                        <h3 class="font-bold text-lg text-text-primary">Uji Prasyarat</h3>
-                        <div class="flex flex-wrap gap-4 mb-4">
-                            <div id="normality-badge"></div>
-                            <div id="homogeneity-badge"></div>
-                        </div>
-                        <p id="prerequisite-summary" class="text-sm"></p>
-                        <h3 class="font-bold text-lg text-text-primary mt-6">Jenis Analisis yang Digunakan</h3>
-                        <p id="analysis-type" class="text-accent-cyan font-semibold"></p>
-                        <h3 class="font-bold text-lg text-text-primary mt-6">Interpretasi Hasil</h3>
-                        <div class="p-4 bg-bg-canvas rounded-md border border-border-panel">
-                            <p id="summary-indonesia" class="text-text-primary"></p>
-                            <button id="copy-summary" class="mt-3 text-xs font-semibold text-accent-cyan hover:underline">Salin ke Laporan</button>
-                        </div>
-                        <h4 class="font-semibold text-md text-text-primary mt-4">Format Laporan (APA Style)</h4>
-                        <div class="p-3 bg-bg-canvas rounded-md border border-border-panel text-sm">
-                            <p id="summary-apa" class="font-mono"></p>
+                <div id="export-content" class="prose max-w-none prose-sm text-text-secondary space-y-8">
+                    <div>
+                        <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Ringkasan & Interpretasi</h3>
+                        <div id="summary-content">
+                            <h4 class="font-bold text-lg text-text-primary">Uji Prasyarat</h4>
+                            <div class="flex flex-wrap gap-4 mb-4">
+                                <div id="normality-badge"></div>
+                                <div id="homogeneity-badge"></div>
+                            </div>
+                            <p id="prerequisite-summary" class="text-sm"></p>
+                            <h4 class="font-bold text-lg text-text-primary mt-6">Jenis Analisis yang Digunakan</h4>
+                            <p id="analysis-type" class="text-accent-cyan font-semibold"></p>
+                            <h4 class="font-bold text-lg text-text-primary mt-6">Interpretasi Hasil</h4>
+                            <div class="p-4 bg-bg-canvas rounded-md border border-border-panel">
+                                <p id="summary-indonesia" class="text-text-primary"></p>
+                                <button id="copy-summary" class="mt-3 text-xs font-semibold text-accent-cyan hover:underline">Salin ke Laporan</button>
+                            </div>
+                            <h4 class="font-semibold text-md text-text-primary mt-4">Format Laporan (APA Style)</h4>
+                            <div class="p-3 bg-bg-canvas rounded-md border border-border-panel text-sm">
+                                <p id="summary-apa" class="font-mono"></p>
+                            </div>
                         </div>
                     </div>
-                    <div id="stats-tab" class="tab-pane hidden">
-                        <h3 class="font-bold text-lg text-text-primary">Statistik Deskriptif</h3>
-                        <div class="overflow-x-auto"><table id="desc-table" class="display" style="width:100%"></table></div>
-                        <h3 class="font-bold text-lg text-text-primary mt-8">Hasil Uji Utama (<span id="main-test-title"></span>)</h3>
-                        <div class="overflow-x-auto"><table id="main-test-table" class="display" style="width:100%"></table></div>
-                        <div id="posthoc-container" class="mt-8" style="display: none;">
-                            <h3 class="font-bold text-lg text-text-primary">Hasil Uji Post-Hoc (<span id="posthoc-title"></span>)</h3>
-                            <p class="text-sm">Tabel perbandingan antar pasangan grup. Nilai p-value < 0.05 menunjukkan perbedaan yang signifikan.</p>
-                            <div class="overflow-x-auto"><table id="posthoc-table" class="display" style="width:100%"></table></div>
+                    <div>
+                        <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Tabel Statistik</h3>
+                        <div id="stats-content" class="space-y-8">
+                            <h4 class="font-bold text-lg text-text-primary">Statistik Deskriptif</h4>
+                            <div class="overflow-x-auto"><table id="desc-table" class="display" style="width:100%"></table></div>
+                            <h4 class="font-bold text-lg text-text-primary mt-8">Hasil Uji Utama (<span id="main-test-title"></span>)</h4>
+                            <div class="overflow-x-auto"><table id="main-test-table" class="display" style="width:100%"></table></div>
+                            <div id="posthoc-container" style="display: none;">
+                                <h4 class="font-bold text-lg text-text-primary">Hasil Uji Post-Hoc (<span id="posthoc-title"></span>)</h4>
+                                <p class="text-sm">Tabel perbandingan antar pasangan grup. Nilai p-value < 0.05 menunjukkan perbedaan yang signifikan.</p>
+                                <div class="overflow-x-auto"><table id="posthoc-table" class="display" style="width:100%"></table></div>
+                            </div>
                         </div>
                     </div>
-                    <div id="plot-tab" class="tab-pane hidden">
-                        <div id="plot-output" class="w-full h-auto min-h-[400px] bg-bg-canvas rounded-md flex items-center justify-center border border-border-panel p-2">
-                            <img id="result-plot" src="" alt="Hasil Plot Analisis" class="max-w-full max-h-full object-contain">
+                    <div>
+                        <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Visualisasi</h3>
+                        <div id="plot-content">
+                            <div id="plot-output" class="w-full h-auto min-h-[400px] bg-bg-canvas rounded-md flex items-center justify-center border border-border-panel p-2">
+                                <img id="result-plot" src="" alt="Hasil Plot Analisis" class="max-w-full max-h-full object-contain">
+                            </div>
+                            <button id="download-plot" class="mt-4 btn-secondary text-sm">Download Grafik (PNG)</button>
                         </div>
-                         <button id="download-plot" class="mt-4 btn-secondary text-sm">Download Grafik (PNG)</button>
                     </div>
                 </div>
             </div>
@@ -273,7 +272,7 @@ $(document).ready(function() {
     // --- Inisialisasi Awal ---
     createOneWayGroup('Kelompok A', '');
     createOneWayGroup('Kelompok B', '');
-    for(let i=0; i<5; i++) createTwoWayRow(); // Buat 5 baris kosong untuk two-way
+    for(let i=0; i<5; i++) createTwoWayRow();
 
     // --- EVENT LISTENERS ---
     $('.input-method-btn').on('click', function() {
@@ -386,13 +385,7 @@ $(document).ready(function() {
     });
 
     $('#anova-form').on('submit', function(e) { e.preventDefault(); runAnalysis(); });
-    $('.tab-button').on('click', function() {
-        const tabId = $(this).data('tab');
-        $('.tab-button').removeClass('active');
-        $(this).addClass('active');
-        $('.tab-pane').hide();
-        $('#' + tabId).show();
-    });
+    
     $('#copy-summary').on('click', function() {
         navigator.clipboard.writeText($('#summary-indonesia').text()).then(() => {
             $(this).text('Berhasil disalin!');
@@ -449,6 +442,7 @@ $(document).ready(function() {
                 const colNames = { dependent: $('#manual-col-dependent').val().trim(), independent1: $('#manual-col-independent1').val().trim(), independent2: $('#manual-col-independent2').val().trim() };
                 $('#manual-twoway-tbody tr').each(function() {
                     const row = $(this), val = parseFloat(row.find('td:eq(0) input').val()), g1 = row.find('td:eq(1) input').val().trim(), g2 = row.find('td:eq(2) input').val().trim();
+                    if (isNaN(val) && !g1 && !g2) return true; // Lewati baris kosong
                     if (isNaN(val) || !g1 || !g2) { hasError = true; return false; }
                     let rowData = {};
                     rowData[colNames.dependent] = val; rowData[colNames.independent1] = g1; rowData[colNames.independent2] = g2;
@@ -475,13 +469,70 @@ $(document).ready(function() {
         }
     }
     
-    // --- Fungsi Ekspor ---
-    function exportToPdf() { /* ... (kode tidak berubah) ... */ }
-    function exportToDoc() { /* ... (kode tidak berubah) ... */ }
+    // --- FUNGSI EKSPOR (DIPERBARUI TOTAL) ---
+    function exportToPdf() {
+        const { jsPDF } = window.jspdf;
+        const content = $('#export-content')[0];
+        const buttons = $('#export-content').find('button');
+        
+        showNotification("Membuat PDF...", "Harap tunggu, proses ini mungkin memakan waktu beberapa detik.");
+        buttons.hide();
+
+        html2canvas(content, {
+            scale: 2, useCORS: true,
+            backgroundColor: getComputedStyle(document.body).getPropertyValue('background-color')
+        }).then(canvas => {
+            buttons.show();
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = imgWidth / imgHeight;
+            let finalImgWidth = pdfWidth - 20;
+            let finalImgHeight = finalImgWidth / ratio;
+            let heightLeft = finalImgHeight;
+            let position = 10;
+
+            pdf.addImage(imgData, 'PNG', 10, position, finalImgWidth, finalImgHeight);
+            heightLeft -= (pdfHeight - 20);
+
+            while (heightLeft > 0) {
+                position = heightLeft - finalImgHeight + 10;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 10, position, finalImgWidth, finalImgHeight);
+                heightLeft -= (pdfHeight - 20);
+            }
+            
+            pdf.save('Laporan_ANOVA_OnThesis.pdf');
+            $('#notification').fadeOut();
+        }).catch(err => {
+            buttons.show();
+            showNotification("Error Ekspor PDF", "Terjadi kesalahan saat membuat file PDF.");
+        });
+    }
+
+    function exportToDoc() {
+        const content = $('#export-content').clone();
+        content.find('button').remove();
+        const contentHtml = `
+            <!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+            body { font-family: Arial, sans-serif; font-size: 12pt; }
+            h3, h4 { color: #333; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
+            th { background-color: #f2f2f2; }
+            img { max-width: 500px; height: auto; }
+            </style></head><body>${content.html()}</body></html>`;
+        const converted = htmlDocx.asBlob(contentHtml);
+        saveAs(converted, 'Laporan_ANOVA_OnThesis.docx');
+    }
+
     $('#export-pdf-btn').on('click', exportToPdf);
     $('#export-doc-btn').on('click', exportToDoc);
 
-    // --- Fungsi Tampilan & Reset ---
+    // --- Fungsi Tampilan & Reset (Lengkap) ---
     function displayResults(data) {
         const { prerequisites, analysis_type, summary, descriptive_stats, main_test_results, post_hoc_results, plot } = data;
         $('#normality-badge').html(`<span class="badge badge-${prerequisites.is_all_normal ? 'success' : 'warning'}">${prerequisites.is_all_normal ? '✅ Normalitas Terpenuhi' : '⚠️ Normalitas Tidak Terpenuhi'}</span>`);
