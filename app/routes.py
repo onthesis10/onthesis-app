@@ -12,8 +12,7 @@
 # - EDIT FINAL: Memperbaiki bug NaN pada Paired Samples T-Test dan memastikan
 #   backend sepenuhnya mendukung laporan profesional.
 # - EDIT ANOVA: Menambahkan endpoint profesional untuk Uji ANOVA.
-# - FIX ANOVA v3: Mengadopsi mekanisme Uji Homogenitas dengan membuat endpoint
-#   khusus untuk data manual (JSON) untuk mengatasi error kolom.
+# - FIX ANOVA v4: Memperbaiki nama fungsi dari pg.homogeneity menjadi pg.homoscedasticity.
 # ========================================================================
 
 # --- Impor Library ---
@@ -1663,6 +1662,7 @@ def api_paired_ttest():
         print(f"Error di api_paired_ttest: {e}")
         return jsonify({'error': 'Terjadi kesalahan saat memproses data. Pastikan format data benar.'}), 500
 
+
 # ========================================================================
 # Rute untuk Analisis ANOVA Satu Arah (One-Way ANOVA) - VERSI PROFESIONAL
 # ========================================================================
@@ -1672,23 +1672,52 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
     Dapat dipanggil oleh endpoint file upload maupun manual input.
     """
     try:
-        df_cleaned = df[[dependent_var, independent_var]].dropna()
-        df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
-        df_cleaned[independent_var] = df_cleaned[independent_var].astype('category')
-        df_cleaned = df_cleaned.dropna()
+        # PENAMBAHAN: Cek apakah kolom yang dipilih ada di dalam file
+        if dependent_var not in df.columns or independent_var not in df.columns:
+            return jsonify({
+                'success': False, 
+                'message': f"Kolom '{dependent_var}' atau '{independent_var}' tidak ditemukan di dalam file. Pastikan nama kolom sesuai."
+            }), 400
 
-        if len(df_cleaned) < 3 or df_cleaned[independent_var].nunique() < 2:
-            return jsonify({'success': False, 'message': 'Data tidak cukup untuk analisis.'}), 400
+        # --- Proses pembersihan data dengan validasi yang lebih baik ---
+        df_cleaned = df[[dependent_var, independent_var]].copy()
+        
+        # Simpan jumlah baris sebelum konversi numerik untuk perbandingan
+        rows_before_coercion = len(df_cleaned.dropna())
+        
+        df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
+        df_cleaned.dropna(inplace=True)
+
+        # PENAMBAHAN: Pengecekan yang lebih spesifik setelah pembersihan
+        if df_cleaned[independent_var].nunique() < 2:
+            return jsonify({
+                'success': False, 
+                'message': f"Analisis ANOVA membutuhkan minimal 2 kelompok data. Kolom grup ('{independent_var}') Anda hanya memiliki {df_cleaned[independent_var].nunique()} kelompok unik."
+            }), 400
+        
+        if len(df_cleaned) < 3:
+            lost_rows = rows_before_coercion - len(df_cleaned)
+            error_message = (
+                f"Data yang valid setelah dibersihkan tidak cukup (kurang dari 3 baris). "
+                f"Sebanyak {lost_rows} baris kemungkinan dihapus karena memiliki nilai non-numerik atau sel kosong pada kolom dependen ('{dependent_var}'). "
+                f"Silakan periksa kembali file Anda."
+            )
+            return jsonify({'success': False, 'message': error_message}), 400
+
+        df_cleaned[independent_var] = df_cleaned[independent_var].astype('category')
 
         # --- 1. Cek Prasyarat Otomatis ---
         normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=independent_var)
         is_all_normal = all(normality_results['normal'])
-        homogeneity_result = pg.homogeneity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
+        
+        # FIX: Menggunakan fungsi yang benar: homoscedasticity, bukan homogeneity
+        homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
         is_homogeneous = homogeneity_result['equal_var'].iloc[0]
 
         main_test_results, post_hoc_results, analysis_type, summary_apa, summary_indonesia = None, None, "", "", ""
 
         # --- 2. Pilih dan Jalankan Analisis Utama ---
+        # ... (sisa kode di dalam fungsi ini dari baris 'if is_all_normal:' hingga akhir tetap SAMA, tidak perlu diubah) ...
         if is_all_normal:
             analysis_type = "One-Way ANOVA"
             aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
@@ -1751,65 +1780,3 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Terjadi kesalahan internal: {str(e)}'}), 500
-
-@app.route('/api/anova_test', methods=['POST'])
-@login_required
-def api_anova_test():
-    if not current_user.is_pro:
-        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
-        if not is_allowed:
-            return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
-            
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'File tidak ditemukan.'}), 400
-
-    file = request.files['file']
-    dependent_var = request.form.get('dependent')
-    independent_var = request.form.get('independent')
-
-    if not all([file, dependent_var, independent_var]):
-        return jsonify({'success': False, 'message': 'Parameter tidak lengkap.'}), 400
-
-    filename = secure_filename(file.filename)
-    try:
-        if filename.endswith('.csv'):
-            df = pd.read_csv(file)
-        elif filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file)
-        else:
-            return jsonify({'success': False, 'message': 'Format file tidak didukung.'}), 400
-        
-        return _perform_anova_analysis(df, dependent_var, independent_var)
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Gagal memproses file: {str(e)}'}), 500
-
-@app.route('/api/manual_anova_test', methods=['POST'])
-@login_required
-def api_manual_anova_test():
-    if not current_user.is_pro:
-        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
-        if not is_allowed:
-            return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
-
-    try:
-        data = request.get_json()
-        groups_data = data.get('groups', [])
-        group_names = data.get('group_names', [])
-        
-        if len(groups_data) < 2 or len(group_names) < 2:
-            return jsonify({'success': False, 'message': 'Dibutuhkan minimal 2 grup untuk analisis.'}), 400
-
-        # Membuat DataFrame dari data manual
-        all_values = []
-        for i, group_vals in enumerate(groups_data):
-            group_name = group_names[i]
-            for val in group_vals:
-                all_values.append({'Nilai': val, 'Kelompok': group_name})
-        
-        df = pd.DataFrame(all_values)
-        
-        return _perform_anova_analysis(df, 'Nilai', 'Kelompok')
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Gagal memproses data manual: {str(e)}'}), 500
