@@ -3,8 +3,10 @@
 {% block title %}Uji T (T-Test) - OnThesis{% endblock %}
 
 {% block page_styles %}
+<!-- Pustaka untuk Grafik & Tabel -->
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Pustaka untuk Export Profesional -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
@@ -98,6 +100,7 @@
 
     <div class="max-w-5xl mx-auto space-y-8">
         
+        <!-- Kartu Input -->
         <div class="apex-card p-6 relative"> 
             <div class="border-b border-border-panel mb-6">
                 <nav class="flex justify-center -mb-px">
@@ -106,6 +109,7 @@
                 </nav>
             </div>
 
+            <!-- Input untuk Independent T-Test -->
             <div id="independent-input" class="tab-content">
                 <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Dua Grup Berbeda</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -122,6 +126,7 @@
                 </div>
             </div>
 
+            <!-- Input untuk Paired T-Test -->
             <div id="paired-input" class="tab-content hidden">
                 <h3 class="text-xl font-bold text-text-primary mb-4 text-center">1. Input Data Berpasangan</h3>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -152,6 +157,7 @@
             </div>
         </div>
 
+        <!-- Kontainer Output -->
         <div id="resultCard" class="space-y-8" style="display:none;">
             <div class="apex-card p-6">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
@@ -170,7 +176,8 @@
                 </div>
                 
                 <div id="professional-report">
-                    </div>
+                    <!-- Akan diisi oleh JavaScript -->
+                </div>
                 
                 <div class="mt-8 border-t border-border-panel pt-6">
                     <h4 class="text-lg font-bold text-text-primary mb-2">Interpretasi AI</h4>
@@ -676,7 +683,7 @@ $(document).ready(function() {
             title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
             paper_bgcolor: 'transparent',
             plot_bgcolor: 'transparent',
-            font: { color: is-light ? '#5E6278' : '#8B949E' },
+            font: { color: isLight ? '#5E6278' : '#8B949E' },
             xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D' },
             yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D' }
         };
