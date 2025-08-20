@@ -12,6 +12,7 @@
 # - EDIT FINAL: Memperbaiki bug NaN pada Paired Samples T-Test dan memastikan
 #   backend sepenuhnya mendukung laporan profesional.
 # - EDIT ANOVA: Menambahkan endpoint profesional untuk Uji ANOVA.
+# - FIX ANOVA: Menambahkan encoding='utf-8-sig' untuk mengatasi error saat input manual.
 # ========================================================================
 
 # --- Impor Library ---
@@ -1697,7 +1698,8 @@ def api_anova_test():
         # --- Membaca dan Memvalidasi Data ---
         filename = secure_filename(file.filename)
         if filename.endswith('.csv'):
-            df = pd.read_csv(file)
+            # FIX: Tambahkan encoding='utf-8-sig' untuk menangani BOM (Byte Order Mark)
+            df = pd.read_csv(file, encoding='utf-8-sig')
         elif filename.endswith(('.xls', '.xlsx')):
             df = pd.read_excel(file)
         else:
