@@ -11,6 +11,7 @@
 #   untuk mencegah crash dan memastikan respons selalu JSON.
 # - EDIT FINAL: Memperbaiki bug NaN pada Paired Samples T-Test dan memastikan
 #   backend sepenuhnya mendukung laporan profesional.
+# - EDIT ANOVA: Menambahkan endpoint profesional untuk Uji ANOVA.
 # ========================================================================
 
 # --- Impor Library ---
@@ -36,6 +37,12 @@ import matplotlib
 matplotlib.use('Agg')  # non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
+# --- Impor tambahan untuk ANOVA Profesional ---
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+import pingouin as pg # Library untuk statistik yang lebih lengkap, termasuk Games-Howell
+
 
 # --- Impor dari __init__.py ---
 from app import app, db, login_manager
@@ -352,6 +359,11 @@ def homogeneity_test(): return render_template('homogeneity_test.html')
 @login_required
 def t_test():
     return render_template('t_test.html')
+
+@app.route('/anova-test')
+@login_required
+def anova_test():
+    return render_template('anova_test.html')
 # ------------------------------------
 
 @app.route('/descriptive_statistics')
@@ -1648,3 +1660,177 @@ def api_paired_ttest():
     except Exception as e:
         print(f"Error di api_paired_ttest: {e}")
         return jsonify({'error': 'Terjadi kesalahan saat memproses data. Pastikan format data benar.'}), 500
+
+# ========================================================================
+# Rute untuk Analisis ANOVA Satu Arah (One-Way ANOVA) - VERSI PROFESIONAL
+# ========================================================================
+@app.route('/api/anova_test', methods=['POST'])
+@login_required
+def api_anova_test():
+    """
+    Endpoint untuk melakukan analisis ANOVA satu arah yang komprehensif.
+    - Menerima file (CSV/Excel), nama kolom dependen, dan nama kolom independen.
+    - Melakukan cek prasyarat otomatis (Normalitas & Homogenitas).
+    - Menjalankan ANOVA atau Kruskal-Wallis sebagai alternatif.
+    - Menjalankan post-hoc yang sesuai (Tukey HSD atau Games-Howell).
+    - Menghitung effect size (Eta Squared).
+    - Mengembalikan hasil lengkap dalam format JSON.
+    """
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            if message == "UPGRADE_REQUIRED":
+                return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+            return jsonify({'error': message}), 429
+            
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'File tidak ditemukan.'}), 400
+
+        file = request.files['file']
+        dependent_var = request.form.get('dependent')
+        independent_var = request.form.get('independent')
+
+        if not all([file, dependent_var, independent_var]):
+            return jsonify({'success': False, 'message': 'Parameter tidak lengkap.'}), 400
+
+        # --- Membaca dan Memvalidasi Data ---
+        filename = secure_filename(file.filename)
+        if filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        elif filename.endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(file)
+        else:
+            return jsonify({'success': False, 'message': 'Format file tidak didukung.'}), 400
+
+        if dependent_var not in df.columns or independent_var not in df.columns:
+            return jsonify({'success': False, 'message': 'Nama kolom tidak ditemukan.'}), 400
+        
+        df_cleaned = df[[dependent_var, independent_var]].dropna()
+        df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
+        df_cleaned[independent_var] = df_cleaned[independent_var].astype('category')
+        df_cleaned = df_cleaned.dropna()
+
+        if len(df_cleaned) < 3 or df_cleaned[independent_var].nunique() < 2:
+            return jsonify({'success': False, 'message': 'Data tidak cukup untuk analisis.'}), 400
+
+        groups = df_cleaned[independent_var].unique()
+        grouped_data = [df_cleaned[dependent_var][df_cleaned[independent_var] == g] for g in groups]
+
+        # --- 1. Cek Prasyarat Otomatis ---
+        # a) Uji Normalitas (Shapiro-Wilk)
+        normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=independent_var)
+        is_all_normal = all(normality_results['normal'])
+
+        # b) Uji Homogenitas Varians (Levene's Test)
+        homogeneity_result = pg.homogeneity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
+        is_homogeneous = homogeneity_result['equal_var'].iloc[0]
+
+        # --- Inisialisasi variabel hasil ---
+        main_test_results = None
+        post_hoc_results = None
+        analysis_type = ""
+        summary_apa = ""
+        summary_indonesia = ""
+
+        # --- 2. Pilih dan Jalankan Analisis Utama ---
+        if is_all_normal:
+            # --- 2a. Jalankan ANOVA ---
+            analysis_type = "One-Way ANOVA"
+            aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
+            
+            # Menghitung Eta Squared
+            ss_between = aov.loc[0, 'SS']
+            ss_total = aov.loc[1, 'SS'] + ss_between
+            eta_squared = ss_between / ss_total if ss_total > 0 else 0
+
+            main_test_results = {
+                'source': 'Antar Grup',
+                'df': int(aov.loc[0, 'DF']),
+                'f_stat': round(aov.loc[0, 'F'], 3),
+                'p_value': round(aov.loc[0, 'p-unc'], 4),
+                'eta_squared': round(eta_squared, 3)
+            }
+            
+            # --- 3. Pilih dan Jalankan Uji Post-Hoc ---
+            if main_test_results['p_value'] < 0.05:
+                if is_homogeneous:
+                    # Tukey HSD
+                    post_hoc = pg.pairwise_tukey(data=df_cleaned, dv=dependent_var, between=independent_var)
+                    post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
+                else:
+                    # Games-Howell
+                    post_hoc = pg.pairwise_gameshowell(data=df_cleaned, dv=dependent_var, between=independent_var)
+                    post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
+            
+            # --- 4. Buat Ringkasan Profesional ---
+            eta_interpretation = "kecil" if eta_squared < 0.06 else "sedang" if eta_squared < 0.14 else "besar"
+            if main_test_results['p_value'] < 0.05:
+                summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}, η² = {eta_squared:.2f}."
+                summary_indonesia = f"Terdapat perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}. Ukuran efek (η²) menunjukkan pengaruh yang {eta_interpretation} ({eta_squared:.2f})."
+            else:
+                summary_apa = f"A one-way ANOVA did not reveal a significant effect of {independent_var} on {dependent_var}, F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}, η² = {eta_squared:.2f}."
+                summary_indonesia = f"Tidak ditemukan perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
+
+        else:
+            # --- 2b. Jalankan Kruskal-Wallis sebagai Alternatif ---
+            analysis_type = "Kruskal-Wallis H Test"
+            kruskal = pg.kruskal(data=df_cleaned, dv=dependent_var, between=independent_var)
+            
+            main_test_results = {
+                'source': 'Grup',
+                'df': int(kruskal['ddof1'].iloc[0]),
+                'h_stat': round(kruskal['H'].iloc[0], 3),
+                'p_value': round(kruskal['p-unc'].iloc[0], 4)
+            }
+            
+            # --- 3b. Post-Hoc Dunn ---
+            if main_test_results['p_value'] < 0.05:
+                post_hoc = pg.pairwise_dunn(data=df_cleaned, dv=dependent_var, between=independent_var, p_adjust='bonferroni')
+                post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
+
+            # --- 4b. Buat Ringkasan Profesional ---
+            if main_test_results['p_value'] < 0.05:
+                summary_apa = f"A Kruskal-Wallis H test showed that there was a statistically significant difference in {dependent_var} between the different {independent_var} groups, χ²({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
+                summary_indonesia = f"Hasil uji Kruskal-Wallis menunjukkan terdapat perbedaan peringkat (rank) yang signifikan secara statistik pada '{dependent_var}' antar kelompok '{independent_var}', H({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
+            else:
+                summary_apa = f"A Kruskal-Wallis H test showed no statistically significant difference in {dependent_var} between the different {independent_var} groups, χ²({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
+                summary_indonesia = f"Hasil uji Kruskal-Wallis menunjukkan tidak ada perbedaan peringkat (rank) yang signifikan secara statistik pada '{dependent_var}' antar kelompok '{independent_var}', H({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
+
+        # --- 5. Statistik Deskriptif ---
+        descriptive_stats = df_cleaned.groupby(independent_var)[dependent_var].describe().round(3)
+        
+        # --- 6. Membuat Plot ---
+        plt.figure(figsize=(10, 6))
+        sns.boxplot(x=independent_var, y=dependent_var, data=df_cleaned, palette="pastel")
+        sns.stripplot(x=independent_var, y=dependent_var, data=df_cleaned, color=".25", size=4)
+        plt.title(f'Distribusi {dependent_var} Berdasarkan {independent_var}', fontsize=16)
+        plt.xlabel(str(independent_var).title(), fontsize=12)
+        plt.ylabel(str(dependent_var).title(), fontsize=12)
+        plt.tight_layout()
+        
+        plot_base64 = create_plot_as_base64(plt.gcf())
+
+        return jsonify({
+            'success': True,
+            'analysis_type': analysis_type,
+            'prerequisites': {
+                'normality': json.loads(normality_results.round(4).to_json(orient='records')),
+                'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')),
+                'is_all_normal': is_all_normal,
+                'is_homogeneous': is_homogeneous
+            },
+            'descriptive_stats': json.loads(descriptive_stats.reset_index().to_json(orient='records')),
+            'main_test_results': main_test_results,
+            'post_hoc_results': post_hoc_results,
+            'summary': {
+                'apa': summary_apa,
+                'indonesia': summary_indonesia
+            },
+            'plot': plot_base64
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Terjadi kesalahan internal: {str(e)}'}), 500

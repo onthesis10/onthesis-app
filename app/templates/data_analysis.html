@@ -15,7 +15,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
                     <!-- Icon: Calculator -->
-                    <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="8" y1="14" x2="8" y2="18"></line><line x1="8" y1="10" x2="16" y2="10"></line></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="8" y1="14" x2="8" y2="18"></line><line x1="8" y1="10" x2="16" y2="10"></line></svg>
                 </div>
                 <div>
                     <h3 class="font-bold text-text-primary">Statistik Deskriptif</h3>
@@ -29,7 +29,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
                     <!-- Icon: Bar Chart -->
-                    <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
                         <line x1="12" y1="20" x2="12" y2="10"></line>
                         <line x1="18" y1="20" x2="18" y2="4"></line>
                         <line x1="6" y1="20" x2="6" y2="16"></line>
@@ -60,7 +60,7 @@
             </div>
         </a>
 
-        <!-- PERUBAHAN: Menambahkan Card untuk Uji T (T-Test) -->
+        <!-- Card untuk Uji T (T-Test) -->
         <a href="{{ url_for('t_test') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
@@ -75,6 +75,23 @@
                 <div>
                     <h3 class="font-bold text-text-primary">Uji T (T-Test)</h3>
                     <p class="text-sm text-text-secondary">Bandingkan rata-rata dua grup data.</p>
+                </div>
+            </div>
+        </a>
+
+        <!-- Card untuk Uji ANOVA -->
+        <a href="{{ url_for('anova_test') }}" class="apex-card p-6 block hover:ring-2 hover:ring-accent-cyan transition-all duration-300">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-bg-canvas flex items-center justify-center">
+                    <!-- Icon: Pie Chart -->
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-cyan">
+                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                        <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-primary">Uji ANOVA</h3>
+                    <p class="text-sm text-text-secondary">Bandingkan rata-rata lebih dari dua grup.</p>
                 </div>
             </div>
         </a>

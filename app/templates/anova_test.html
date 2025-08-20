@@ -1,0 +1,523 @@
+{% extends "layout.html" %}
+
+{% block title %}Uji ANOVA Profesional - OnThesis{% endblock %}
+
+{% block page_styles %}
+<!-- Pustaka untuk Grafik & Tabel -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<!-- Pustaka untuk Export Profesional -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- Library untuk membaca file Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+
+<style>
+    .tab-button.active {
+        border-color: #4f46e5;
+        color: #4f46e5;
+        background-color: #eef2ff;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25em 0.6em;
+        font-size: 0.75em;
+        font-weight: 600;
+        border-radius: 9999px;
+    }
+    .badge-success { background-color: #dcfce7; color: #166534; }
+    .badge-warning { background-color: #fef9c3; color: #854d0e; }
+    .highlight td {
+        background-color: #eef2ff !important;
+        font-weight: 600;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #4f46e5 !important;
+        color: white !important;
+        border-color: #4f46e5 !important;
+    }
+    .btn-secondary {
+        background-color: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    .btn-secondary:hover {
+        background-color: #e5e7eb;
+    }
+    .input-error {
+        border-color: #ef4444 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+        <div class="prose max-w-none">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">ANOVA (Analysis of Variance)</h1>
+            <p class="text-gray-600">Alat analisis canggih yang secara otomatis memeriksa prasyarat, memilih uji yang paling tepat, dan menyajikan hasil yang siap untuk laporan skripsi Anda.</p>
+        </div>
+
+        <!-- Form Input -->
+        <form id="anova-form" class="mt-8 space-y-6">
+            <!-- Pilihan Metode Input -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">1. Pilih Metode Input Data</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center">
+                        <input type="radio" name="input-method" value="upload" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" checked>
+                        <span class="ml-2 text-sm text-gray-600">Unggah File</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="input-method" value="manual" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-600">Input Manual</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Kontainer Unggah File -->
+            <div id="upload-container">
+                <label for="file-upload" class="block text-sm font-medium text-gray-700">Unggah File Data (CSV/Excel)</label>
+                <div class="mt-1 flex items-center space-x-4">
+                    <input type="file" id="file-upload" name="file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" accept=".csv, .xlsx, .xls">
+                </div>
+                <p id="file-name" class="mt-2 text-sm text-gray-500"></p>
+            </div>
+
+            <!-- Kontainer Input Manual -->
+            <div id="manual-input-container" style="display: none;">
+                <p class="text-sm text-gray-600 mb-4">Masukkan data untuk setiap kelompok. Pisahkan setiap angka dengan koma, spasi, atau baris baru.</p>
+                <div id="groups-container" class="space-y-4">
+                    <!-- Grup dinamis akan ditambahkan di sini -->
+                </div>
+                <div class="flex gap-4 mt-4 pt-4 border-t border-gray-200">
+                    <button type="button" id="add-group" class="btn-secondary text-sm flex-grow">+ Tambah Grup</button>
+                    <button type="button" id="remove-group" class="btn-secondary text-sm flex-grow">- Hapus Grup</button>
+                    <button type="button" id="load-sample" class="btn-secondary text-sm flex-grow">Muat Contoh</button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="dependent-var" class="block text-sm font-medium text-gray-700">2. Pilih Variabel Dependen</label>
+                    <select id="dependent-var" name="dependent" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" required disabled>
+                        <option>Pilih metode input & sediakan data</option>
+                    </select>
+                     <p class="mt-1 text-xs text-gray-500">Pilih variabel numerik yang akan diuji.</p>
+                </div>
+                <div>
+                    <label for="independent-var" class="block text-sm font-medium text-gray-700">3. Pilih Variabel Grup (Independen)</label>
+                    <select id="independent-var" name="independent" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" required disabled>
+                         <option>Pilih metode input & sediakan data</option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">Pilih variabel kategori sebagai pembeda grup.</p>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" id="run-analysis" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300" disabled>
+                    <span class="btn-text">Jalankan Analisis</span>
+                    <div class="spinner hidden ml-2 w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Kontainer Hasil (Sama seperti sebelumnya) -->
+    <div id="results-container" class="mt-10 bg-white rounded-xl shadow-lg p-6 md:p-8" style="display: none;">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Hasil Analisis</h2>
+            <div class="flex gap-2">
+                <button id="export-pdf-btn" class="btn-secondary text-sm">Export PDF</button>
+                <button id="export-doc-btn" class="btn-secondary text-sm">Export DOC</button>
+            </div>
+        </div>
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                <button class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" data-tab="summary-tab">Ringkasan</button>
+                <button class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="stats-tab">Tabel Statistik</button>
+                <button class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="plot-tab">Visualisasi</button>
+            </nav>
+        </div>
+        <div id="tab-content" class="prose max-w-none">
+            <div id="summary-tab" class="tab-pane">
+                <h3 class="font-bold text-lg">Uji Prasyarat</h3>
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <div id="normality-badge"></div>
+                    <div id="homogeneity-badge"></div>
+                </div>
+                <p id="prerequisite-summary" class="text-sm text-gray-600"></p>
+                <h3 class="font-bold text-lg mt-6">Jenis Analisis yang Digunakan</h3>
+                <p id="analysis-type" class="text-indigo-600 font-semibold"></p>
+                <h3 class="font-bold text-lg mt-6">Interpretasi Hasil</h3>
+                <div class="p-4 bg-gray-50 rounded-md border">
+                    <p id="summary-indonesia" class="text-gray-800"></p>
+                    <button id="copy-summary" class="mt-3 text-xs font-semibold text-indigo-600 hover:underline">Salin ke Laporan</button>
+                </div>
+                <h4 class="font-semibold text-md mt-4">Format Laporan (APA Style)</h4>
+                <div class="p-3 bg-gray-50 rounded-md border text-sm">
+                    <p id="summary-apa" class="text-gray-600 font-mono"></p>
+                </div>
+            </div>
+            <div id="stats-tab" class="tab-pane hidden">
+                <h3 class="font-bold text-lg">Statistik Deskriptif</h3>
+                <table id="desc-table" class="display" style="width:100%"></table>
+                <h3 class="font-bold text-lg mt-8">Hasil Uji Utama (<span id="main-test-title"></span>)</h3>
+                <table id="main-test-table" class="display" style="width:100%"></table>
+                <div id="posthoc-container" class="mt-8" style="display: none;">
+                    <h3 class="font-bold text-lg">Hasil Uji Post-Hoc (<span id="posthoc-title"></span>)</h3>
+                    <p class="text-sm">Tabel perbandingan antar pasangan grup. Nilai p-value < 0.05 menunjukkan perbedaan yang signifikan.</p>
+                    <table id="posthoc-table" class="display" style="width:100%"></table>
+                </div>
+            </div>
+            <div id="plot-tab" class="tab-pane hidden">
+                <div id="plot-output" class="w-full h-[500px] bg-gray-50 rounded-md flex items-center justify-center">
+                    <img id="result-plot" src="" alt="Hasil Plot Analisis" class="max-w-full max-h-full">
+                </div>
+                 <button id="download-plot" class="mt-4 btn-secondary text-sm">Download Grafik (PNG)</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+$(document).ready(function() {
+    let columnHeaders = [];
+    let analysisData = null;
+
+    // --- Inisialisasi Input Manual ---
+    function createGroup(name = '', data = '') {
+        const groupCount = $('#groups-container').children().length + 1;
+        const groupName = name || `Kelompok ${groupCount}`;
+        const groupHtml = `
+            <div class="data-group border border-gray-200 p-3 rounded-md">
+                <input type="text" class="group-name-input w-full border-0 border-b-2 border-gray-200 focus:ring-0 focus:border-indigo-500 font-semibold mb-2" value="${groupName}" placeholder="Nama Kelompok">
+                <textarea class="data-input w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" rows="3" placeholder="Masukkan data...">${data}</textarea>
+            </div>
+        `;
+        $('#groups-container').append(groupHtml);
+    }
+    createGroup('Kelompok A');
+    createGroup('Kelompok B');
+
+    // --- Event Listeners ---
+    $('input[name="input-method"]').on('change', function() {
+        const selectedMethod = $(this).val();
+        if (selectedMethod === 'upload') {
+            $('#upload-container').show();
+            $('#manual-input-container').hide();
+            if ($('#file-upload').val()) {
+                $('#file-upload').trigger('change');
+            } else {
+                resetSelectors();
+            }
+        } else { // manual
+            $('#upload-container').hide();
+            $('#manual-input-container').show();
+            populateSelectorsForManual();
+        }
+    });
+
+    $('#file-upload').on('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) {
+            resetSelectors();
+            return;
+        }
+
+        $('#file-name').text(`File terpilih: ${file.name}`);
+        const reader = new FileReader();
+        
+        reader.onload = function(event) {
+            const data = event.target.result;
+            if (file.name.endsWith('.csv')) {
+                const firstLine = data.split('\\n')[0].split('\\r')[0];
+                columnHeaders = firstLine.split(',').map(h => h.trim().replace(/"/g, ''));
+            } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                const workbook = XLSX.read(data, {type: 'binary'});
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const headers = XLSX.utils.sheet_to_json(worksheet, {header: 1})[0];
+                columnHeaders = headers.map(h => String(h).trim());
+            }
+            populateSelectorsFromFile();
+        };
+
+        if (file.name.endsWith('.csv')) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsBinaryString(file);
+        }
+    });
+
+    $('#add-group').on('click', () => createGroup());
+    $('#remove-group').on('click', function() {
+        if ($('#groups-container').children().length > 2) {
+            $('#groups-container').children().last().remove();
+        } else {
+            alert('Minimal harus ada 2 kelompok.');
+        }
+    });
+
+    $('#load-sample').on('click', function() {
+        // Pindahkan ke mode manual
+        $('input[name="input-method"][value="manual"]').prop('checked', true).trigger('change');
+        
+        // Kosongkan grup yang ada
+        $('#groups-container').empty();
+
+        // Buat grup baru dengan data contoh
+        createGroup('Metode A', '85, 88, 82, 89, 90, 84, 87');
+        createGroup('Metode B', '78, 81, 79, 80, 83, 77, 82');
+        createGroup('Metode C', '90, 92, 95, 88, 91, 94, 93');
+
+        // Perbarui selector
+        populateSelectorsForManual();
+    });
+
+    $('#anova-form').on('submit', function(e) {
+        e.preventDefault();
+        runAnalysis();
+    });
+
+    $('.tab-button').on('click', function() {
+        const tabId = $(this).data('tab');
+        $('.tab-button').removeClass('active');
+        $(this).addClass('active');
+        $('.tab-pane').hide();
+        $('#' + tabId).show();
+    });
+
+    $('#copy-summary').on('click', function() {
+        const textToCopy = $('#summary-indonesia').text();
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            $(this).text('Berhasil disalin!');
+            setTimeout(() => $(this).text('Salin ke Laporan'), 2000);
+        });
+    });
+    
+    $('#download-plot').on('click', function() {
+        const link = document.createElement('a');
+        link.href = $('#result-plot').attr('src');
+        link.download = 'anova-plot-onthesis.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // --- Functions ---
+    function resetSelectors() {
+        const depSelect = $('#dependent-var');
+        const indepSelect = $('#independent-var');
+        depSelect.empty().append('<option>Pilih metode input & sediakan data</option>').prop('disabled', true);
+        indepSelect.empty().append('<option>Pilih metode input & sediakan data</option>').prop('disabled', true);
+        $('#run-analysis').prop('disabled', true);
+    }
+
+    function populateSelectorsFromFile() {
+        const depSelect = $('#dependent-var');
+        const indepSelect = $('#independent-var');
+        depSelect.empty().append('<option value="">Pilih variabel...</option>');
+        indepSelect.empty().append('<option value="">Pilih variabel...</option>');
+
+        columnHeaders.forEach(header => {
+            if(header) {
+                depSelect.append(`<option value="${header}">${header}</option>`);
+                indepSelect.append(`<option value="${header}">${header}</option>`);
+            }
+        });
+
+        depSelect.prop('disabled', false);
+        indepSelect.prop('disabled', false);
+        $('#run-analysis').prop('disabled', false);
+    }
+
+    function populateSelectorsForManual() {
+        const depSelect = $('#dependent-var');
+        const indepSelect = $('#independent-var');
+        depSelect.empty().append('<option value="Nilai">Nilai (Dependen)</option>').prop('disabled', false);
+        indepSelect.empty().append('<option value="Kelompok">Kelompok (Grup)</option>').prop('disabled', false);
+        $('#run-analysis').prop('disabled', false);
+    }
+
+    function createVirtualFileFromManualInput() {
+        let csvContent = "Nilai,Kelompok\\n";
+        let isValid = true;
+        $('.data-group').each(function() {
+            const groupName = $(this).find('.group-name-input').val().trim().replace(/,/g, ''); // Hapus koma dari nama grup
+            const dataArea = $(this).find('.data-input');
+            const dataText = dataArea.val().trim();
+            
+            if (!groupName || !dataText) {
+                isValid = false;
+                return; // Lanjut ke grup berikutnya
+            }
+
+            const values = dataText.split(/[ ,\\n\\t;]+/).filter(v => v !== '');
+            if (values.length < 1) {
+                isValid = false;
+                dataArea.addClass('input-error');
+                return;
+            }
+            dataArea.removeClass('input-error');
+
+            values.forEach(val => {
+                if (!isNaN(parseFloat(val))) {
+                    csvContent += `${parseFloat(val)},${groupName}\\n`;
+                }
+            });
+        });
+
+        if (!isValid) return null;
+        return new File([csvContent], "manual_data.csv", { type: "text/csv" });
+    }
+
+    async function runAnalysis() {
+        const button = $('#run-analysis');
+        const btnText = button.find('.btn-text');
+        const spinner = button.find('.spinner');
+        const inputMethod = $('input[name="input-method"]:checked').val();
+        
+        const formData = new FormData();
+
+        if (inputMethod === 'upload') {
+            const fileInput = $('#file-upload')[0];
+            if (fileInput.files.length === 0) {
+                alert('Silakan pilih file untuk diunggah.');
+                return;
+            }
+            formData.append('file', fileInput.files[0]);
+            formData.append('dependent', $('#dependent-var').val());
+            formData.append('independent', $('#independent-var').val());
+        } else { // manual
+            const virtualFile = createVirtualFileFromManualInput();
+            if (!virtualFile) {
+                alert('Pastikan semua nama kelompok dan data telah diisi dengan benar.');
+                return;
+            }
+            formData.append('file', virtualFile);
+            formData.append('dependent', 'Nilai');
+            formData.append('independent', 'Kelompok');
+        }
+
+        btnText.text('Menganalisis...');
+        spinner.removeClass('hidden');
+        button.prop('disabled', true);
+        $('#results-container').slideUp();
+
+        try {
+            const response = await fetch("{{ url_for('api_anova_test') }}", {
+                method: 'POST',
+                body: formData
+            });
+
+            analysisData = await response.json();
+
+            if (!response.ok) {
+                 throw new Error(analysisData.message || `Error ${response.status}`);
+            }
+            if (!analysisData.success) {
+                throw new Error(analysisData.message || 'Analisis gagal.');
+            }
+            
+            displayResults(analysisData);
+            $('#results-container').slideDown();
+
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        } finally {
+            btnText.text('Jalankan Analisis');
+            spinner.addClass('hidden');
+            button.prop('disabled', false);
+        }
+    }
+
+    function displayResults(data) {
+        // Fungsi ini sama persis seperti sebelumnya, tidak perlu diubah
+        const { prerequisites, analysis_type, summary } = data;
+        
+        let normalityBadge = `<span class="badge badge-${prerequisites.is_all_normal ? 'success' : 'warning'}">✅ Normalitas Terpenuhi</span>`;
+        if (!prerequisites.is_all_normal) {
+            normalityBadge = `<span class="badge badge-warning">⚠️ Normalitas Tidak Terpenuhi</span>`;
+        }
+        $('#normality-badge').html(normalityBadge);
+
+        let homogeneityBadge = `<span class="badge badge-${prerequisites.is_homogeneous ? 'success' : 'warning'}">✅ Homogenitas Terpenuhi</span>`;
+        if (!prerequisites.is_homogeneous) {
+            homogeneityBadge = `<span class="badge badge-warning">⚠️ Homogenitas Tidak Terpenuhi</span>`;
+        }
+        $('#homogeneity-badge').html(homogeneityBadge);
+        
+        const normalitySummary = prerequisites.is_all_normal 
+            ? "Semua grup data berdistribusi normal (Uji Shapiro-Wilk, p > 0.05)."
+            : "Setidaknya satu grup data tidak berdistribusi normal (Uji Shapiro-Wilk, p < 0.05). Sistem secara otomatis menggunakan uji non-parametrik (Kruskal-Wallis) yang lebih sesuai.";
+        const homogeneitySummary = prerequisites.is_homogeneous
+            ? "Varians antar grup data adalah homogen (Uji Levene, p > 0.05)."
+            : "Varians antar grup data tidak homogen (Uji Levene, p < 0.05). Sistem secara otomatis menggunakan uji post-hoc (Games-Howell) yang robust terhadap pelanggaran asumsi ini.";
+        $('#prerequisite-summary').html(`${normalitySummary}<br>${homogeneitySummary}`);
+
+        $('#analysis-type').text(analysis_type);
+        $('#summary-indonesia').text(summary.indonesia);
+        $('#summary-apa').text(summary.apa);
+
+        const { descriptive_stats, main_test_results, post_hoc_results } = data;
+        
+        const descColumns = Object.keys(descriptive_stats[0]).map(key => ({ title: key.charAt(0).toUpperCase() + key.slice(1), data: key }));
+        renderDataTable('#desc-table', descriptive_stats, descColumns);
+
+        $('#main-test-title').text(analysis_type);
+        const mainTestColumns = Object.keys(main_test_results).map(key => ({ title: key.replace(/_/g, ' ').replace('stat', 'Statistic').replace(/\b\w/g, l => l.toUpperCase()), data: key }));
+        renderDataTable('#main-test-table', [main_test_results], mainTestColumns);
+
+        if (post_hoc_results && post_hoc_results.length > 0) {
+            $('#posthoc-container').show();
+            $('#posthoc-title').text(prerequisites.is_homogeneous ? 'Tukey HSD' : (analysis_type === 'One-Way ANOVA' ? 'Games-Howell' : 'Dunn'));
+            const pKey = Object.keys(post_hoc_results[0]).find(k => k.startsWith('p-'));
+            const posthocColumns = Object.keys(post_hoc_results[0]).map(key => ({ title: key.replace(pKey, 'p-value'), data: key }));
+            renderDataTable('#posthoc-table', post_hoc_results, posthocColumns, (row, data) => {
+                if (data[pKey] < 0.05) {
+                    $(row).addClass('highlight');
+                }
+            });
+        } else {
+            $('#posthoc-container').hide();
+        }
+
+        $('#result-plot').attr('src', data.plot);
+    }
+
+    function renderDataTable(tableId, data, columns, createdRowCallback = null) {
+        if ($.fn.DataTable.isDataTable(tableId)) {
+            $(tableId).DataTable().destroy();
+        }
+        $(tableId).DataTable({
+            data: data,
+            columns: columns,
+            paging: false,
+            searching: false,
+            info: false,
+            ordering: false,
+            responsive: true,
+            createdRow: createdRowCallback,
+            language: {
+                emptyTable: "Tidak ada data untuk ditampilkan"
+            }
+        });
+    }
+
+});
+</script>
+{% endblock %}
