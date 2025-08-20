@@ -1748,6 +1748,7 @@ def api_manual_anova_test():
                 for val in group_vals:
                     all_values.append({'Nilai': val, 'Kelompok': group_names[i]})
             df = pd.DataFrame(all_values)
+            # PERBAIKAN: Memastikan nama fungsi yang dipanggil sudah benar
             result = _perform_oneway_anova_analysis(df, 'Nilai', 'Kelompok')
         elif anova_type == 'two_way':
             table_data = data.get('data', [])
@@ -1761,4 +1762,6 @@ def api_manual_anova_test():
 
         return jsonify(result)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': f'Gagal memproses data manual: {str(e)}'}), 500

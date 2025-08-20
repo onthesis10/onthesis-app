@@ -10,8 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- Pustaka untuk Ekspor Profesional (PDF & DOCX) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -471,57 +471,63 @@ $(document).ready(function() {
     
     // --- FUNGSI EKSPOR (DIPERBARUI TOTAL) ---
     function exportToPdf() {
+        if (!analysisData) { showNotification("Gagal Ekspor", "Tidak ada data hasil analisis untuk diekspor."); return; }
         const { jsPDF } = window.jspdf;
-        const content = $('#export-content')[0];
-        const buttons = $('#export-content').find('button');
-        
-        showNotification("Membuat PDF...", "Harap tunggu, proses ini mungkin memakan waktu beberapa detik.");
-        buttons.hide();
-
-        html2canvas(content, {
-            scale: 2, useCORS: true,
-            backgroundColor: getComputedStyle(document.body).getPropertyValue('background-color')
-        }).then(canvas => {
-            buttons.show();
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-            const ratio = imgWidth / imgHeight;
-            let finalImgWidth = pdfWidth - 20;
-            let finalImgHeight = finalImgWidth / ratio;
-            let heightLeft = finalImgHeight;
-            let position = 10;
-
-            pdf.addImage(imgData, 'PNG', 10, position, finalImgWidth, finalImgHeight);
-            heightLeft -= (pdfHeight - 20);
-
-            while (heightLeft > 0) {
-                position = heightLeft - finalImgHeight + 10;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 10, position, finalImgWidth, finalImgHeight);
-                heightLeft -= (pdfHeight - 20);
-            }
-            
-            pdf.save('Laporan_ANOVA_OnThesis.pdf');
-            $('#notification').fadeOut();
-        }).catch(err => {
-            buttons.show();
-            showNotification("Error Ekspor PDF", "Terjadi kesalahan saat membuat file PDF.");
-        });
+        const doc = new jsPDF('p', 'mm', 'a4');
+        let yPos = 20;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("Laporan Hasil Analisis ANOVA - OnThesis", doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text("Ringkasan & Interpretasi", 14, yPos + 5);
+        yPos += 8;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(`Jenis Analisis: ${analysisData.analysis_type}`, 14, yPos);
+        yPos += 7;
+        const summaryLines = doc.splitTextToSize(analysisData.summary.indonesia, 180);
+        doc.text(summaryLines, 14, yPos);
+        yPos += summaryLines.length * 4 + 5;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("Tabel Statistik Deskriptif", 14, yPos);
+        yPos += 2;
+        doc.autoTable({ html: '#desc-table', startY: yPos, theme: 'grid', headStyles: { fillColor: [2, 132, 199] } });
+        yPos = doc.autoTable.previous.finalY + 10;
+        doc.text(`Hasil Uji Utama (${analysisData.analysis_type})`, 14, yPos);
+        yPos += 2;
+        doc.autoTable({ html: '#main-test-table', startY: yPos, theme: 'grid', headStyles: { fillColor: [2, 132, 199] } });
+        yPos = doc.autoTable.previous.finalY + 10;
+        if (analysisData.post_hoc_results && analysisData.post_hoc_results.length > 0) {
+            if (yPos > 250) { doc.addPage(); yPos = 20; }
+            doc.text("Hasil Uji Post-Hoc", 14, yPos);
+            yPos += 2;
+            doc.autoTable({ html: '#posthoc-table', startY: yPos, theme: 'grid', headStyles: { fillColor: [2, 132, 199] } });
+            yPos = doc.autoTable.previous.finalY + 10;
+        }
+        if (yPos > 180) { doc.addPage(); yPos = 20; }
+        doc.text("Visualisasi", 14, yPos);
+        yPos += 5;
+        try {
+            const imgElement = document.getElementById('result-plot');
+            const imgData = imgElement.src;
+            doc.addImage(imgData, 'PNG', 15, yPos, 180, 100);
+        } catch(e) {
+            doc.text("Gagal memuat grafik.", 15, yPos);
+        }
+        doc.save('Laporan_ANOVA_OnThesis.pdf');
     }
 
     function exportToDoc() {
+        if (!analysisData) { showNotification("Gagal Ekspor", "Tidak ada data hasil analisis untuk diekspor."); return; }
         const content = $('#export-content').clone();
         content.find('button').remove();
         const contentHtml = `
             <!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-            body { font-family: Arial, sans-serif; font-size: 12pt; }
-            h3, h4 { color: #333; }
+            body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+            h3, h4 { font-family: 'Times New Roman', Times, serif; color: #000; }
             table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-            th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
+            th, td { border: 1px solid #000000; text-align: left; padding: 8px; }
             th { background-color: #f2f2f2; }
             img { max-width: 500px; height: auto; }
             </style></head><body>${content.html()}</body></html>`;
