@@ -573,6 +573,14 @@ $(document).ready(function() {
                 sections.each(function() {
                     if (yPos > 250) { doc.addPage(); addHeader(doc); yPos = 25; }
                     const sectionTitle = $(this).find('h4').text();
+
+                    // ======================================================
+                    // === PERUBAHAN 1: MELEWATI (SKIP) BAGIAN HIPOTESIS ===
+                    // ======================================================
+                    if (sectionTitle.trim() === 'Hipotesis Penelitian') {
+                        return; // Ini akan skip iterasi saat ini dan lanjut ke bagian berikutnya
+                    }
+
                     const contentP = $(this).find('p').text();
                     const contentUl = $(this).find('ul li');
                     const table = $(this).find('table').get(0);
@@ -588,35 +596,6 @@ $(document).ready(function() {
                         yPos += (splitText.length * 4) + 5;
                     }
                     
-                    // ======================================================
-                    // === BLOK KODE YANG DIPERBAIKI ADA DI SINI ===
-                    // ======================================================
-                    if (contentUl.length > 0) {
-                        const pageWidth = doc.internal.pageSize.width;
-                        const margin = 18;
-                        const maxLineWidth = pageWidth - (margin * 2); // Lebar maksimal teks
-                        const lineHeight = 4.5; // Jarak antar baris yang ideal untuk font 10pt
-
-                        doc.setFontSize(10);
-                        contentUl.each(function() {
-                            // 1. Ambil teks dan bersihkan dari spasi ekstra di awal/akhir
-                            const liText = $(this).text().trim();
-                            
-                            // 2. Biarkan jsPDF memecah teks panjang menjadi beberapa baris
-                            const splitText = doc.splitTextToSize(`- ${liText}`, maxLineWidth);
-                            
-                            // 3. Tampilkan teks yang sudah dipecah
-                            doc.text(splitText, margin, yPos);
-                            
-                            // 4. Tambahkan yPos berdasarkan jumlah baris yang dihasilkan
-                            yPos += (splitText.length * lineHeight) + 2; // Tambah 2 untuk spasi antar item
-                        });
-                        yPos += 3; // Sedikit spasi setelah seluruh daftar selesai
-                    }
-                    // ======================================================
-                    // === AKHIR DARI BLOK KODE YANG DIPERBAIKI ===
-                    // ======================================================
-
                     if (table) {
                         doc.autoTable({ 
                             html: table, 
@@ -628,7 +607,35 @@ $(document).ready(function() {
                     }
                 });
                 
+                // ================================================================
+                // === PERUBAHAN 2: MENGUBAH WARNA FONT GRAFIK SEBELUM EKSPOR ===
+                // ================================================================
+                const originalLayout = getPlotlyLayout('title'); // Simpan layout asli
+                const plotElement = document.getElementById('plot');
+                
+                // Atur layout untuk ekspor dengan font hitam
+                await Plotly.relayout(plotElement, { 
+                    'title.font.color': '#000000',
+                    'font.color': '#000000',
+                    'xaxis.tickfont.color': '#000000',
+                    'yaxis.tickfont.color': '#000000',
+                    'xaxis.title.font.color': '#000000',
+                    'yaxis.title.font.color': '#000000'
+                });
+
                 const plotImg = await Plotly.toImage('plot', {format: 'png', width: 800, height: 450});
+                
+                // Kembalikan layout ke keadaan semula setelah gambar dibuat
+                await Plotly.relayout(plotElement, {
+                    'title.font.color': originalLayout.title.font.color,
+                    'font.color': originalLayout.font.color,
+                    'xaxis.tickfont.color': originalLayout.font.color,
+                    'yaxis.tickfont.color': originalLayout.font.color,
+                    'xaxis.title.font.color': originalLayout.font.color,
+                    'yaxis.title.font.color': originalLayout.font.color
+                });
+                // ================================================================
+
                 if (yPos > 190) { doc.addPage(); addHeader(doc); yPos = 25; }
                 doc.setFontSize(14);
                 doc.text("Visualisasi Data", 15, yPos);
@@ -636,6 +643,7 @@ $(document).ready(function() {
                 doc.addImage(plotImg, 'PNG', 15, yPos, 180, 101);
 
                 doc.save(`hasil-uji-t-${activeTest}-onthesis.pdf`);
+
             } else if (format === 'doc') {
                 const reportHtml = $('#professional-report').html();
                 const plotImg = await Plotly.toImage('plot', {format: 'png', width: 800, height: 450});
