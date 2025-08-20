@@ -13,10 +13,9 @@
 <style>
     /* Mengatur lebar tabel agar auto fit */
     .spss-table {
-        width: auto; 
+        width: auto; /* Memastikan lebar tabel tidak dipaksa melebar */
         min-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
+        /* HAPUS margin-left dan margin-right karena centering ditangani parent */
         border-collapse: collapse;
         margin-bottom: 1.5rem;
         font-size: 0.875rem;
@@ -51,6 +50,11 @@
         text-align: left;
         font-weight: 600;
     }
+    /* Style BARU untuk membuat tabel berada di tengah */
+    .overflow-x-auto {
+        display: flex;
+        justify-content: center;
+    }
     .highlight {
         color: var(--accent-cyan);
         font-weight: 600;
@@ -72,13 +76,15 @@
     .report-section {
         margin-bottom: 1.5rem;
     }
+    /* Style yang DIUBAH untuk Judul menjadi di tengah */
     .report-section h4 {
         font-size: 1.25rem;
         font-weight: 700;
         color: var(--text-primary);
-        margin-bottom: 0.75rem;
+        margin-bottom: 1rem; /* Tambah margin bawah agar ada jarak ke tabel */
         padding-bottom: 0.5rem;
-        border-bottom: 1px solid var(--border-panel);
+        text-align: center; /* KUNCI: Membuat teks judul ke tengah */
+        border-bottom: none; /* Hapus garis bawah agar lebih rapi saat di tengah */
     }
 </style>
 {% endblock %}
@@ -573,12 +579,9 @@ $(document).ready(function() {
                 sections.each(function() {
                     if (yPos > 250) { doc.addPage(); addHeader(doc); yPos = 25; }
                     const sectionTitle = $(this).find('h4').text();
-
-                    // ======================================================
-                    // === PERUBAHAN 1: MELEWATI (SKIP) BAGIAN HIPOTESIS ===
-                    // ======================================================
+                    
                     if (sectionTitle.trim() === 'Hipotesis Penelitian') {
-                        return; // Ini akan skip iterasi saat ini dan lanjut ke bagian berikutnya
+                        return; 
                     }
 
                     const contentP = $(this).find('p').text();
@@ -607,13 +610,9 @@ $(document).ready(function() {
                     }
                 });
                 
-                // ================================================================
-                // === PERUBAHAN 2: MENGUBAH WARNA FONT GRAFIK SEBELUM EKSPOR ===
-                // ================================================================
-                const originalLayout = getPlotlyLayout('title'); // Simpan layout asli
+                const originalLayout = getPlotlyLayout('title');
                 const plotElement = document.getElementById('plot');
                 
-                // Atur layout untuk ekspor dengan font hitam
                 await Plotly.relayout(plotElement, { 
                     'title.font.color': '#000000',
                     'font.color': '#000000',
@@ -625,7 +624,6 @@ $(document).ready(function() {
 
                 const plotImg = await Plotly.toImage('plot', {format: 'png', width: 800, height: 450});
                 
-                // Kembalikan layout ke keadaan semula setelah gambar dibuat
                 await Plotly.relayout(plotElement, {
                     'title.font.color': originalLayout.title.font.color,
                     'font.color': originalLayout.font.color,
@@ -634,7 +632,6 @@ $(document).ready(function() {
                     'xaxis.title.font.color': originalLayout.font.color,
                     'yaxis.title.font.color': originalLayout.font.color
                 });
-                // ================================================================
 
                 if (yPos > 190) { doc.addPage(); addHeader(doc); yPos = 25; }
                 doc.setFontSize(14);
@@ -679,7 +676,7 @@ $(document).ready(function() {
             title: { text: title, font: { color: isLight ? '#181C32' : '#E6EDF3' } },
             paper_bgcolor: 'transparent',
             plot_bgcolor: 'transparent',
-            font: { color: isLight ? '#5E6278' : '#8B949E' },
+            font: { color: is-light ? '#5E6278' : '#8B949E' },
             xaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D' },
             yaxis: { gridcolor: isLight ? '#DEE2E6' : '#30363D' }
         };
