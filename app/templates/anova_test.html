@@ -411,64 +411,55 @@ $(document).ready(function() {
         $('#run-analysis').prop('disabled', false);
     }
 
-    function createVirtualFileFromManualInput() {
-        let csvContent = "Nilai,Kelompok\\n";
-        let isValid = true;
-        $('.data-group').each(function() {
-            const groupName = $(this).find('.group-name-input').val().trim().replace(/,/g, '');
-            const dataArea = $(this).find('.data-input');
-            const dataText = dataArea.val().trim();
-            
-            if (!groupName || !dataText) {
-                isValid = false;
-                return;
-            }
-
-            const values = dataText.split(/[ ,\\n\\t;]+/).filter(v => v !== '');
-            if (values.length < 1) {
-                isValid = false;
-                dataArea.addClass('input-error');
-                return;
-            }
-            dataArea.removeClass('input-error');
-
-            values.forEach(val => {
-                if (!isNaN(parseFloat(val))) {
-                    csvContent += `${parseFloat(val)},${groupName}\\n`;
-                }
-            });
-        });
-
-        if (!isValid) return null;
-        return new File([csvContent], "manual_data.csv", { type: "text/csv" });
-    }
-
     async function runAnalysis() {
         const button = $('#run-analysis');
         const btnText = button.find('.btn-text');
         const spinner = button.find('.spinner');
         const inputMethod = $('.input-method-btn.active').data('method');
         
-        const formData = new FormData();
+        let endpoint = '';
+        let payload = {};
+        let headers = {};
 
         if (inputMethod === 'upload') {
-            const fileInput = $('#file-upload')[0];
-            if (fileInput.files.length === 0) {
+            const form = $('#anova-form')[0];
+            const formData = new FormData(form);
+            if (!$('#file-upload')[0].files.length) {
                 alert('Silakan pilih file untuk diunggah.');
                 return;
             }
-            formData.append('file', fileInput.files[0]);
-            formData.append('dependent', $('#dependent-var').val());
-            formData.append('independent', $('#independent-var').val());
+            endpoint = "{{ url_for('api_anova_test') }}";
+            payload = formData;
+            // Headers will be set automatically for FormData
         } else { // manual
-            const virtualFile = createVirtualFileFromManualInput();
-            if (!virtualFile) {
-                alert('Pastikan semua nama kelompok dan data telah diisi dengan benar.');
+            let groupsData = [];
+            let groupNames = [];
+            let hasError = false;
+
+            $('.data-group').each(function() {
+                const groupName = $(this).find('.group-name-input').val().trim();
+                const dataArea = $(this).find('.data-input');
+                const dataText = dataArea.val().trim();
+                const values = dataText.split(/[ ,\\n\\t;]+/).map(Number).filter(v => !isNaN(v));
+                
+                if (!groupName || values.length < 2) {
+                    hasError = true;
+                    dataArea.addClass('input-error');
+                } else {
+                    dataArea.removeClass('input-error');
+                    groupsData.push(values);
+                    groupNames.push(groupName);
+                }
+            });
+
+            if (hasError || groupsData.length < 2) {
+                alert('Pastikan semua grup memiliki nama dan minimal 2 data poin yang valid.');
                 return;
             }
-            formData.append('file', virtualFile);
-            formData.append('dependent', 'Nilai');
-            formData.append('independent', 'Kelompok');
+
+            endpoint = "{{ url_for('api_manual_anova_test') }}";
+            payload = JSON.stringify({ groups: groupsData, group_names: groupNames });
+            headers = { 'Content-Type': 'application/json' };
         }
 
         btnText.text('Menganalisis...');
@@ -477,18 +468,16 @@ $(document).ready(function() {
         $('#results-container').slideUp();
 
         try {
-            const response = await fetch("{{ url_for('api_anova_test') }}", {
+            const response = await fetch(endpoint, {
                 method: 'POST',
-                body: formData
+                body: payload,
+                headers: headers
             });
 
             analysisData = await response.json();
 
-            if (!response.ok) {
+            if (!response.ok || !analysisData.success) {
                  throw new Error(analysisData.message || `Error ${response.status}`);
-            }
-            if (!analysisData.success) {
-                throw new Error(analysisData.message || 'Analisis gagal.');
             }
             
             displayResults(analysisData);
