@@ -2,12 +2,9 @@
 # File: app/routes.py
 # Deskripsi: Versi LENGKAP dengan semua perbaikan bug untuk fitur ANOVA
 #            dan fitur-fitur lainnya.
-# Perubahan Final:
-# 1. FIX AttributeError: Mengganti pg.homogeneity -> pg.homoscedasticity.
-# 2. FIX 500 Internal Server Error: Menambahkan validasi data yang lebih
-#    robust di dalam _perform_anova_analysis untuk mencegah crash.
-# 3. FIX BuildError: Menambahkan nama endpoint secara eksplisit pada
-#    dekorator @app.route untuk API ANOVA.
+# Perubahan Final v2:
+# 1. FIX TypeError: Mengonversi numpy.bool_ menjadi bool standar Python
+#    untuk mencegah error "not JSON serializable".
 # ========================================================================
 
 # --- Impor Library ---
@@ -37,7 +34,7 @@ import seaborn as sns
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
-import pingouin as pg # Library untuk statistik yang lebih lengkap, termasuk Games-Howell
+import pingouin as pg
 
 
 # --- Impor dari __init__.py ---
@@ -165,7 +162,7 @@ def sanitize_nan(data):
     elif isinstance(data, list):
         return [sanitize_nan(i) for i in data]
     elif isinstance(data, float) and (np.isnan(data) or np.isinf(data)):
-        return None  # JSON standard for null
+        return None
     return data
 
 # =========================================================================
@@ -191,7 +188,6 @@ class User(UserMixin):
         return False
 
     def check_password(self, password):
-        # This is for legacy password check, new flow uses Firebase directly
         if self.password_hash is None: return False
         return check_password_hash(self.password_hash, password)
 
@@ -1670,12 +1666,15 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
 
         # --- 1. Cek Prasyarat Otomatis ---
         normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=independent_var)
-        is_all_normal = all(normality_results['normal'])
+        # PERBAIKAN JSON: Konversi numpy.bool_ ke bool standar
+        is_all_normal = bool(all(normality_results['normal']))
         
         homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
         
+        is_homogeneous = False # Default value
         if not homogeneity_result.empty:
-            is_homogeneous = homogeneity_result['equal_var'].iloc[0]
+            # PERBAIKAN JSON: Konversi numpy.bool_ ke bool standar
+            is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0])
         else:
             return jsonify({
                 'success': False, 
@@ -1736,7 +1735,8 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
             'prerequisites': {
                 'normality': json.loads(normality_results.round(4).to_json(orient='records')),
                 'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')),
-                'is_all_normal': is_all_normal, 'is_homogeneous': is_homogeneous
+                'is_all_normal': is_all_normal,
+                'is_homogeneous': is_homogeneous
             },
             'descriptive_stats': json.loads(descriptive_stats.reset_index().to_json(orient='records')),
             'main_test_results': main_test_results, 'post_hoc_results': post_hoc_results,
