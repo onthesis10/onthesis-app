@@ -1633,75 +1633,6 @@ def api_paired_ttest():
 # Tempelkan dua fungsi ini untuk menggantikan fungsi _perform_anova_analysis lama.
 # ========================================================================
 
-def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
-    """Fungsi helper khusus untuk One-Way ANOVA."""
-    df_cleaned = df[[dependent_var, independent_var]].copy()
-    df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
-    df_cleaned.dropna(inplace=True)
-
-    if df_cleaned[independent_var].nunique() < 2:
-        raise ValueError(f"Analisis ANOVA membutuhkan minimal 2 kelompok data. Kolom grup ('{independent_var}') Anda hanya memiliki {df_cleaned[independent_var].nunique()} kelompok unik.")
-    
-    group_counts = df_cleaned.groupby(independent_var)[dependent_var].count()
-    if (group_counts < 2).any():
-        invalid_groups = group_counts[group_counts < 2].index.tolist()
-        raise ValueError(f"Setiap kelompok harus memiliki minimal 2 data poin yang valid. Kelompok berikut tidak memenuhi syarat: {', '.join(invalid_groups)}.")
-
-    df_cleaned[independent_var] = df_cleaned[independent_var].astype('category')
-
-    normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=independent_var)
-    is_all_normal = bool(all(normality_results['normal']))
-    
-    homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
-    is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
-
-    if is_all_normal:
-        analysis_type = "One-Way ANOVA"
-        aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
-        main_test_results = json.loads(aov.round(4).to_json(orient='records'))[0]
-        p_value = main_test_results['p-unc']
-        f_stat = main_test_results['F']
-        df_between = main_test_results['DF']
-        df_within = aov.loc[1, 'DF']
-
-        if p_value < 0.05:
-            post_hoc = pg.pairwise_tukey(data=df_cleaned, dv=dependent_var, between=independent_var) if is_homogeneous else pg.pairwise_gameshowell(data=df_cleaned, dv=dependent_var, between=independent_var)
-            post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
-            summary_indonesia = f"Terdapat perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f}."
-            summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p < .05."
-        else:
-            post_hoc_results = None
-            summary_indonesia = f"Tidak ditemukan perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f}."
-            summary_apa = f"A one-way ANOVA did not reveal a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p > .05."
-    else:
-        analysis_type = "Kruskal-Wallis H Test"
-        kruskal = pg.kruskal(data=df_cleaned, dv=dependent_var, between=independent_var)
-        main_test_results = json.loads(kruskal.round(4).to_json(orient='records'))[0]
-        p_value = main_test_results['p-unc']
-        h_stat = main_test_results['H']
-        df_kruskal = main_test_results['ddof1']
-        post_hoc_results = None
-        summary_indonesia = f"Hasil uji Kruskal-Wallis menunjukkan tidak ada perbedaan peringkat (rank) yang signifikan secara statistik pada '{dependent_var}' antar kelompok '{independent_var}', H({df_kruskal}) = {h_stat:.2f}, p = {p_value:.3f}."
-        summary_apa = f"A Kruskal-Wallis H test showed no statistically significant difference in ranks for {dependent_var} across {independent_var} groups, H({df_kruskal}) = {h_stat:.2f}, p > .05."
-
-
-    descriptive_stats = df_cleaned.groupby(independent_var)[dependent_var].describe().round(3)
-    
-    plt.figure(figsize=(10, 6))
-    sns.boxplot(x=independent_var, y=dependent_var, data=df_cleaned, palette="pastel")
-    sns.stripplot(x=independent_var, y=dependent_var, data=df_cleaned, color=".25", size=4)
-    plt.title(f'Distribusi {dependent_var} Berdasarkan {independent_var}', fontsize=16)
-    plot_base64 = create_plot_as_base64(plt.gcf())
-
-    return {
-        'success': True, 'analysis_type': analysis_type,
-        'prerequisites': { 'normality': json.loads(normality_results.round(4).to_json(orient='records')), 'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')), 'is_all_normal': is_all_normal, 'is_homogeneous': is_homogeneous },
-        'descriptive_stats': json.loads(descriptive_stats.reset_index().to_json(orient='records')),
-        'main_test_results': main_test_results, 'post_hoc_results': post_hoc_results,
-        'summary': {'apa': summary_apa, 'indonesia': summary_indonesia},
-        'plot': plot_base64
-    }
-
 def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
     """Fungsi helper BARU khusus untuk Two-Way ANOVA."""
     iv1, iv2 = independent_vars[0], independent_vars[1]
@@ -1713,10 +1644,19 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
     if df_cleaned[iv1].nunique() < 2 or df_cleaned[iv2].nunique() < 2:
         raise ValueError("Setiap variabel independen pada Two-Way ANOVA harus memiliki minimal 2 level/kategori.")
 
+    # PENAMBAHAN: Buat kolom interaksi untuk uji prasyarat
+    interaction_col = f"{iv1}_{iv2}"
+    df_cleaned[interaction_col] = df_cleaned[iv1].astype(str) + "_" + df_cleaned[iv2].astype(str)
+
     normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=iv1)
     is_all_normal = bool(all(normality_results['normal']))
-    homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=[iv1, iv2], method='levene')
+    
+    # PERUBAHAN: Gunakan kolom interaksi untuk uji homogenitas
+    homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=interaction_col, method='levene')
     is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
+
+    # Hapus kolom interaksi setelah tidak diperlukan lagi
+    df_cleaned.drop(columns=[interaction_col], inplace=True)
 
     aov = pg.anova(data=df_cleaned, dv=dependent_var, between=[iv1, iv2], detailed=True)
     main_test_results = json.loads(aov.round(4).to_json(orient='records'))
@@ -1749,6 +1689,7 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
         'summary': {'apa': summary_apa, 'indonesia': summary_indonesia},
         'plot': plot_base64
     }
+
 
 # ========================================================================
 # BAGIAN 2: DUA RUTE API YANG DIPERBARUI
