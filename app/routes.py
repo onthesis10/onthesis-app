@@ -12,7 +12,7 @@
 # - EDIT FINAL: Memperbaiki bug NaN pada Paired Samples T-Test dan memastikan
 #   backend sepenuhnya mendukung laporan profesional.
 # - EDIT ANOVA: Menambahkan endpoint profesional untuk Uji ANOVA.
-# - FIX ANOVA: Menambahkan encoding='utf-8-sig' untuk mengatasi error saat input manual.
+# - FIX ANOVA v2: Mengubah cara membaca file untuk mengatasi error kolom.
 # ========================================================================
 
 # --- Impor Library ---
@@ -1698,15 +1698,17 @@ def api_anova_test():
         # --- Membaca dan Memvalidasi Data ---
         filename = secure_filename(file.filename)
         if filename.endswith('.csv'):
-            # FIX: Tambahkan encoding='utf-8-sig' untuk menangani BOM (Byte Order Mark)
-            df = pd.read_csv(file, encoding='utf-8-sig')
+            # FIX v2: Membaca stream sebagai string terlebih dahulu
+            csv_string = file.stream.read().decode('utf-8-sig')
+            string_io = io.StringIO(csv_string)
+            df = pd.read_csv(string_io)
         elif filename.endswith(('.xls', '.xlsx')):
             df = pd.read_excel(file)
         else:
             return jsonify({'success': False, 'message': 'Format file tidak didukung.'}), 400
 
         if dependent_var not in df.columns or independent_var not in df.columns:
-            return jsonify({'success': False, 'message': 'Nama kolom tidak ditemukan.'}), 400
+            return jsonify({'success': False, 'message': f"Nama kolom '{dependent_var}' atau '{independent_var}' tidak ditemukan."}), 400
         
         df_cleaned = df[[dependent_var, independent_var]].dropna()
         df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
