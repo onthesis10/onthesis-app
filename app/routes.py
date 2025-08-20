@@ -1,18 +1,13 @@
 # ========================================================================
 # File: app/routes.py
-# Deskripsi: Versi LENGKAP dengan alur kerja interaktif untuk Generator Kajian Teori.
-# Perubahan:
-# - PROMPT AI DIROMBAK TOTAL untuk memaksa sitasi di setiap klaim,
-#   menghasilkan tulisan minimal 6 paragraf per poin, dan menyertakan DOI.
-# - EDIT: Mengimplementasikan alur otentikasi berbasis token Firebase
-#   untuk login/sign-up email dan Google.
-# - EDIT BARU: Menambahkan endpoint untuk Uji T (Independent & Paired).
-# - EDIT TERAKHIR: Menambahkan penanganan error (try-except) pada API Uji T
-#   untuk mencegah crash dan memastikan respons selalu JSON.
-# - EDIT FINAL: Memperbaiki bug NaN pada Paired Samples T-Test dan memastikan
-#   backend sepenuhnya mendukung laporan profesional.
-# - EDIT ANOVA: Menambahkan endpoint profesional untuk Uji ANOVA.
-# - FIX ANOVA v4: Memperbaiki nama fungsi dari pg.homogeneity menjadi pg.homoscedasticity.
+# Deskripsi: Versi LENGKAP dengan semua perbaikan bug untuk fitur ANOVA
+#            dan fitur-fitur lainnya.
+# Perubahan Final:
+# 1. FIX AttributeError: Mengganti pg.homogeneity -> pg.homoscedasticity.
+# 2. FIX 500 Internal Server Error: Menambahkan validasi data yang lebih
+#    robust di dalam _perform_anova_analysis untuk mencegah crash.
+# 3. FIX BuildError: Menambahkan nama endpoint secara eksplisit pada
+#    dekorator @app.route untuk API ANOVA.
 # ========================================================================
 
 # --- Impor Library ---
@@ -272,12 +267,11 @@ def check_and_update_pro_trial(user_id, feature_name):
 # =========================================================================
 # RUTE-RUTE OTENTIKASI DAN HALAMAN
 # =========================================================================
-@app.route('/login', methods=['GET']) # PERUBAHAN: Hanya handle GET request
+@app.route('/login', methods=['GET'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
-    # Konfigurasi Firebase dikirim ke template untuk digunakan oleh JavaScript frontend
     firebase_config = { 
         "apiKey": os.getenv("FIREBASE_API_KEY"), 
         "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"), 
@@ -297,7 +291,6 @@ def logout():
     flash('Anda telah berhasil logout.', 'success')
     return redirect(url_for('login'))
 
-# RUTE HALAMAN LAINNYA (TIDAK DIUBAH)
 @app.route('/')
 @app.route('/dashboard')
 @login_required
@@ -355,7 +348,6 @@ def normality_test(): return render_template('normality_test.html')
 @login_required
 def homogeneity_test(): return render_template('homogeneity_test.html')
 
-# --- PENAMBAHAN ROUTE HALAMAN BARU ---
 @app.route('/t-test')
 @login_required
 def t_test():
@@ -365,7 +357,6 @@ def t_test():
 @login_required
 def anova_test():
     return render_template('anova_test.html')
-# ------------------------------------
 
 @app.route('/descriptive_statistics')
 @login_required
@@ -400,8 +391,6 @@ def upgrade_page():
 # =========================================================================
 # RUTE API BARU UNTUK OTENTIKASI & LAINNYA
 # =========================================================================
-
-# PERUBAHAN: Route ini sekarang menangani login & sign-up baru dari Google DAN email/password
 @app.route('/api/verify-google-token', methods=['POST'])
 def verify_google_token():
     try:
@@ -412,16 +401,14 @@ def verify_google_token():
         user_doc = user_ref.get()
 
         if user_doc.exists:
-            # Pengguna sudah ada, langsung login
             user = load_user(uid)
         else:
-            # Pengguna baru, buat dokumen di Firestore
             user_data = {
                 'displayName': decoded_token.get('name', decoded_token.get('email')),
                 'email': decoded_token.get('email'),
                 'picture': decoded_token.get('picture'),
                 'isPro': False, 
-                'password_hash': None, # Tidak ada password hash untuk login sosial/email
+                'password_hash': None,
                 'proExpiryDate': None
             }
             user_ref.set(user_data)
@@ -433,7 +420,6 @@ def verify_google_token():
         print(f"Error verifikasi token: {e}")
         return jsonify({'status': 'error', 'message': f'Verifikasi token gagal: {e}'}), 401
 
-# PERUBAHAN: Route BARU khusus untuk verifikasi login email/password yang sudah ada
 @app.route('/api/verify-email-token', methods=['POST'])
 def verify_email_token():
     try:
@@ -444,7 +430,6 @@ def verify_email_token():
         decoded_token = auth.verify_id_token(token)
         uid = decoded_token['uid']
         
-        # Cukup load user dan login, karena user pasti sudah ada di database
         user = load_user(uid)
         if user:
             login_user(user)
@@ -885,14 +870,12 @@ def generate_subchapter_content():
             ref['citation_placeholder'] = f"[{ref.get('authors_str', 'N/A').split(' ')[0].replace(',', '')}, {ref.get('year', 'n.d.')}]"
             sources_text += f"Sumber {i+1}:\n- Judul: {ref.get('title')}\n- Abstrak: {ref.get('abstract')}\n- Sitasi: {ref.get('citation_placeholder')}\n- DOI: {ref.get('doi')}\n\n"
         
-        # PERUBAHAN UTAMA: Instruksi panjang tulisan yang lebih tegas
         length_instruction = "Tulis pembahasan yang sangat mendalam dan komprehensif, minimal 6 paragraf untuk setiap poin pembahasan. Uraikan setiap aspek secara detail, berikan contoh, dan sintesis informasi dari berbagai sumber untuk membangun argumen yang kuat."
         if length_preference == 'Normal':
             length_instruction = "Tulis pembahasan dengan detail yang seimbang, sekitar 2-4 paragraf untuk setiap poin."
         elif length_preference == 'Ringkas':
             length_instruction = "Tulis pembahasan yang ringkas dan padat, sekitar 1-2 paragraf untuk setiap poin."
 
-        # PERUBAHAN UTAMA: Prompt yang dirombak total
         prompt_draft = f"""
         Anda adalah seorang penulis akademik ahli dengan standar tertinggi. Tugas Anda adalah menulis konten HANYA untuk satu sub-bab berikut dengan sangat teliti.
 
@@ -938,7 +921,7 @@ def generate_subchapter_content():
         return jsonify({"error": f"Terjadi kesalahan saat generate konten: {str(e)}"}), 500
 
 # =========================================================================
-# API LAINNYA (TETAP ADA)
+# API LAINNYA
 # =========================================================================
 
 @app.route('/api/export-document', methods=['POST'])
@@ -1382,7 +1365,7 @@ def api_descriptive_analysis():
             plots[f'{col}_boxplot'] = create_plot_as_base64(fig_box)
 
             try:
-                if series.nunique() > 1 and series.nunique() <= 10: # Pie chart for categorical or low-cardinality data
+                if series.nunique() > 1 and series.nunique() <= 10:
                     pie_data = series.value_counts()
                     fig_pie, ax_pie = plt.subplots()
                     ax_pie.pie(pie_data, labels=pie_data.index.astype(str), autopct='%1.1f%%', startangle=90)
@@ -1509,7 +1492,7 @@ def payment_notification():
         print(f"Error saat menangani notifikasi pembayaran: {e}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
-# --- PENAMBAHAN API BARU UNTUK UJI T ---
+# --- API UNTUK UJI T ---
 @app.route('/api/independent-ttest', methods=['POST'])
 @login_required
 def api_independent_ttest():
@@ -1534,20 +1517,15 @@ def api_independent_ttest():
         if len(group1) < 3 or len(group2) < 3:
             return jsonify({'error': 'Setiap grup harus memiliki minimal 3 data poin.'}), 400
 
-        # Group Statistics
         stats1 = {'N': len(group1), 'mean': np.mean(group1), 'std': np.std(group1, ddof=1)}
         stats2 = {'N': len(group2), 'mean': np.mean(group2), 'std': np.std(group2, ddof=1)}
         
-        # Levene's Test
         levene_stat, levene_p = stats.levene(group1, group2)
 
-        # Independent T-Test
         t_stat_equal, p_equal = stats.ttest_ind(group1, group2, equal_var=True)
         t_stat_unequal, p_unequal = stats.ttest_ind(group1, group2, equal_var=False)
         
-        # Degrees of Freedom
         df_equal = len(group1) + len(group2) - 2
-        # Welch's df
         v1 = np.var(group1, ddof=1)
         v2 = np.var(group2, ddof=1)
         n1 = len(group1)
@@ -1556,14 +1534,12 @@ def api_independent_ttest():
 
         mean_diff = np.mean(group1) - np.mean(group2)
         
-        # Confidence Intervals
         se_diff_equal = np.sqrt( ( (n1-1)*v1 + (n2-1)*v2 ) / df_equal * (1/n1 + 1/n2) )
         ci_equal = stats.t.interval(confidence_level, df_equal, loc=mean_diff, scale=se_diff_equal)
 
         se_diff_unequal = np.sqrt(v1/n1 + v2/n2)
         ci_unequal = stats.t.interval(confidence_level, df_unequal, loc=mean_diff, scale=se_diff_unequal)
         
-        # Summary
         p_to_check = levene_p > 0.05 and p_equal or p_unequal
         conclusion = "terdapat perbedaan rata-rata yang signifikan" if p_to_check < 0.05 else "tidak terdapat perbedaan rata-rata yang signifikan"
         summary = f"Berdasarkan hasil uji T (p = {p_to_check:.3f}), dapat disimpulkan bahwa {conclusion} antara kedua kelompok."
@@ -1609,14 +1585,11 @@ def api_paired_ttest():
         if len(pair1) != len(pair2) or len(pair1) < 3:
             return jsonify({'error': 'Kedua set data harus memiliki jumlah yang sama dan minimal 3 data poin.'}), 400
 
-        # Paired Samples Statistics
         stats1 = {'N': len(pair1), 'mean': np.mean(pair1), 'std': np.std(pair1, ddof=1)}
         stats2 = {'N': len(pair2), 'mean': np.mean(pair2), 'std': np.std(pair2, ddof=1)}
         
-        # Paired Samples Correlation
         corr_r, corr_p = stats.pearsonr(pair1, pair2)
 
-        # Paired Samples Test
         t_stat, p_value = stats.ttest_rel(pair1, pair2)
         
         diff = pair1 - pair2
@@ -1624,14 +1597,11 @@ def api_paired_ttest():
         std_diff = np.std(diff, ddof=1)
         df = len(pair1) - 1
         
-        # Confidence Interval
-        # Handle case where std_diff is 0 to avoid division by zero -> NaN
         if std_diff > 0:
             ci = stats.t.interval(confidence_level, df, loc=mean_diff, scale=stats.sem(diff))
         else:
-            ci = (mean_diff, mean_diff) # If no deviation, CI is just the mean difference
+            ci = (mean_diff, mean_diff)
 
-        # Summary
         conclusion = "terdapat perbedaan rata-rata yang signifikan" if p_value < 0.05 else "tidak terdapat perbedaan rata-rata yang signifikan"
         summary = f"Berdasarkan hasil uji T berpasangan (p = {p_value:.3f}), dapat disimpulkan bahwa {conclusion} antara kedua pengukuran."
 
@@ -1662,9 +1632,6 @@ def api_paired_ttest():
         print(f"Error di api_paired_ttest: {e}")
         return jsonify({'error': 'Terjadi kesalahan saat memproses data. Pastikan format data benar.'}), 500
 
-
-
-
 # ========================================================================
 # Rute untuk Analisis ANOVA Satu Arah (One-Way ANOVA) - VERSI PROFESIONAL
 # ========================================================================
@@ -1681,7 +1648,6 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
             }), 400
 
         df_cleaned = df[[dependent_var, independent_var]].copy()
-        rows_before_coercion = len(df_cleaned.dropna())
         
         df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
         df_cleaned.dropna(inplace=True)
@@ -1692,7 +1658,6 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
                 'message': f"Analisis ANOVA membutuhkan minimal 2 kelompok data. Kolom grup ('{independent_var}') Anda hanya memiliki {df_cleaned[independent_var].nunique()} kelompok unik."
             }), 400
         
-        # PERBAIKAN: Cek jumlah data per grup untuk mencegah error statistik
         group_counts = df_cleaned.groupby(independent_var)[dependent_var].count()
         if (group_counts < 2).any():
             invalid_groups = group_counts[group_counts < 2].index.tolist()
@@ -1709,11 +1674,9 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
         
         homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
         
-        # PENAMBAHAN KODE PENGAMAN (DEFENSIVE CHECK) UNTUK MENCEGAH 500 ERROR
         if not homogeneity_result.empty:
             is_homogeneous = homogeneity_result['equal_var'].iloc[0]
         else:
-            # Jika uji homogenitas gagal, kita tidak bisa melanjutkan. Beri pesan error.
             return jsonify({
                 'success': False, 
                 'message': 'Gagal melakukan uji homogenitas. Ini bisa terjadi jika varians data sangat ekstrem atau data tidak memadai.'
@@ -1722,7 +1685,6 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
         main_test_results, post_hoc_results, analysis_type, summary_apa, summary_indonesia = None, None, "", "", ""
 
         # --- 2. Pilih dan Jalankan Analisis Utama ---
-        # ... (SISA KODE DI BAWAH INI SAMA PERSIS SEPERTI SEBELUMNYA, TIDAK ADA PERUBAHAN) ...
         if is_all_normal:
             analysis_type = "One-Way ANOVA"
             aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
@@ -1785,3 +1747,64 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Terjadi kesalahan internal yang tidak terduga: {str(e)}'}), 500
+
+@app.route('/api/anova_test', methods=['POST'], endpoint='api_anova_test_file')
+@login_required
+def api_anova_test():
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+            
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'File tidak ditemukan.'}), 400
+
+    file = request.files['file']
+    dependent_var = request.form.get('dependent')
+    independent_var = request.form.get('independent')
+
+    if not all([file, dependent_var, independent_var]):
+        return jsonify({'success': False, 'message': 'Parameter tidak lengkap.'}), 400
+
+    filename = secure_filename(file.filename)
+    try:
+        if filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        elif filename.endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(file)
+        else:
+            return jsonify({'success': False, 'message': 'Format file tidak didukung.'}), 400
+        
+        return _perform_anova_analysis(df, dependent_var, independent_var)
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Gagal memproses file: {str(e)}'}), 500
+
+@app.route('/api/manual_anova_test', methods=['POST'], endpoint='api_anova_test_manual')
+@login_required
+def api_manual_anova_test():
+    if not current_user.is_pro:
+        is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
+        if not is_allowed:
+            return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+
+    try:
+        data = request.get_json()
+        groups_data = data.get('groups', [])
+        group_names = data.get('group_names', [])
+        
+        if len(groups_data) < 2 or len(group_names) < 2:
+            return jsonify({'success': False, 'message': 'Dibutuhkan minimal 2 grup untuk analisis.'}), 400
+
+        all_values = []
+        for i, group_vals in enumerate(groups_data):
+            group_name = group_names[i]
+            for val in group_vals:
+                all_values.append({'Nilai': val, 'Kelompok': group_name})
+        
+        df = pd.DataFrame(all_values)
+        
+        return _perform_anova_analysis(df, 'Nilai', 'Kelompok')
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Gagal memproses data manual: {str(e)}'}), 500

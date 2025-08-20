@@ -428,7 +428,8 @@ $(document).ready(function() {
                 alert('Silakan pilih file untuk diunggah.');
                 return;
             }
-            endpoint = "{{ url_for('api_anova_test') }}";
+            // PERBAIKAN FINAL UNTUK ENDPOINT FILE UPLOAD
+            endpoint = "{{ url_for('api_anova_test_file') }}";
             payload = formData;
             // Headers will be set automatically for FormData
         } else { // manual
@@ -457,7 +458,8 @@ $(document).ready(function() {
                 return;
             }
 
-            endpoint = "{{ url_for('api_manual_anova_test') }}";
+            // PERBAIKAN FINAL UNTUK ENDPOINT INPUT MANUAL
+            endpoint = "{{ url_for('api_anova_test_manual') }}";
             payload = JSON.stringify({ groups: groupsData, group_names: groupNames });
             headers = { 'Content-Type': 'application/json' };
         }
