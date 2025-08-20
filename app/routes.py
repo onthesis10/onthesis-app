@@ -1629,182 +1629,195 @@ def api_paired_ttest():
         return jsonify({'error': 'Terjadi kesalahan saat memproses data. Pastikan format data benar.'}), 500
 
 # ========================================================================
-# Rute untuk Analisis ANOVA Satu Arah (One-Way ANOVA) - VERSI PROFESIONAL
+# BAGIAN 1: DUA FUNGSI ANALISIS BARU
+# Tempelkan dua fungsi ini untuk menggantikan fungsi _perform_anova_analysis lama.
 # ========================================================================
-def _perform_anova_analysis(df, dependent_var, independent_var):
-    """
-    Fungsi helper yang berisi logika inti analisis ANOVA.
-    Dapat dipanggil oleh endpoint file upload maupun manual input.
-    """
-    try:
-        if dependent_var not in df.columns or independent_var not in df.columns:
-            return jsonify({
-                'success': False, 
-                'message': f"Kolom '{dependent_var}' atau '{independent_var}' tidak ditemukan di dalam file. Pastikan nama kolom sesuai."
-            }), 400
 
-        df_cleaned = df[[dependent_var, independent_var]].copy()
-        
-        df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
-        df_cleaned.dropna(inplace=True)
+def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
+    """Fungsi helper khusus untuk One-Way ANOVA."""
+    df_cleaned = df[[dependent_var, independent_var]].copy()
+    df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
+    df_cleaned.dropna(inplace=True)
 
-        if df_cleaned[independent_var].nunique() < 2:
-            return jsonify({
-                'success': False, 
-                'message': f"Analisis ANOVA membutuhkan minimal 2 kelompok data. Kolom grup ('{independent_var}') Anda hanya memiliki {df_cleaned[independent_var].nunique()} kelompok unik."
-            }), 400
-        
-        group_counts = df_cleaned.groupby(independent_var)[dependent_var].count()
-        if (group_counts < 2).any():
-            invalid_groups = group_counts[group_counts < 2].index.tolist()
-            return jsonify({
-                'success': False,
-                'message': f"Setiap kelompok harus memiliki minimal 2 data poin yang valid. Kelompok berikut tidak memenuhi syarat: {', '.join(invalid_groups)}."
-            }), 400
+    if df_cleaned[independent_var].nunique() < 2:
+        raise ValueError(f"Analisis ANOVA membutuhkan minimal 2 kelompok data. Kolom grup ('{independent_var}') Anda hanya memiliki {df_cleaned[independent_var].nunique()} kelompok unik.")
+    
+    group_counts = df_cleaned.groupby(independent_var)[dependent_var].count()
+    if (group_counts < 2).any():
+        invalid_groups = group_counts[group_counts < 2].index.tolist()
+        raise ValueError(f"Setiap kelompok harus memiliki minimal 2 data poin yang valid. Kelompok berikut tidak memenuhi syarat: {', '.join(invalid_groups)}.")
 
-        df_cleaned[independent_var] = df_cleaned[independent_var].astype('category')
+    df_cleaned[independent_var] = df_cleaned[independent_var].astype('category')
 
-        # --- 1. Cek Prasyarat Otomatis ---
-        normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=independent_var)
-        # PERBAIKAN JSON: Konversi numpy.bool_ ke bool standar
-        is_all_normal = bool(all(normality_results['normal']))
-        
-        homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
-        
-        is_homogeneous = False # Default value
-        if not homogeneity_result.empty:
-            # PERBAIKAN JSON: Konversi numpy.bool_ ke bool standar
-            is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0])
+    normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=independent_var)
+    is_all_normal = bool(all(normality_results['normal']))
+    
+    homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
+    is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
+
+    if is_all_normal:
+        analysis_type = "One-Way ANOVA"
+        aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
+        main_test_results = json.loads(aov.round(4).to_json(orient='records'))[0]
+        p_value = main_test_results['p-unc']
+        f_stat = main_test_results['F']
+        df_between = main_test_results['DF']
+        df_within = aov.loc[1, 'DF']
+
+        if p_value < 0.05:
+            post_hoc = pg.pairwise_tukey(data=df_cleaned, dv=dependent_var, between=independent_var) if is_homogeneous else pg.pairwise_gameshowell(data=df_cleaned, dv=dependent_var, between=independent_var)
+            post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
+            summary_indonesia = f"Terdapat perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f}."
+            summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p < .05."
         else:
-            return jsonify({
-                'success': False, 
-                'message': 'Gagal melakukan uji homogenitas. Ini bisa terjadi jika varians data sangat ekstrem atau data tidak memadai.'
-            }), 400
+            post_hoc_results = None
+            summary_indonesia = f"Tidak ditemukan perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f}."
+            summary_apa = f"A one-way ANOVA did not reveal a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p > .05."
+    else:
+        analysis_type = "Kruskal-Wallis H Test"
+        kruskal = pg.kruskal(data=df_cleaned, dv=dependent_var, between=independent_var)
+        main_test_results = json.loads(kruskal.round(4).to_json(orient='records'))[0]
+        p_value = main_test_results['p-unc']
+        h_stat = main_test_results['H']
+        df_kruskal = main_test_results['ddof1']
+        post_hoc_results = None
+        summary_indonesia = f"Hasil uji Kruskal-Wallis menunjukkan tidak ada perbedaan peringkat (rank) yang signifikan secara statistik pada '{dependent_var}' antar kelompok '{independent_var}', H({df_kruskal}) = {h_stat:.2f}, p = {p_value:.3f}."
+        summary_apa = f"A Kruskal-Wallis H test showed no statistically significant difference in ranks for {dependent_var} across {independent_var} groups, H({df_kruskal}) = {h_stat:.2f}, p > .05."
 
-        main_test_results, post_hoc_results, analysis_type, summary_apa, summary_indonesia = None, None, "", "", ""
 
-        # --- 2. Pilih dan Jalankan Analisis Utama ---
-        if is_all_normal:
-            analysis_type = "One-Way ANOVA"
-            aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
-            ss_between = aov.loc[0, 'SS']
-            ss_total = aov.loc[1, 'SS'] + ss_between
-            eta_squared = ss_between / ss_total if ss_total > 0 else 0
-            main_test_results = {'source': 'Antar Grup', 'df': int(aov.loc[0, 'DF']), 'f_stat': round(aov.loc[0, 'F'], 3), 'p_value': round(aov.loc[0, 'p-unc'], 4), 'eta_squared': round(eta_squared, 3)}
-            
-            if main_test_results['p_value'] < 0.05:
-                post_hoc = pg.pairwise_tukey(data=df_cleaned, dv=dependent_var, between=independent_var) if is_homogeneous else pg.pairwise_gameshowell(data=df_cleaned, dv=dependent_var, between=independent_var)
-                post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
-            
-            eta_interpretation = "kecil" if eta_squared < 0.06 else "sedang" if eta_squared < 0.14 else "besar"
-            if main_test_results['p_value'] < 0.05:
-                summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}, η² = {eta_squared:.2f}."
-                summary_indonesia = f"Terdapat perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}. Ukuran efek (η²) menunjukkan pengaruh yang {eta_interpretation} ({eta_squared:.2f})."
-            else:
-                summary_apa = f"A one-way ANOVA did not reveal a significant effect of {independent_var} on {dependent_var}, F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}, η² = {eta_squared:.2f}."
-                summary_indonesia = f"Tidak ditemukan perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({main_test_results['df']}, {int(aov.loc[1, 'DF'])}) = {main_test_results['f_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
-        else:
-            analysis_type = "Kruskal-Wallis H Test"
-            kruskal = pg.kruskal(data=df_cleaned, dv=dependent_var, between=independent_var)
-            main_test_results = {'source': 'Grup', 'df': int(kruskal['ddof1'].iloc[0]), 'h_stat': round(kruskal['H'].iloc[0], 3), 'p_value': round(kruskal['p-unc'].iloc[0], 4)}
-            
-            if main_test_results['p_value'] < 0.05:
-                post_hoc = pg.pairwise_dunn(data=df_cleaned, dv=dependent_var, between=independent_var, p_adjust='bonferroni')
-                post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
+    descriptive_stats = df_cleaned.groupby(independent_var)[dependent_var].describe().round(3)
+    
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x=independent_var, y=dependent_var, data=df_cleaned, palette="pastel")
+    sns.stripplot(x=independent_var, y=dependent_var, data=df_cleaned, color=".25", size=4)
+    plt.title(f'Distribusi {dependent_var} Berdasarkan {independent_var}', fontsize=16)
+    plot_base64 = create_plot_as_base64(plt.gcf())
 
-            if main_test_results['p_value'] < 0.05:
-                summary_apa = f"A Kruskal-Wallis H test showed that there was a statistically significant difference in {dependent_var} between the different {independent_var} groups, χ²({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
-                summary_indonesia = f"Hasil uji Kruskal-Wallis menunjukkan terdapat perbedaan peringkat (rank) yang signifikan secara statistik pada '{dependent_var}' antar kelompok '{independent_var}', H({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
-            else:
-                summary_apa = f"A Kruskal-Wallis H test showed no statistically significant difference in {dependent_var} between the different {independent_var} groups, χ²({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
-                summary_indonesia = f"Hasil uji Kruskal-Wallis menunjukkan tidak ada perbedaan peringkat (rank) yang signifikan secara statistik pada '{dependent_var}' antar kelompok '{independent_var}', H({main_test_results['df']}) = {main_test_results['h_stat']:.2f}, p = {main_test_results['p_value']:.3f}."
+    return {
+        'success': True, 'analysis_type': analysis_type,
+        'prerequisites': { 'normality': json.loads(normality_results.round(4).to_json(orient='records')), 'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')), 'is_all_normal': is_all_normal, 'is_homogeneous': is_homogeneous },
+        'descriptive_stats': json.loads(descriptive_stats.reset_index().to_json(orient='records')),
+        'main_test_results': main_test_results, 'post_hoc_results': post_hoc_results,
+        'summary': {'apa': summary_apa, 'indonesia': summary_indonesia},
+        'plot': plot_base64
+    }
 
-        descriptive_stats = df_cleaned.groupby(independent_var)[dependent_var].describe().round(3)
-        
-        plt.figure(figsize=(10, 6))
-        sns.boxplot(x=independent_var, y=dependent_var, data=df_cleaned, palette="pastel")
-        sns.stripplot(x=independent_var, y=dependent_var, data=df_cleaned, color=".25", size=4)
-        plt.title(f'Distribusi {dependent_var} Berdasarkan {independent_var}', fontsize=16)
-        plt.xlabel(str(independent_var).title(), fontsize=12)
-        plt.ylabel(str(dependent_var).title(), fontsize=12)
-        plt.tight_layout()
-        plot_base64 = create_plot_as_base64(plt.gcf())
+def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
+    """Fungsi helper BARU khusus untuk Two-Way ANOVA."""
+    iv1, iv2 = independent_vars[0], independent_vars[1]
+    
+    df_cleaned = df[[dependent_var, iv1, iv2]].copy()
+    df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
+    df_cleaned.dropna(inplace=True)
 
-        return jsonify({
-            'success': True, 'analysis_type': analysis_type,
-            'prerequisites': {
-                'normality': json.loads(normality_results.round(4).to_json(orient='records')),
-                'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')),
-                'is_all_normal': is_all_normal,
-                'is_homogeneous': is_homogeneous
-            },
-            'descriptive_stats': json.loads(descriptive_stats.reset_index().to_json(orient='records')),
-            'main_test_results': main_test_results, 'post_hoc_results': post_hoc_results,
-            'summary': {'apa': summary_apa, 'indonesia': summary_indonesia},
-            'plot': plot_base64
-        })
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Terjadi kesalahan internal yang tidak terduga: {str(e)}'}), 500
+    if df_cleaned[iv1].nunique() < 2 or df_cleaned[iv2].nunique() < 2:
+        raise ValueError("Setiap variabel independen pada Two-Way ANOVA harus memiliki minimal 2 level/kategori.")
 
+    normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=iv1)
+    is_all_normal = bool(all(normality_results['normal']))
+    homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=[iv1, iv2], method='levene')
+    is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
+
+    aov = pg.anova(data=df_cleaned, dv=dependent_var, between=[iv1, iv2], detailed=True)
+    main_test_results = json.loads(aov.round(4).to_json(orient='records'))
+
+    p_interaction = aov[aov['Source'] == f'{iv1} * {iv2}']['p-unc'].iloc[0]
+    summary_indonesia = f"Hasil Two-Way ANOVA menunjukkan "
+    summary_apa = "A two-way ANOVA was conducted to examine the effects of " + iv1 + " and " + iv2 + " on " + dependent_var + ". "
+    
+    if p_interaction < 0.05:
+        summary_indonesia += f"terdapat efek interaksi yang signifikan antara '{iv1}' dan '{iv2}' terhadap '{dependent_var}' (p < .05)."
+        summary_apa += "There was a statistically significant interaction between the effects of " + iv1 + " and " + iv2 + "."
+    else:
+        summary_indonesia += f"tidak terdapat efek interaksi yang signifikan (p > .05). "
+        summary_apa += "There was not a statistically significant interaction between the effects of " + iv1 + " and " + iv2 + ". "
+        p_iv1 = aov[aov['Source'] == iv1]['p-unc'].iloc[0]
+        p_iv2 = aov[aov['Source'] == iv2]['p-unc'].iloc[0]
+        if p_iv1 < 0.05: summary_indonesia += f"Terdapat efek utama yang signifikan dari '{iv1}'. "
+        if p_iv2 < 0.05: summary_indonesia += f"Terdapat efek utama yang signifikan dari '{iv2}'. "
+
+    plt.figure(figsize=(10, 6))
+    sns.pointplot(data=df_cleaned, x=iv1, y=dependent_var, hue=iv2, dodge=True, errorbar='se', capsize=.1)
+    plt.title(f'Grafik Interaksi {iv1} dan {iv2} terhadap {dependent_var}', fontsize=16)
+    plot_base64 = create_plot_as_base64(plt.gcf())
+
+    return {
+        'success': True, 'analysis_type': 'Two-Way ANOVA',
+        'prerequisites': { 'normality': json.loads(normality_results.round(4).to_json(orient='records')), 'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')), 'is_all_normal': is_all_normal, 'is_homogeneous': is_homogeneous },
+        'descriptive_stats': json.loads(df_cleaned.groupby([iv1, iv2])[dependent_var].describe().round(3).reset_index().to_json(orient='records')),
+        'main_test_results': main_test_results, 'post_hoc_results': None,
+        'summary': {'apa': summary_apa, 'indonesia': summary_indonesia},
+        'plot': plot_base64
+    }
+
+# ========================================================================
+# BAGIAN 2: DUA RUTE API YANG DIPERBARUI
+# Tempelkan dua fungsi ini untuk menggantikan rute api_anova_test dan
+# api_manual_anova_test yang lama.
+# ========================================================================
 @app.route('/api/anova_test', methods=['POST'], endpoint='api_anova_test_file')
 @login_required
-def api_anova_test():
+def api_anova_test_file():
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
-        if not is_allowed:
-            return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+        if not is_allowed: return jsonify({'success': False, 'message': "Batas percobaan tercapai. Upgrade ke PRO."}), 429
             
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'File tidak ditemukan.'}), 400
+    if 'file' not in request.files: return jsonify({'success': False, 'message': 'File tidak ditemukan.'}), 400
 
-    file = request.files['file']
-    dependent_var = request.form.get('dependent')
-    independent_var = request.form.get('independent')
-
-    if not all([file, dependent_var, independent_var]):
-        return jsonify({'success': False, 'message': 'Parameter tidak lengkap.'}), 400
-
-    filename = secure_filename(file.filename)
     try:
-        if filename.endswith('.csv'):
-            df = pd.read_csv(file)
-        elif filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file)
-        else:
-            return jsonify({'success': False, 'message': 'Format file tidak didukung.'}), 400
+        file = request.files['file']
+        filename = secure_filename(file.filename)
+        if filename.endswith('.csv'): df = pd.read_csv(file)
+        elif filename.endswith(('.xls', '.xlsx')): df = pd.read_excel(file)
+        else: return jsonify({'success': False, 'message': 'Format file tidak didukung.'}), 400
         
-        return _perform_anova_analysis(df, dependent_var, independent_var)
+        anova_type = request.form.get('anova_type')
+        dependent_var = request.form.get('dependent')
+        independent_var1 = request.form.get('independent1')
+        independent_var2 = request.form.get('independent2')
 
+        if anova_type == 'one_way':
+            result = _perform_oneway_anova_analysis(df, dependent_var, independent_var1)
+        elif anova_type == 'two_way':
+            if not independent_var2: return jsonify({'success': False, 'message': 'Variabel grup kedua diperlukan untuk Two-Way ANOVA.'}), 400
+            result = _perform_twoway_anova_analysis(df, dependent_var, [independent_var1, independent_var2])
+        else:
+            return jsonify({'success': False, 'message': 'Jenis ANOVA tidak valid.'}), 400
+        
+        return jsonify(result)
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Gagal memproses file: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Terjadi kesalahan saat analisis: {str(e)}'}), 500
 
 @app.route('/api/manual_anova_test', methods=['POST'], endpoint='api_anova_test_manual')
 @login_required
 def api_manual_anova_test():
     if not current_user.is_pro:
         is_allowed, message = check_and_update_pro_trial(current_user.id, 'data_analysis')
-        if not is_allowed:
-            return jsonify({'error': "Batas percobaan tercapai.", 'redirect': url_for('upgrade_page')}), 429
+        if not is_allowed: return jsonify({'success': False, 'message': "Batas percobaan tercapai. Upgrade ke PRO."}), 429
 
     try:
         data = request.get_json()
-        groups_data = data.get('groups', [])
-        group_names = data.get('group_names', [])
-        
-        if len(groups_data) < 2 or len(group_names) < 2:
-            return jsonify({'success': False, 'message': 'Dibutuhkan minimal 2 grup untuk analisis.'}), 400
+        anova_type = data.get('anova_type')
 
-        all_values = []
-        for i, group_vals in enumerate(groups_data):
-            group_name = group_names[i]
-            for val in group_vals:
-                all_values.append({'Nilai': val, 'Kelompok': group_name})
-        
-        df = pd.DataFrame(all_values)
-        
-        return _perform_anova_analysis(df, 'Nilai', 'Kelompok')
+        if anova_type == 'one_way':
+            groups_data = data.get('groups', [])
+            group_names = data.get('group_names', [])
+            all_values = []
+            for i, group_vals in enumerate(groups_data):
+                for val in group_vals:
+                    all_values.append({'Nilai': val, 'Kelompok': group_names[i]})
+            df = pd.DataFrame(all_values)
+            result = _perform_oneway_anova_analysis(df, 'Nilai', 'Kelompok')
+        elif anova_type == 'two_way':
+            table_data = data.get('data', [])
+            if not table_data:
+                return jsonify({'success': False, 'message': 'Data tabel manual tidak boleh kosong.'}), 400
+            df = pd.DataFrame(table_data)
+            col_names = list(table_data[0].keys())
+            result = _perform_twoway_anova_analysis(df, col_names[0], [col_names[1], col_names[2]])
+        else:
+            return jsonify({'success': False, 'message': 'Jenis ANOVA tidak valid.'}), 400
 
+        return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'message': f'Gagal memproses data manual: {str(e)}'}), 500
