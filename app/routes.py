@@ -1663,6 +1663,8 @@ def api_paired_ttest():
         return jsonify({'error': 'Terjadi kesalahan saat memproses data. Pastikan format data benar.'}), 500
 
 
+
+
 # ========================================================================
 # Rute untuk Analisis ANOVA Satu Arah (One-Way ANOVA) - VERSI PROFESIONAL
 # ========================================================================
@@ -1672,37 +1674,32 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
     Dapat dipanggil oleh endpoint file upload maupun manual input.
     """
     try:
-        # PENAMBAHAN: Cek apakah kolom yang dipilih ada di dalam file
         if dependent_var not in df.columns or independent_var not in df.columns:
             return jsonify({
                 'success': False, 
                 'message': f"Kolom '{dependent_var}' atau '{independent_var}' tidak ditemukan di dalam file. Pastikan nama kolom sesuai."
             }), 400
 
-        # --- Proses pembersihan data dengan validasi yang lebih baik ---
         df_cleaned = df[[dependent_var, independent_var]].copy()
-        
-        # Simpan jumlah baris sebelum konversi numerik untuk perbandingan
         rows_before_coercion = len(df_cleaned.dropna())
         
         df_cleaned[dependent_var] = pd.to_numeric(df_cleaned[dependent_var], errors='coerce')
         df_cleaned.dropna(inplace=True)
 
-        # PENAMBAHAN: Pengecekan yang lebih spesifik setelah pembersihan
         if df_cleaned[independent_var].nunique() < 2:
             return jsonify({
                 'success': False, 
                 'message': f"Analisis ANOVA membutuhkan minimal 2 kelompok data. Kolom grup ('{independent_var}') Anda hanya memiliki {df_cleaned[independent_var].nunique()} kelompok unik."
             }), 400
         
-        if len(df_cleaned) < 3:
-            lost_rows = rows_before_coercion - len(df_cleaned)
-            error_message = (
-                f"Data yang valid setelah dibersihkan tidak cukup (kurang dari 3 baris). "
-                f"Sebanyak {lost_rows} baris kemungkinan dihapus karena memiliki nilai non-numerik atau sel kosong pada kolom dependen ('{dependent_var}'). "
-                f"Silakan periksa kembali file Anda."
-            )
-            return jsonify({'success': False, 'message': error_message}), 400
+        # PERBAIKAN: Cek jumlah data per grup untuk mencegah error statistik
+        group_counts = df_cleaned.groupby(independent_var)[dependent_var].count()
+        if (group_counts < 2).any():
+            invalid_groups = group_counts[group_counts < 2].index.tolist()
+            return jsonify({
+                'success': False,
+                'message': f"Setiap kelompok harus memiliki minimal 2 data poin yang valid. Kelompok berikut tidak memenuhi syarat: {', '.join(invalid_groups)}."
+            }), 400
 
         df_cleaned[independent_var] = df_cleaned[independent_var].astype('category')
 
@@ -1710,14 +1707,22 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
         normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=independent_var)
         is_all_normal = all(normality_results['normal'])
         
-        # FIX: Menggunakan fungsi yang benar: homoscedasticity, bukan homogeneity
         homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
-        is_homogeneous = homogeneity_result['equal_var'].iloc[0]
+        
+        # PENAMBAHAN KODE PENGAMAN (DEFENSIVE CHECK) UNTUK MENCEGAH 500 ERROR
+        if not homogeneity_result.empty:
+            is_homogeneous = homogeneity_result['equal_var'].iloc[0]
+        else:
+            # Jika uji homogenitas gagal, kita tidak bisa melanjutkan. Beri pesan error.
+            return jsonify({
+                'success': False, 
+                'message': 'Gagal melakukan uji homogenitas. Ini bisa terjadi jika varians data sangat ekstrem atau data tidak memadai.'
+            }), 400
 
         main_test_results, post_hoc_results, analysis_type, summary_apa, summary_indonesia = None, None, "", "", ""
 
         # --- 2. Pilih dan Jalankan Analisis Utama ---
-        # ... (sisa kode di dalam fungsi ini dari baris 'if is_all_normal:' hingga akhir tetap SAMA, tidak perlu diubah) ...
+        # ... (SISA KODE DI BAWAH INI SAMA PERSIS SEPERTI SEBELUMNYA, TIDAK ADA PERUBAHAN) ...
         if is_all_normal:
             analysis_type = "One-Way ANOVA"
             aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
@@ -1779,4 +1784,4 @@ def _perform_anova_analysis(df, dependent_var, independent_var):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Terjadi kesalahan internal: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Terjadi kesalahan internal yang tidak terduga: {str(e)}'}), 500
