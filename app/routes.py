@@ -1760,8 +1760,11 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
     df_cleaned[interaction_col] = df_cleaned[iv1].astype(str) + "_" + df_cleaned[iv2].astype(str)
 
     normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=iv1)
+    # PERBAIKAN: Konversi numpy.bool_ ke bool standar Python
     is_all_normal = bool(all(normality_results['normal']))
+    
     homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=interaction_col, method='levene')
+    # PERBAIKAN: Konversi numpy.bool_ ke bool standar Python
     is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
 
     df_cleaned.drop(columns=[interaction_col], inplace=True)
@@ -1803,10 +1806,9 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
         'dv_name': dependent_var,
         'iv_name': iv1,
         'iv2_name': iv2,
-        'boxplot': [], # Boxplot untuk 2-way akan dibuat di frontend
-        'barplot': [] # Barplot interaksi akan dibuat di frontend
+        'groups': json.loads(descriptive_stats.to_json(orient='records')),
+        'raw_data': json.loads(df_cleaned.to_json(orient='records'))
     }
-
 
     return {
         'success': True, 'analysis_type': 'Two-Way ANOVA',
