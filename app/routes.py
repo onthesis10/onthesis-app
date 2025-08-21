@@ -1760,11 +1760,9 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
     df_cleaned[interaction_col] = df_cleaned[iv1].astype(str) + "_" + df_cleaned[iv2].astype(str)
 
     normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=iv1)
-    # PERBAIKAN: Konversi numpy.bool_ ke bool standar Python
     is_all_normal = bool(all(normality_results['normal']))
     
     homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=interaction_col, method='levene')
-    # PERBAIKAN: Konversi numpy.bool_ ke bool standar Python
     is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
 
     df_cleaned.drop(columns=[interaction_col], inplace=True)
@@ -1794,7 +1792,8 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
     lowest_group = descriptive_stats.loc[descriptive_stats['mean'].idxmin()]
     highlights = {
         'significance': {
-            'significant': p_interaction < 0.05,
+            # PERBAIKAN FINAL: Konversi numpy.bool_ ke bool standar Python
+            'significant': bool(p_interaction < 0.05),
             'text': 'Ada Efek Interaksi' if p_interaction < 0.05 else 'Tidak Ada Efek Interaksi'
         },
         'highest': {'group': f"{highest_group[iv1]} & {highest_group[iv2]}", 'mean': highest_group['mean']},
