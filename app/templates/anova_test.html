@@ -88,7 +88,7 @@
             <form id="anova-form" class="space-y-6">
                 <!-- Pilihan Metode Input -->
                 <div>
-                    <h3 class="text-xl font-bold text-text-primary mb-4">Pertama Lu Input Data Dulu Bor!</h3>
+                    <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data</h3>
                     <div class="flex gap-1 border border-border-panel p-1 rounded-lg bg-bg-canvas">
                         <button type="button" class="input-method-btn active btn-secondary flex-1 border-0" data-method="upload">Unggah File</button>
                         <button type="button" class="input-method-btn btn-secondary flex-1 border-0" data-method="manual">Input Manual</button>
@@ -142,7 +142,7 @@
                 
                 <!-- Pengaturan Analisis -->
                 <div class="space-y-6 pt-6 border-t border-border-panel">
-                    <h3 class="text-xl font-bold text-text-primary">Nah disini atur sesuai keinginan lo pengen Analisis yang mana!</h3>
+                    <h3 class="text-xl font-bold text-text-primary">2. Pengaturan Analisis</h3>
                     <div>
                         <label for="anova-type" class="block text-sm font-medium text-text-secondary mb-1">Jenis ANOVA</label>
                         <select id="anova-type" name="anova_type" class="feedback-form-input">
@@ -709,7 +709,7 @@ $(document).ready(function() {
     }
 
     function renderPlots(data) {
-        const plotData = data.plot_data;
+        const { plot_data, analysis_type } = data;
         const colors = ['#0ea5e9', '#f97316', '#16a34a', '#dc2626', '#9333ea', '#f59e0b'];
         const baseLayout = {
             margin: { t: 40, b: 40, l: 50, r: 20 },
@@ -720,15 +720,55 @@ $(document).ready(function() {
             yaxis: { gridcolor: 'rgba(128,128,128,0.2)' }
         };
 
-        // Box Plot
-        const boxplotLayout = $.extend(true, {}, baseLayout, { title: `Distribusi ${plotData.dv_name} per ${plotData.iv_name}` });
-        const boxplotTraces = plotData.boxplot.map((trace, i) => ({...trace, marker: { color: colors[i % colors.length] }}));
-        Plotly.newPlot('boxplot-output', boxplotTraces, boxplotLayout);
+        if (analysis_type === "One-Way ANOVA" || analysis_type === "Kruskal-Wallis H Test") {
+            // Box Plot
+            const boxplotLayout = $.extend(true, {}, baseLayout, { title: `Distribusi ${plotData.dv_name} per ${plotData.iv_name}` });
+            const boxplotTraces = plotData.boxplot.map((trace, i) => ({...trace, marker: { color: colors[i % colors.length] }}));
+            Plotly.newPlot('boxplot-output', boxplotTraces, boxplotLayout);
 
-        // Bar Plot
-        const barplotLayout = $.extend(true, {}, baseLayout, { title: `Rata-rata ${plotData.dv_name} per ${plotData.iv_name}` });
-        const barplotTraces = plotData.barplot.map((trace, i) => ({...trace, marker: { color: colors[i % colors.length] }}));
-        Plotly.newPlot('barplot-output', barplotTraces, barplotLayout);
+            // Bar Plot
+            const barplotLayout = $.extend(true, {}, baseLayout, { title: `Rata-rata ${plotData.dv_name} per ${plotData.iv_name}` });
+            const barplotTraces = plotData.barplot.map((trace, i) => ({...trace, marker: { color: colors[i % colors.length] }}));
+            Plotly.newPlot('barplot-output', barplotTraces, barplotLayout);
+        } else { // Two-Way ANOVA
+            const { dv_name, iv_name, iv2_name, groups, raw_data } = plot_data;
+            const iv2_categories = [...new Set(groups.map(item => item[iv2_name]))];
+
+            // Box Plot for Two-Way
+            const boxplotLayout = $.extend(true, {}, baseLayout, { 
+                title: `Distribusi ${dv_name} per ${iv_name} & ${iv2_name}`,
+                boxmode: 'group'
+            });
+            const boxplotTraces = iv2_categories.map((cat, i) => {
+                const filteredData = raw_data.filter(d => d[iv2_name] === cat);
+                return {
+                    y: filteredData.map(d => d[dv_name]),
+                    x: filteredData.map(d => d[iv_name]),
+                    name: cat,
+                    type: 'box',
+                    marker: { color: colors[i % colors.length] }
+                };
+            });
+            Plotly.newPlot('boxplot-output', boxplotTraces, boxplotLayout);
+
+            // Bar Plot (Interaction Plot) for Two-Way
+            const barplotLayout = $.extend(true, {}, baseLayout, {
+                title: `Rata-rata ${dv_name} per ${iv_name} & ${iv2_name}`,
+                barmode: 'group'
+            });
+            const barplotTraces = iv2_categories.map((cat, i) => {
+                const filteredGroups = groups.filter(g => g[iv2_name] === cat);
+                return {
+                    x: filteredGroups.map(g => g[iv_name]),
+                    y: filteredGroups.map(g => g['mean']),
+                    error_y: { type: 'data', array: filteredGroups.map(g => g['std']) },
+                    name: cat,
+                    type: 'bar',
+                    marker: { color: colors[i % colors.length] }
+                };
+            });
+            Plotly.newPlot('barplot-output', barplotTraces, barplotLayout);
+        }
     }
     
     function displayResults(data) {
