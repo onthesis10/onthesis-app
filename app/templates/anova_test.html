@@ -88,7 +88,7 @@
             <form id="anova-form" class="space-y-6">
                 <!-- Pilihan Metode Input -->
                 <div>
-                    <h3 class="text-xl font-bold text-text-primary mb-4">Input Data</h3>
+                    <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data</h3>
                     <div class="flex gap-1 border border-border-panel p-1 rounded-lg bg-bg-canvas">
                         <button type="button" class="input-method-btn active btn-secondary flex-1 border-0" data-method="upload">Unggah File</button>
                         <button type="button" class="input-method-btn btn-secondary flex-1 border-0" data-method="manual">Input Manual</button>
@@ -142,7 +142,7 @@
                 
                 <!-- Pengaturan Analisis -->
                 <div class="space-y-6 pt-6 border-t border-border-panel">
-                    <h3 class="text-xl font-bold text-text-primary">Pengaturan Analisis</h3>
+                    <h3 class="text-xl font-bold text-text-primary">2. Pengaturan Analisis</h3>
                     <div>
                         <label for="anova-type" class="block text-sm font-medium text-text-secondary mb-1">Jenis ANOVA</label>
                         <select id="anova-type" name="anova_type" class="feedback-form-input">
@@ -642,6 +642,83 @@ $(document).ready(function() {
     $('#export-doc-btn').on('click', exportToDoc);
 
     // --- Fungsi Tampilan & Reset (Lengkap) ---
+    function displayHighlights(data) {
+        const card = $('#highlight-card').empty();
+        const { significance, highest, lowest } = data.highlights;
+
+        const significanceHtml = `
+            <div class="highlight-item">
+                <div class="icon ${significance.significant ? 'significant' : 'not-significant'}">
+                    ${significance.significant ? 
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' :
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+                    }
+                </div>
+                <div class="text">
+                    <div class="label">Hasil Uji</div>
+                    <div class="value">${significance.text}</div>
+                </div>
+            </div>`;
+        card.append(significanceHtml);
+
+        if (highest) {
+            card.append(`
+                <div class="highlight-item">
+                    <div class="icon significant">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                    </div>
+                    <div class="text">
+                        <div class="label">Rata-rata Tertinggi</div>
+                        <div class="value">${highest.group} (${parseFloat(highest.mean).toFixed(2)})</div>
+                    </div>
+                </div>`);
+        }
+        if (lowest) {
+             card.append(`
+                <div class="highlight-item">
+                    <div class="icon not-significant">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                    </div>
+                    <div class="text">
+                        <div class="label">Rata-rata Terendah</div>
+                        <div class="value">${lowest.group} (${parseFloat(lowest.mean).toFixed(2)})</div>
+                    </div>
+                </div>`);
+        }
+    }
+
+    function renderPlots(data) {
+        const plotDiv = 'plot-output';
+        const plotData = data.plot_data;
+        const layout = {
+            margin: { t: 40, b: 40, l: 50, r: 20 },
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            font: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
+            xaxis: { gridcolor: 'rgba(128,128,128,0.2)' },
+            yaxis: { gridcolor: 'rgba(128,128,128,0.2)' }
+        };
+
+        const showBoxPlot = () => {
+            $('.plot-switch-btn').removeClass('active');
+            $('#show-boxplot').addClass('active');
+            layout.title = `Distribusi ${plotData.dv_name} per ${plotData.iv_name}`;
+            Plotly.newPlot(plotDiv, plotData.boxplot, layout);
+        };
+
+        const showBarPlot = () => {
+            $('.plot-switch-btn').removeClass('active');
+            $('#show-barplot').addClass('active');
+            layout.title = `Rata-rata ${plotData.dv_name} per ${plotData.iv_name}`;
+            Plotly.newPlot(plotDiv, plotData.barplot, layout);
+        };
+
+        $('#show-boxplot').off('click').on('click', showBoxPlot);
+        $('#show-barplot').off('click').on('click', showBarPlot);
+
+        showBoxPlot();
+    }
+    
     function displayResults(data) {
         analysisData = data;
         const { prerequisites, analysis_type, summary, descriptive_stats, main_test_results, post_hoc_results } = data;
@@ -664,7 +741,7 @@ $(document).ready(function() {
         const mainTestColumns = Object.keys(mainTestData[0]).map(key => {
             let title = key.replace(/_/g, ' ').replace('stat', 'Statistic').replace(/\b\w/g, l => l.toUpperCase());
             if (['DF', 'SS', 'MS'].includes(key)) {
-                const tooltips = { 'DF': 'Degree of Freedom', 'SS': 'Sum of Squares', 'MS': 'Mean Square' };
+                const tooltips = { 'DF': 'Degree of Freedom - Jumlah nilai dalam perhitungan yang bebas bervariasi.', 'SS': 'Sum of Squares - Jumlah total kuadrat deviasi dari mean.', 'MS': 'Mean Square - Rata-rata dari Sum of Squares.' };
                 title = `<span data-tooltip="${tooltips[key] || ''}">${key}</span>`;
             }
             return { title: title, data: key };
