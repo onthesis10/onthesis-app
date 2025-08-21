@@ -1630,7 +1630,7 @@ def api_paired_ttest():
 
 
 # ========================================================================
-# FUNGSI-FUNGSI ANALISIS ANOVA (DIPERBARUI DENGAN NAMA FUNGSI YANG BENAR)
+# FUNGSI-FUNGSI ANALISIS ANOVA (DIPERBARUI DENGAN HIGHLIGHTS & PLOT DATA)
 # ========================================================================
 
 def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
@@ -1655,6 +1655,14 @@ def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
     homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=independent_var, method='levene')
     is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
 
+    # Inisialisasi variabel hasil
+    analysis_type = ""
+    main_test_results = {}
+    post_hoc_results = None
+    summary_indonesia = ""
+    summary_apa = ""
+    p_value = 1.0
+
     if is_all_normal:
         analysis_type = "One-Way ANOVA"
         aov = pg.anova(data=df_cleaned, dv=dependent_var, between=independent_var, detailed=True)
@@ -1667,11 +1675,10 @@ def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
         if p_value < 0.05:
             post_hoc = pg.pairwise_tukey(data=df_cleaned, dv=dependent_var, between=independent_var) if is_homogeneous else pg.pairwise_gameshowell(data=df_cleaned, dv=dependent_var, between=independent_var)
             post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
-            summary_indonesia = f"Terdapat perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f}."
+            summary_indonesia = f"Hasil analisis One-Way ANOVA menunjukkan bahwa terdapat perbedaan yang signifikan secara statistik antara rata-rata kelompok (F({df_between}, {df_within}) = {f_stat:.2f}, p < .05). Uji post-hoc lebih lanjut dapat mengidentifikasi kelompok mana yang berbeda."
             summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p < .05."
         else:
-            post_hoc_results = None
-            summary_indonesia = f"Tidak ditemukan perbedaan yang signifikan secara statistik pada rata-rata '{dependent_var}' antar kelompok '{independent_var}', F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f}."
+            summary_indonesia = f"Hasil analisis One-Way ANOVA menunjukkan bahwa tidak terdapat perbedaan yang signifikan secara statistik antara rata-rata kelompok (F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f})."
             summary_apa = f"A one-way ANOVA did not reveal a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p > .05."
     else:
         analysis_type = "Kruskal-Wallis H Test"
@@ -1680,26 +1687,46 @@ def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
         p_value = main_test_results['p-unc']
         h_stat = main_test_results['H']
         df_kruskal = main_test_results['ddof1']
-        post_hoc_results = None
-        summary_indonesia = f"Hasil uji Kruskal-Wallis menunjukkan tidak ada perbedaan peringkat (rank) yang signifikan secara statistik pada '{dependent_var}' antar kelompok '{independent_var}', H({df_kruskal}) = {h_stat:.2f}, p = {p_value:.3f}."
+        summary_indonesia = f"Karena data tidak berdistribusi normal, uji non-parametrik Kruskal-Wallis digunakan. Hasilnya menunjukkan tidak ada perbedaan peringkat (rank) yang signifikan secara statistik antar kelompok (H({df_kruskal}) = {h_stat:.2f}, p = {p_value:.3f})."
         summary_apa = f"A Kruskal-Wallis H test showed no statistically significant difference in ranks for {dependent_var} across {independent_var} groups, H({df_kruskal}) = {h_stat:.2f}, p > .05."
-
 
     descriptive_stats = df_cleaned.groupby(independent_var)[dependent_var].describe().round(3)
     
-    plt.figure(figsize=(10, 6))
-    sns.boxplot(x=independent_var, y=dependent_var, data=df_cleaned, palette="pastel")
-    sns.stripplot(x=independent_var, y=dependent_var, data=df_cleaned, color=".25", size=4)
-    plt.title(f'Distribusi {dependent_var} Berdasarkan {independent_var}', fontsize=16)
-    plot_base64 = create_plot_as_base64(plt.gcf())
+    # MEMBUAT DATA HIGHLIGHTS
+    desc_reset = descriptive_stats.reset_index()
+    highest_group = desc_reset.loc[desc_reset['mean'].idxmax()]
+    lowest_group = desc_reset.loc[desc_reset['mean'].idxmin()]
+    highlights = {
+        'significance': {
+            'significant': p_value < 0.05,
+            'text': 'Ada Perbedaan Signifikan' if p_value < 0.05 else 'Tidak Ada Perbedaan Signifikan'
+        },
+        'highest': {'group': highest_group[independent_var], 'mean': highest_group['mean']},
+        'lowest': {'group': lowest_group[independent_var], 'mean': lowest_group['mean']}
+    }
+
+    # MEMBUAT DATA UNTUK PLOTLY
+    groups = [df_cleaned[dependent_var][df_cleaned[independent_var] == g] for g in desc_reset[independent_var]]
+    plot_data = {
+        'dv_name': dependent_var,
+        'iv_name': independent_var,
+        'boxplot': [{'y': list(g), 'type': 'box', 'name': name} for g, name in zip(groups, desc_reset[independent_var])],
+        'barplot': [{
+            'x': list(desc_reset[independent_var]),
+            'y': list(desc_reset['mean']),
+            'error_y': {'type': 'data', 'array': list(desc_reset['std'])},
+            'type': 'bar'
+        }]
+    }
 
     return {
         'success': True, 'analysis_type': analysis_type,
         'prerequisites': { 'normality': json.loads(normality_results.round(4).to_json(orient='records')), 'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')), 'is_all_normal': is_all_normal, 'is_homogeneous': is_homogeneous },
-        'descriptive_stats': json.loads(descriptive_stats.reset_index().to_json(orient='records')),
+        'descriptive_stats': json.loads(desc_reset.to_json(orient='records')),
         'main_test_results': main_test_results, 'post_hoc_results': post_hoc_results,
         'summary': {'apa': summary_apa, 'indonesia': summary_indonesia},
-        'plot': plot_base64
+        'highlights': highlights,
+        'plot_data': plot_data
     }
 
 def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
@@ -1718,7 +1745,6 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
 
     normality_results = pg.normality(data=df_cleaned, dv=dependent_var, group=iv1)
     is_all_normal = bool(all(normality_results['normal']))
-    
     homogeneity_result = pg.homoscedasticity(data=df_cleaned, dv=dependent_var, group=interaction_col, method='levene')
     is_homogeneous = bool(homogeneity_result['equal_var'].iloc[0]) if not homogeneity_result.empty else False
 
@@ -1742,20 +1768,38 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
         if p_iv1 < 0.05: summary_indonesia += f"Terdapat efek utama yang signifikan dari '{iv1}'. "
         if p_iv2 < 0.05: summary_indonesia += f"Terdapat efek utama yang signifikan dari '{iv2}'. "
 
-    plt.figure(figsize=(10, 6))
-    sns.pointplot(data=df_cleaned, x=iv1, y=dependent_var, hue=iv2, dodge=True, errorbar='se', capsize=.1)
-    plt.title(f'Grafik Interaksi {iv1} dan {iv2} terhadap {dependent_var}', fontsize=16)
-    plot_base64 = create_plot_as_base64(plt.gcf())
+    descriptive_stats = df_cleaned.groupby([iv1, iv2])[dependent_var].describe().round(3).reset_index()
+    
+    # MEMBUAT DATA HIGHLIGHTS
+    highest_group = descriptive_stats.loc[descriptive_stats['mean'].idxmax()]
+    lowest_group = descriptive_stats.loc[descriptive_stats['mean'].idxmin()]
+    highlights = {
+        'significance': {
+            'significant': p_interaction < 0.05,
+            'text': 'Ada Efek Interaksi' if p_interaction < 0.05 else 'Tidak Ada Efek Interaksi'
+        },
+        'highest': {'group': f"{highest_group[iv1]} & {highest_group[iv2]}", 'mean': highest_group['mean']},
+        'lowest': {'group': f"{lowest_group[iv1]} & {lowest_group[iv2]}", 'mean': lowest_group['mean']}
+    }
+    
+    # MEMBUAT DATA UNTUK PLOTLY
+    plot_data = {
+        'dv_name': dependent_var,
+        'iv_name': f"{iv1} & {iv2}",
+        'boxplot': [], # Boxplot untuk 2-way bisa kompleks, kita gunakan barplot interaksi
+        'barplot': [] # Barplot interaksi akan dibuat di frontend
+    }
+
 
     return {
         'success': True, 'analysis_type': 'Two-Way ANOVA',
         'prerequisites': { 'normality': json.loads(normality_results.round(4).to_json(orient='records')), 'homogeneity': json.loads(homogeneity_result.round(4).to_json(orient='records')), 'is_all_normal': is_all_normal, 'is_homogeneous': is_homogeneous },
-        'descriptive_stats': json.loads(df_cleaned.groupby([iv1, iv2])[dependent_var].describe().round(3).reset_index().to_json(orient='records')),
+        'descriptive_stats': json.loads(descriptive_stats.to_json(orient='records')),
         'main_test_results': main_test_results, 'post_hoc_results': None,
         'summary': {'apa': summary_apa, 'indonesia': summary_indonesia},
-        'plot': plot_base64
+        'highlights': highlights,
+        'plot_data': plot_data
     }
-
 
 # ========================================================================
 # BAGIAN 2: DUA RUTE API YANG DIPERBARUI
