@@ -1630,7 +1630,7 @@ def api_paired_ttest():
 
 
 # ========================================================================
-# FUNGSI-FUNGSI ANALISIS ANOVA (DIPERBARUI DENGAN HIGHLIGHTS & PLOT DATA)
+# FUNGSI-FUNGSI ANALISIS ANOVA (DIPERBARUI DENGAN INTERPRETASI POST-HOC)
 # ========================================================================
 
 def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
@@ -1673,14 +1673,32 @@ def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
         df_within = aov.loc[1, 'DF']
 
         if p_value < 0.05:
+            post_hoc_test_name = "Tukey HSD" if is_homogeneous else "Games-Howell"
             post_hoc = pg.pairwise_tukey(data=df_cleaned, dv=dependent_var, between=independent_var) if is_homogeneous else pg.pairwise_gameshowell(data=df_cleaned, dv=dependent_var, between=independent_var)
             post_hoc_results = json.loads(post_hoc.round(4).to_json(orient='records'))
-            summary_indonesia = f"Hasil analisis One-Way ANOVA menunjukkan bahwa terdapat perbedaan yang signifikan secara statistik antara rata-rata kelompok (F({df_between}, {df_within}) = {f_stat:.2f}, p < .05). Uji post-hoc lebih lanjut dapat mengidentifikasi kelompok mana yang berbeda."
-            summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p < .05."
+            
+            summary_indonesia = f"Hasil analisis One-Way ANOVA menunjukkan bahwa terdapat perbedaan yang signifikan secara statistik antara rata-rata kelompok (F({df_between}, {df_within}) = {f_stat:.2f}, p < .05). "
+            summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p < .05. "
+            
+            # --- INTERPRETASI POST-HOC BARU ---
+            significant_pairs = []
+            p_key = next((key for key in post_hoc.keys() if key.startswith('p-')), None)
+            if p_key:
+                for index, row in post_hoc.iterrows():
+                    if row[p_key] < 0.05:
+                        pair_summary = f"antara kelompok '{row['A']}' dan '{row['B']}'"
+                        significant_pairs.append(pair_summary)
+            
+            if significant_pairs:
+                post_hoc_summary = f"Uji post-hoc ({post_hoc_test_name}) menunjukkan perbedaan signifikan {', '.join(significant_pairs)}."
+                summary_indonesia += post_hoc_summary
+                summary_apa += f"Post hoc comparisons using the {post_hoc_test_name} test indicated that significant differences were found between specific groups."
+
         else:
             summary_indonesia = f"Hasil analisis One-Way ANOVA menunjukkan bahwa tidak terdapat perbedaan yang signifikan secara statistik antara rata-rata kelompok (F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f})."
             summary_apa = f"A one-way ANOVA did not reveal a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p > .05."
     else:
+        # Logika untuk Kruskal-Wallis tetap sama karena post-hoc nya lebih kompleks untuk diinterpretasikan secara otomatis
         analysis_type = "Kruskal-Wallis H Test"
         kruskal = pg.kruskal(data=df_cleaned, dv=dependent_var, between=independent_var)
         main_test_results = json.loads(kruskal.round(4).to_json(orient='records'))[0]
