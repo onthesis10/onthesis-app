@@ -470,34 +470,63 @@ $(document).ready(function() {
     }
     
     // --- FUNGSI EKSPOR (DIPERBARUI TOTAL) ---
-    function exportToPdf() {
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+            if (!url) { resolve(null); return; }
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => reject(new Error('Gagal memuat gambar untuk ekspor.'));
+            img.src = url;
+        });
+    };
+
+    async function exportToPdf() {
         if (!analysisData) { showNotification("Gagal Ekspor", "Tidak ada data hasil analisis untuk diekspor."); return; }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
-        let yPos = 20;
+        let yPos = 25;
+
+        try {
+            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
+            const logoData = await loadImageAsBase64(logoUrl);
+            doc.addImage(logoData, 'PNG', doc.internal.pageSize.width - 45, 8, 30, 8);
+        } catch(e) { console.error("Logo gagal dimuat untuk PDF"); }
+
         doc.setFont("helvetica", "bold");
         doc.setFontSize(16);
         doc.text("Laporan Hasil Analisis ANOVA - OnThesis", doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        
         doc.setFontSize(12);
-        doc.text("Ringkasan & Interpretasi", 14, yPos + 5);
+        doc.text("Ringkasan & Interpretasi", 14, yPos);
         yPos += 8;
+
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         doc.text(`Jenis Analisis: ${analysisData.analysis_type}`, 14, yPos);
         yPos += 7;
         const summaryLines = doc.splitTextToSize(analysisData.summary.indonesia, 180);
         doc.text(summaryLines, 14, yPos);
-        yPos += summaryLines.length * 4 + 5;
+        yPos += summaryLines.length * 4 + 10;
+
         doc.setFont("helvetica", "bold");
         doc.setFontSize(12);
         doc.text("Tabel Statistik Deskriptif", 14, yPos);
         yPos += 2;
         doc.autoTable({ html: '#desc-table', startY: yPos, theme: 'grid', headStyles: { fillColor: [2, 132, 199] } });
         yPos = doc.autoTable.previous.finalY + 10;
+
         doc.text(`Hasil Uji Utama (${analysisData.analysis_type})`, 14, yPos);
         yPos += 2;
         doc.autoTable({ html: '#main-test-table', startY: yPos, theme: 'grid', headStyles: { fillColor: [2, 132, 199] } });
         yPos = doc.autoTable.previous.finalY + 10;
+
         if (analysisData.post_hoc_results && analysisData.post_hoc_results.length > 0) {
             if (yPos > 250) { doc.addPage(); yPos = 20; }
             doc.text("Hasil Uji Post-Hoc", 14, yPos);
@@ -505,34 +534,68 @@ $(document).ready(function() {
             doc.autoTable({ html: '#posthoc-table', startY: yPos, theme: 'grid', headStyles: { fillColor: [2, 132, 199] } });
             yPos = doc.autoTable.previous.finalY + 10;
         }
+
         if (yPos > 180) { doc.addPage(); yPos = 20; }
         doc.text("Visualisasi", 14, yPos);
         yPos += 5;
         try {
             const imgElement = document.getElementById('result-plot');
             const imgData = imgElement.src;
-            doc.addImage(imgData, 'PNG', 15, yPos, 180, 100);
+            const imgProps = doc.getImageProperties(imgData);
+            const imgWidth = 180;
+            const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+            doc.addImage(imgData, 'PNG', 15, yPos, imgWidth, imgHeight);
         } catch(e) {
             doc.text("Gagal memuat grafik.", 15, yPos);
         }
+        
         doc.save('Laporan_ANOVA_OnThesis.pdf');
     }
 
-    function exportToDoc() {
+    async function exportToDoc() {
         if (!analysisData) { showNotification("Gagal Ekspor", "Tidak ada data hasil analisis untuk diekspor."); return; }
-        const content = $('#export-content').clone();
-        content.find('button').remove();
-        const contentHtml = `
-            <!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-            body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
-            h3, h4 { font-family: 'Times New Roman', Times, serif; color: #000; }
-            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-            th, td { border: 1px solid #000000; text-align: left; padding: 8px; }
-            th { background-color: #f2f2f2; }
-            img { max-width: 500px; height: auto; }
-            </style></head><body>${content.html()}</body></html>`;
-        const converted = htmlDocx.asBlob(contentHtml);
-        saveAs(converted, 'Laporan_ANOVA_OnThesis.docx');
+        
+        try {
+            const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
+            const logoData = await loadImageAsBase64(logoUrl);
+            const plotData = await loadImageAsBase64($('#result-plot').attr('src'));
+
+            let contentHtml = `
+                <div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
+                    <p style="text-align: right;"><img src="${logoData}" width="150"></p>
+                    <h1 style="text-align: center;">Laporan Hasil Analisis ANOVA</h1>
+                    <h3>Ringkasan & Interpretasi</h3>
+                    <p><b>Jenis Analisis:</b> ${analysisData.analysis_type}</p>
+                    <p>${analysisData.summary.indonesia}</p>
+                    <br/>
+                    <h3>Tabel Statistik Deskriptif</h3>
+                    ${$('#desc-table').parent().html()}
+                    <br/>
+                    <h3>Hasil Uji Utama (${analysisData.analysis_type})</h3>
+                    ${$('#main-test-table').parent().html()}
+            `;
+            if (analysisData.post_hoc_results && analysisData.post_hoc_results.length > 0) {
+                contentHtml += `<br/><h3>Hasil Uji Post-Hoc</h3>${$('#posthoc-table').parent().html()}`;
+            }
+            contentHtml += `
+                    <br/>
+                    <h3>Visualisasi</h3>
+                    <p><img src="${plotData}" style="width:500px; height:auto;" /></p>
+                </div>`;
+
+            const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+                body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+                h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif; color: #000; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+                th, td { border: 1px solid #000000; text-align: left; padding: 8px; }
+                th { background-color: #f2f2f2; }
+                </style></head><body>${contentHtml}</body></html>`;
+            
+            const converted = htmlDocx.asBlob(fullHtml);
+            saveAs(converted, 'Laporan_ANOVA_OnThesis.docx');
+        } catch(e) {
+            showNotification("Gagal Ekspor", "Terjadi kesalahan saat menyiapkan data untuk ekspor.");
+        }
     }
 
     $('#export-pdf-btn').on('click', exportToPdf);
