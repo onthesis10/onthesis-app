@@ -1630,7 +1630,7 @@ def api_paired_ttest():
 
 
 # ========================================================================
-# FUNGSI-FUNGSI ANALISIS ANOVA (DIPERBARUI DENGAN INTERPRETASI POST-HOC)
+# FUNGSI-FUNGSI ANALISIS ANOVA (DIPERBARUI DENGAN HIGHLIGHTS & PLOT DATA)
 # ========================================================================
 
 def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
@@ -1680,7 +1680,6 @@ def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
             summary_indonesia = f"Hasil analisis One-Way ANOVA menunjukkan bahwa terdapat perbedaan yang signifikan secara statistik antara rata-rata kelompok (F({df_between}, {df_within}) = {f_stat:.2f}, p < .05). "
             summary_apa = f"A one-way ANOVA revealed a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p < .05. "
             
-            # --- INTERPRETASI POST-HOC BARU ---
             significant_pairs = []
             p_key = next((key for key in post_hoc.keys() if key.startswith('p-')), None)
             if p_key:
@@ -1698,7 +1697,6 @@ def _perform_oneway_anova_analysis(df, dependent_var, independent_var):
             summary_indonesia = f"Hasil analisis One-Way ANOVA menunjukkan bahwa tidak terdapat perbedaan yang signifikan secara statistik antara rata-rata kelompok (F({df_between}, {df_within}) = {f_stat:.2f}, p = {p_value:.3f})."
             summary_apa = f"A one-way ANOVA did not reveal a significant effect of {independent_var} on {dependent_var}, F({df_between}, {df_within}) = {f_stat:.2f}, p > .05."
     else:
-        # Logika untuk Kruskal-Wallis tetap sama karena post-hoc nya lebih kompleks untuk diinterpretasikan secara otomatis
         analysis_type = "Kruskal-Wallis H Test"
         kruskal = pg.kruskal(data=df_cleaned, dv=dependent_var, between=independent_var)
         main_test_results = json.loads(kruskal.round(4).to_json(orient='records'))[0]
@@ -1803,8 +1801,9 @@ def _perform_twoway_anova_analysis(df, dependent_var, independent_vars):
     # MEMBUAT DATA UNTUK PLOTLY
     plot_data = {
         'dv_name': dependent_var,
-        'iv_name': f"{iv1} & {iv2}",
-        'boxplot': [], # Boxplot untuk 2-way bisa kompleks, kita gunakan barplot interaksi
+        'iv_name': iv1,
+        'iv2_name': iv2,
+        'boxplot': [], # Boxplot untuk 2-way akan dibuat di frontend
         'barplot': [] # Barplot interaksi akan dibuat di frontend
     }
 
