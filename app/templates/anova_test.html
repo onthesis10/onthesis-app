@@ -9,6 +9,9 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+<!-- Pustaka BARU untuk Grafik Interaktif -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
 <!-- Pustaka untuk Ekspor Profesional (PDF & DOCX) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -48,6 +51,28 @@
     #manual-twoway-table th { background-color: var(--bg-canvas); }
     #manual-twoway-table input { width: 100%; background: transparent; border: none; color: var(--text-primary); padding: 0.25rem; }
     #manual-twoway-table input:focus { outline: 1px solid var(--accent-cyan); border-radius: 3px; }
+
+    /* GAYA BARU: Kartu Sorotan */
+    #highlight-card {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        background-color: var(--bg-canvas);
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-panel);
+    }
+    .highlight-item { display: flex; align-items: center; gap: 1rem; }
+    .highlight-item .icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .highlight-item .icon.significant { background-color: rgba(34, 211, 238, 0.1); color: var(--accent-cyan); }
+    .highlight-item .icon.not-significant { background-color: rgba(251, 191, 36, 0.1); color: #FBBF24; }
+    .highlight-item .text .label { font-size: 0.8rem; color: var(--text-secondary); }
+    .highlight-item .text .value { font-weight: 600; color: var(--text-primary); }
+
+    /* GAYA BARU: Tooltip */
+    [data-tooltip] { position: relative; cursor: help; border-bottom: 1px dotted var(--text-secondary); }
+    [data-tooltip]::before { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); padding: 0.5rem 0.75rem; border-radius: 0.5rem; background: #333; color: #fff; font-size: 0.8rem; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 10; }
+    [data-tooltip]:hover::before { opacity: 1; visibility: visible; }
 </style>
 {% endblock %}
 
@@ -169,7 +194,14 @@
                         <button id="export-doc-btn" class="btn-secondary text-sm">Export DOC</button>
                     </div>
                 </div>
+
+                <!-- KARTU SOROTAN BARU -->
+                <div id="highlight-card" class="mb-8"></div>
+
+                <!-- KONTEN HASIL VERTIKAL -->
                 <div id="export-content" class="prose max-w-none prose-sm text-text-secondary space-y-8">
+                    
+                    <!-- Bagian Ringkasan -->
                     <div>
                         <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Ringkasan & Interpretasi</h3>
                         <div id="summary-content">
@@ -181,17 +213,28 @@
                             <p id="prerequisite-summary" class="text-sm"></p>
                             <h4 class="font-bold text-lg text-text-primary mt-6">Jenis Analisis yang Digunakan</h4>
                             <p id="analysis-type" class="text-accent-cyan font-semibold"></p>
-                            <h4 class="font-bold text-lg text-text-primary mt-6">Interpretasi Hasil</h4>
+                            <h4 class="font-bold text-lg text-text-primary mt-6">Interpretasi Hasil Otomatis</h4>
                             <div class="p-4 bg-bg-canvas rounded-md border border-border-panel">
                                 <p id="summary-indonesia" class="text-text-primary"></p>
                                 <button id="copy-summary" class="mt-3 text-xs font-semibold text-accent-cyan hover:underline">Salin ke Laporan</button>
                             </div>
-                            <h4 class="font-semibold text-md text-text-primary mt-4">Format Laporan (APA Style)</h4>
-                            <div class="p-3 bg-bg-canvas rounded-md border border-border-panel text-sm">
-                                <p id="summary-apa" class="font-mono"></p>
-                            </div>
                         </div>
                     </div>
+
+                    <!-- Bagian Visualisasi -->
+                    <div>
+                        <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Visualisasi</h3>
+                        <div id="plot-content">
+                            <div class="flex justify-center gap-1 border border-border-panel p-1 rounded-lg bg-bg-canvas mb-4">
+                                <button id="show-boxplot" class="plot-switch-btn active btn-secondary flex-1 border-0">Box Plot</button>
+                                <button id="show-barplot" class="plot-switch-btn btn-secondary flex-1 border-0">Bar Plot</button>
+                            </div>
+                            <div id="plot-output" class="w-full h-[450px] bg-bg-canvas rounded-md border border-border-panel"></div>
+                            <button id="download-plot" class="mt-4 btn-secondary text-sm">Download Grafik (PNG)</button>
+                        </div>
+                    </div>
+
+                    <!-- Bagian Tabel Statistik -->
                     <div>
                         <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Tabel Statistik</h3>
                         <div id="stats-content" class="space-y-8">
@@ -204,15 +247,6 @@
                                 <p class="text-sm">Tabel perbandingan antar pasangan grup. Nilai p-value < 0.05 menunjukkan perbedaan yang signifikan.</p>
                                 <div class="overflow-x-auto"><table id="posthoc-table" class="display" style="width:100%"></table></div>
                             </div>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Visualisasi</h3>
-                        <div id="plot-content">
-                            <div id="plot-output" class="w-full h-auto min-h-[400px] bg-bg-canvas rounded-md flex items-center justify-center border border-border-panel p-2">
-                                <img id="result-plot" src="" alt="Hasil Plot Analisis" class="max-w-full max-h-full object-contain">
-                            </div>
-                            <button id="download-plot" class="mt-4 btn-secondary text-sm">Download Grafik (PNG)</button>
                         </div>
                     </div>
                 </div>
@@ -392,13 +426,18 @@ $(document).ready(function() {
             setTimeout(() => $(this).text('Salin ke Laporan'), 2000);
         });
     });
+    
     $('#download-plot').on('click', function() {
-        const link = document.createElement('a');
-        link.href = $('#result-plot').attr('src');
-        link.download = 'anova-plot-onthesis.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const plotDiv = document.getElementById('plot-output');
+        Plotly.toImage(plotDiv, {format: 'png', width: 800, height: 600})
+            .then(function(dataUrl) {
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = 'anova-plot-onthesis.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
     });
     
     // --- Notifikasi & Fungsi Utama ---
@@ -469,7 +508,7 @@ $(document).ready(function() {
         }
     }
     
-    // --- FUNGSI EKSPOR (DIPERBARUI TOTAL) ---
+    // --- FUNGSI EKSPOR ---
     const loadImageAsBase64 = (url) => {
         return new Promise((resolve, reject) => {
             if (!url) { resolve(null); return; }
@@ -539,12 +578,12 @@ $(document).ready(function() {
         doc.text("Visualisasi", 14, yPos);
         yPos += 5;
         try {
-            const imgElement = document.getElementById('result-plot');
-            const imgData = imgElement.src;
-            const imgProps = doc.getImageProperties(imgData);
+            const plotDiv = document.getElementById('plot-output');
+            const dataUrl = await Plotly.toImage(plotDiv, {format: 'png', width: 800, height: 450});
+            const imgProps = doc.getImageProperties(dataUrl);
             const imgWidth = 180;
             const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-            doc.addImage(imgData, 'PNG', 15, yPos, imgWidth, imgHeight);
+            doc.addImage(dataUrl, 'PNG', 15, yPos, imgWidth, imgHeight);
         } catch(e) {
             doc.text("Gagal memuat grafik.", 15, yPos);
         }
@@ -558,7 +597,8 @@ $(document).ready(function() {
         try {
             const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
             const logoData = await loadImageAsBase64(logoUrl);
-            const plotData = await loadImageAsBase64($('#result-plot').attr('src'));
+            const plotDiv = document.getElementById('plot-output');
+            const plotData = await Plotly.toImage(plotDiv, {format: 'png', width: 800, height: 450});
 
             let contentHtml = `
                 <div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
@@ -603,19 +643,34 @@ $(document).ready(function() {
 
     // --- Fungsi Tampilan & Reset (Lengkap) ---
     function displayResults(data) {
-        const { prerequisites, analysis_type, summary, descriptive_stats, main_test_results, post_hoc_results, plot } = data;
+        analysisData = data;
+        const { prerequisites, analysis_type, summary, descriptive_stats, main_test_results, post_hoc_results } = data;
+        
+        displayHighlights(data);
+        renderPlots(data);
+
         $('#normality-badge').html(`<span class="badge badge-${prerequisites.is_all_normal ? 'success' : 'warning'}">${prerequisites.is_all_normal ? '✅ Normalitas Terpenuhi' : '⚠️ Normalitas Tidak Terpenuhi'}</span>`);
         $('#homogeneity-badge').html(`<span class="badge badge-${prerequisites.is_homogeneous ? 'success' : 'warning'}">${prerequisites.is_homogeneous ? '✅ Homogenitas Terpenuhi' : '⚠️ Homogenitas Tidak Terpenuhi'}</span>`);
         $('#prerequisite-summary').html("Uji prasyarat telah dilakukan secara otomatis untuk memastikan validitas hasil.");
         $('#analysis-type').text(analysis_type);
         $('#summary-indonesia').text(summary.indonesia);
         $('#summary-apa').text(summary.apa);
+        
         const descColumns = Object.keys(descriptive_stats[0]).map(key => ({ title: key.charAt(0).toUpperCase() + key.slice(1), data: key }));
         renderDataTable('#desc-table', descriptive_stats, descColumns);
+        
         $('#main-test-title').text(analysis_type);
         const mainTestData = Array.isArray(main_test_results) ? main_test_results : [main_test_results];
-        const mainTestColumns = Object.keys(mainTestData[0]).map(key => ({ title: key.replace(/_/g, ' ').replace('stat', 'Statistic').replace(/\b\w/g, l => l.toUpperCase()), data: key }));
+        const mainTestColumns = Object.keys(mainTestData[0]).map(key => {
+            let title = key.replace(/_/g, ' ').replace('stat', 'Statistic').replace(/\b\w/g, l => l.toUpperCase());
+            if (['DF', 'SS', 'MS'].includes(key)) {
+                const tooltips = { 'DF': 'Degree of Freedom', 'SS': 'Sum of Squares', 'MS': 'Mean Square' };
+                title = `<span data-tooltip="${tooltips[key] || ''}">${key}</span>`;
+            }
+            return { title: title, data: key };
+        });
         renderDataTable('#main-test-table', mainTestData, mainTestColumns);
+
         if (post_hoc_results && post_hoc_results.length > 0) {
             $('#posthoc-container').show();
             $('#posthoc-title').text("Tukey HSD / Games-Howell");
@@ -625,7 +680,6 @@ $(document).ready(function() {
         } else {
             $('#posthoc-container').hide();
         }
-        $('#result-plot').attr('src', plot);
     }
     
     function renderDataTable(tableId, data, columns, createdRowCallback = null) {
