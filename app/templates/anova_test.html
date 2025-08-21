@@ -88,7 +88,7 @@
             <form id="anova-form" class="space-y-6">
                 <!-- Pilihan Metode Input -->
                 <div>
-                    <h3 class="text-xl font-bold text-text-primary mb-4">1. Input Data</h3>
+                    <h3 class="text-xl font-bold text-text-primary mb-4">pertama lu Input Data dulu Bor!</h3>
                     <div class="flex gap-1 border border-border-panel p-1 rounded-lg bg-bg-canvas">
                         <button type="button" class="input-method-btn active btn-secondary flex-1 border-0" data-method="upload">Unggah File</button>
                         <button type="button" class="input-method-btn btn-secondary flex-1 border-0" data-method="manual">Input Manual</button>
@@ -142,7 +142,7 @@
                 
                 <!-- Pengaturan Analisis -->
                 <div class="space-y-6 pt-6 border-t border-border-panel">
-                    <h3 class="text-xl font-bold text-text-primary">2. Pengaturan Analisis</h3>
+                    <h3 class="text-xl font-bold text-text-primary">Nah disini atur sesuai keinginan lo pengen Analisis yang mana!</h3>
                     <div>
                         <label for="anova-type" class="block text-sm font-medium text-text-secondary mb-1">Jenis ANOVA</label>
                         <select id="anova-type" name="anova_type" class="feedback-form-input">
@@ -221,16 +221,19 @@
                         </div>
                     </div>
 
-                    <!-- Bagian Visualisasi -->
+                    <!-- Bagian Visualisasi (DIPERBARUI) -->
                     <div>
                         <h3 class="text-xl font-bold text-text-primary border-b border-border-panel pb-2 mb-4">Visualisasi</h3>
-                        <div id="plot-content">
-                            <div class="flex justify-center gap-1 border border-border-panel p-1 rounded-lg bg-bg-canvas mb-4">
-                                <button id="show-boxplot" class="plot-switch-btn active btn-secondary flex-1 border-0">Box Plot</button>
-                                <button id="show-barplot" class="plot-switch-btn btn-secondary flex-1 border-0">Bar Plot</button>
+                        <div id="plot-content" class="space-y-6">
+                            <div id="boxplot-container" class="plot-container">
+                                <h4 class="font-bold text-lg text-text-primary mb-2">Box Plot Distribusi</h4>
+                                <div id="boxplot-output" class="w-full h-[450px] bg-bg-canvas rounded-md border border-border-panel"></div>
                             </div>
-                            <div id="plot-output" class="w-full h-[450px] bg-bg-canvas rounded-md border border-border-panel"></div>
-                            <button id="download-plot" class="mt-4 btn-secondary text-sm">Download Grafik (PNG)</button>
+                            <div id="barplot-container" class="plot-container">
+                                <h4 class="font-bold text-lg text-text-primary mb-2">Bar Plot Perbandingan Rata-rata</h4>
+                                <div id="barplot-output" class="w-full h-[450px] bg-bg-canvas rounded-md border border-border-panel"></div>
+                            </div>
+                            <button id="download-plots-btn" class="btn-secondary text-sm w-full">Download Semua Grafik (PNG)</button>
                         </div>
                     </div>
 
@@ -296,7 +299,7 @@ $(document).ready(function() {
         if (anovaType === 'one_way') {
             $('#manual-oneway-container').show();
             $('#manual-twoway-container').hide();
-        } else { // two_way
+        } else {
             $('#manual-oneway-container').hide();
             $('#manual-twoway-container').show();
         }
@@ -323,7 +326,7 @@ $(document).ready(function() {
             } else {
                 resetSelectors();
             }
-        } else { // manual
+        } else {
             $('#upload-container').hide();
             $('#manual-input-container').show();
             updateManualInputUI();
@@ -356,7 +359,7 @@ $(document).ready(function() {
             createOneWayGroup('Metode A', '85, 88, 82, 89, 90, 84, 87');
             createOneWayGroup('Metode B', '78, 81, 79, 80, 83, 77, 82');
             createOneWayGroup('Metode C', '90, 92, 95, 88, 91, 94, 93');
-        } else { // two_way
+        } else {
             $('#manual-twoway-tbody').empty();
             const sampleData = [
                 { v: 85, g1: 'Metode A', g2: 'Pria' }, { v: 88, g1: 'Metode A', g2: 'Pria' },
@@ -427,17 +430,29 @@ $(document).ready(function() {
         });
     });
     
-    $('#download-plot').on('click', function() {
-        const plotDiv = document.getElementById('plot-output');
-        Plotly.toImage(plotDiv, {format: 'png', width: 800, height: 600})
-            .then(function(dataUrl) {
-                const link = document.createElement('a');
-                link.href = dataUrl;
-                link.download = 'anova-plot-onthesis.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
+    $('#download-plots-btn').on('click', async function() {
+        try {
+            const boxPlotDiv = document.getElementById('boxplot-output');
+            const barPlotDiv = document.getElementById('barplot-output');
+            const boxDataUrl = await Plotly.toImage(boxPlotDiv, {format: 'png', width: 800, height: 600});
+            const barDataUrl = await Plotly.toImage(barPlotDiv, {format: 'png', width: 800, height: 600});
+            
+            let link = document.createElement('a');
+            link.href = boxDataUrl;
+            link.download = 'anova-boxplot-onthesis.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            link = document.createElement('a');
+            link.href = barDataUrl;
+            link.download = 'anova-barplot-onthesis.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch(e) {
+            showNotification("Gagal Download", "Terjadi kesalahan saat membuat file gambar.");
+        }
     });
     
     // --- Notifikasi & Fungsi Utama ---
@@ -578,12 +593,13 @@ $(document).ready(function() {
         doc.text("Visualisasi", 14, yPos);
         yPos += 5;
         try {
-            const plotDiv = document.getElementById('plot-output');
-            const dataUrl = await Plotly.toImage(plotDiv, {format: 'png', width: 800, height: 450});
-            const imgProps = doc.getImageProperties(dataUrl);
-            const imgWidth = 180;
-            const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-            doc.addImage(dataUrl, 'PNG', 15, yPos, imgWidth, imgHeight);
+            const boxPlotDiv = document.getElementById('boxplot-output');
+            const barPlotDiv = document.getElementById('barplot-output');
+            const boxDataUrl = await Plotly.toImage(boxPlotDiv, {format: 'png', width: 800, height: 450});
+            const barDataUrl = await Plotly.toImage(barPlotDiv, {format: 'png', width: 800, height: 450});
+            
+            doc.addImage(boxDataUrl, 'PNG', 15, yPos, 85, 50);
+            doc.addImage(barDataUrl, 'PNG', 110, yPos, 85, 50);
         } catch(e) {
             doc.text("Gagal memuat grafik.", 15, yPos);
         }
@@ -597,8 +613,10 @@ $(document).ready(function() {
         try {
             const logoUrl = "{{ url_for('static', filename='images/onthesis-logo-black.png') }}";
             const logoData = await loadImageAsBase64(logoUrl);
-            const plotDiv = document.getElementById('plot-output');
-            const plotData = await Plotly.toImage(plotDiv, {format: 'png', width: 800, height: 450});
+            const boxPlotDiv = document.getElementById('boxplot-output');
+            const barPlotDiv = document.getElementById('barplot-output');
+            const boxPlotData = await Plotly.toImage(boxPlotDiv, {format: 'png', width: 800, height: 450});
+            const barPlotData = await Plotly.toImage(barPlotDiv, {format: 'png', width: 800, height: 450});
 
             let contentHtml = `
                 <div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
@@ -620,7 +638,10 @@ $(document).ready(function() {
             contentHtml += `
                     <br/>
                     <h3>Visualisasi</h3>
-                    <p><img src="${plotData}" style="width:500px; height:auto;" /></p>
+                    <h4>Box Plot Distribusi</h4>
+                    <p><img src="${boxPlotData}" style="width:500px; height:auto;" /></p>
+                    <h4>Bar Plot Perbandingan Rata-rata</h4>
+                    <p><img src="${barPlotData}" style="width:500px; height:auto;" /></p>
                 </div>`;
 
             const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -688,35 +709,26 @@ $(document).ready(function() {
     }
 
     function renderPlots(data) {
-        const plotDiv = 'plot-output';
         const plotData = data.plot_data;
-        const layout = {
+        const colors = ['#0ea5e9', '#f97316', '#16a34a', '#dc2626', '#9333ea', '#f59e0b'];
+        const baseLayout = {
             margin: { t: 40, b: 40, l: 50, r: 20 },
             paper_bgcolor: 'transparent',
             plot_bgcolor: 'transparent',
-            font: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
+            font: { color: '#000000' }, // Font hitam
             xaxis: { gridcolor: 'rgba(128,128,128,0.2)' },
             yaxis: { gridcolor: 'rgba(128,128,128,0.2)' }
         };
 
-        const showBoxPlot = () => {
-            $('.plot-switch-btn').removeClass('active');
-            $('#show-boxplot').addClass('active');
-            layout.title = `Distribusi ${plotData.dv_name} per ${plotData.iv_name}`;
-            Plotly.newPlot(plotDiv, plotData.boxplot, layout);
-        };
+        // Box Plot
+        const boxplotLayout = $.extend(true, {}, baseLayout, { title: `Distribusi ${plotData.dv_name} per ${plotData.iv_name}` });
+        const boxplotTraces = plotData.boxplot.map((trace, i) => ({...trace, marker: { color: colors[i % colors.length] }}));
+        Plotly.newPlot('boxplot-output', boxplotTraces, boxplotLayout);
 
-        const showBarPlot = () => {
-            $('.plot-switch-btn').removeClass('active');
-            $('#show-barplot').addClass('active');
-            layout.title = `Rata-rata ${plotData.dv_name} per ${plotData.iv_name}`;
-            Plotly.newPlot(plotDiv, plotData.barplot, layout);
-        };
-
-        $('#show-boxplot').off('click').on('click', showBoxPlot);
-        $('#show-barplot').off('click').on('click', showBarPlot);
-
-        showBoxPlot();
+        // Bar Plot
+        const barplotLayout = $.extend(true, {}, baseLayout, { title: `Rata-rata ${plotData.dv_name} per ${plotData.iv_name}` });
+        const barplotTraces = plotData.barplot.map((trace, i) => ({...trace, marker: { color: colors[i % colors.length] }}));
+        Plotly.newPlot('barplot-output', barplotTraces, barplotLayout);
     }
     
     function displayResults(data) {
